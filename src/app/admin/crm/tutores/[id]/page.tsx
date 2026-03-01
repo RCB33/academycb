@@ -3,9 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Mail, Phone, Users, Calendar, ArrowLeft, Receipt, MessageCircle } from "lucide-react"
-import Link from 'next/link'
-import { GuardianDialog } from '../components/guardian-dialog'
-import { ResetPasswordButton } from './reset-password-button'
+import { GuardianNotesEditor } from './notes-editor'
+import { TutorProfileActions } from './tutor-profile-actions'
 import { notFound } from 'next/navigation'
 
 export default async function TutorProfilePage({ params }: { params: Promise<{ id: string }> | { id: string } }) {
@@ -48,13 +47,7 @@ export default async function TutorProfilePage({ params }: { params: Promise<{ i
                     </div>
                 </div>
 
-                <div className="flex gap-2 flex-wrap justify-end">
-                    {guardian.user_id && <ResetPasswordButton userId={guardian.user_id} />}
-                    <Button variant="outline" className="text-green-600 border-green-200 bg-green-50 hover:bg-green-100">
-                        <MessageCircle className="mr-2 h-4 w-4" /> WhatsApp
-                    </Button>
-                    <GuardianDialog mode="edit" guardian={guardian} />
-                </div>
+                <TutorProfileActions guardian={guardian} />
             </div>
 
             {/* Content Tabs / Info Grid */}
@@ -127,11 +120,7 @@ export default async function TutorProfilePage({ params }: { params: Promise<{ i
                             <CardTitle className="text-sm font-bold uppercase tracking-widest text-amber-700">Notas Internas</CardTitle>
                         </CardHeader>
                         <CardContent className="pt-4 text-sm text-amber-900 leading-relaxed">
-                            {guardian.notes ? (
-                                <p className="whitespace-pre-wrap">{guardian.notes}</p>
-                            ) : (
-                                <p className="italic text-amber-700/50">No hay notas registradas para este tutor.</p>
-                            )}
+                            <GuardianNotesEditor guardianId={guardian.id} currentNotes={guardian.notes} />
                         </CardContent>
                     </Card>
                 </div>

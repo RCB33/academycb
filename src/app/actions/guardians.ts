@@ -173,3 +173,22 @@ export async function resetTutorPassword(userId: string) {
 
     return { success: true }
 }
+
+export async function updateGuardianNotes(id: string, notes: string | null) {
+    const supabase = await createClient()
+
+    const { error } = await supabase
+        .from('guardians')
+        .update({
+            notes: notes
+        })
+        .eq('id', id)
+
+    if (error) {
+        return { success: false, error: error.message }
+    }
+
+    revalidatePath('/admin/crm/tutores')
+    revalidatePath(`/admin/crm/tutores/${id}`)
+    return { success: true }
+}
