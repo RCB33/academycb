@@ -57,12 +57,46 @@ export async function getGuardianById(id: string) {
     return guardian
 }
 
-export async function createGuardian(data: { full_name: string; email: string; phone: string; notes?: string }) {
+export async function createGuardian(data: { full_name: string; email: string; phone: string; notes?: string; createPortalAccount?: boolean }) {
     const supabase = await createClient()
+
+    let authUserId = null;
+
+    if (data.createPortalAccount && data.email) {
+        if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+            return { success: false, error: 'Configuración del servidor incompleta (falta clave administrativa).' }
+        }
+
+        const { createClient: createSupabaseClient } = await import('@supabase/supabase-js');
+        const supabaseAdmin = createSupabaseClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.SUPABASE_SERVICE_ROLE_KEY!
+        );
+
+        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+            email: data.email.trim(),
+            password: 'CostaBrava2026',
+            email_confirm: true,
+            user_metadata: {
+                full_name: data.full_name
+            }
+        });
+
+        if (authError) {
+            console.error("Auth creation error:", authError);
+            if (authError.message.includes('already exists')) {
+                return { success: false, error: 'Ya existe un usuario con este correo electrónico.' }
+            }
+            return { success: false, error: 'Error al crear la cuenta de acceso familiar: ' + authError.message }
+        }
+
+        authUserId = authData.user.id;
+    }
 
     const { data: newGuardian, error } = await supabase
         .from('guardians')
         .insert({
+            user_id: authUserId,
             full_name: data.full_name,
             email: data.email || null,
             phone: data.phone || '',
@@ -114,5 +148,28 @@ export async function deleteGuardian(id: string) {
     }
 
     revalidatePath('/admin/crm/tutores')
+    return { success: true }
+}
+
+export async function resetTutorPassword(userId: string) {
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        return { success: false, error: 'Configuración del servidor incompleta (falta clave administrativa).' }
+    }
+
+    const { createClient: createSupabaseClient } = await import('@supabase/supabase-js');
+    const supabaseAdmin = createSupabaseClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        password: 'CostaBrava2026'
+    });
+
+    if (authError) {
+        console.error("Auth update error:", authError);
+        return { success: false, error: 'Error al reiniciar la contraseña: ' + authError.message }
+    }
+
     return { success: true }
 }

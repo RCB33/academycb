@@ -16,8 +16,9 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { createGuardian, updateGuardian } from "@/app/actions/guardians"
 import { toast } from "sonner"
-import { Loader2, UserPlus, Pencil } from "lucide-react"
+import { Loader2, UserPlus, Pencil, Key } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { Switch } from "@/components/ui/switch"
 
 interface Props {
     mode: 'create' | 'edit'
@@ -35,7 +36,8 @@ export function GuardianDialog({ mode, guardian, trigger, onUpdate }: Props) {
         full_name: guardian?.full_name || '',
         email: guardian?.email || '',
         phone: guardian?.phone || '',
-        notes: guardian?.notes || ''
+        notes: guardian?.notes || '',
+        createPortalAccount: false
     })
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -48,7 +50,7 @@ export function GuardianDialog({ mode, guardian, trigger, onUpdate }: Props) {
                 if (result.success) {
                     toast.success("Tutor creado correctamente")
                     setOpen(false)
-                    setFormData({ full_name: '', email: '', phone: '', notes: '' })
+                    setFormData({ full_name: '', email: '', phone: '', notes: '', createPortalAccount: false })
                     if (onUpdate) onUpdate()
                     router.refresh()
                 } else {
@@ -77,7 +79,7 @@ export function GuardianDialog({ mode, guardian, trigger, onUpdate }: Props) {
             <DialogTrigger asChild>
                 {trigger ? trigger : (
                     mode === 'create' ? (
-                        <Button className="bg-indigo-600 hover:bg-indigo-700">
+                        <Button className="bg-[#0C2241] hover:bg-[#1a365d] text-white">
                             <UserPlus className="mr-2 h-4 w-4" /> Nuevo Tutor
                         </Button>
                     ) : (
@@ -137,9 +139,27 @@ export function GuardianDialog({ mode, guardian, trigger, onUpdate }: Props) {
                             rows={3}
                         />
                     </div>
+                    {mode === 'create' && (
+                        <div className="flex items-center justify-between space-x-2 rounded-lg border p-4 bg-muted/50">
+                            <div className="space-y-0.5">
+                                <Label className="text-sm font-medium flex items-center gap-2">
+                                    <Key className="w-4 h-4 text-emerald-600" />
+                                    Activar acceso al Portal Familias
+                                </Label>
+                                <p className="text-xs text-muted-foreground">
+                                    Si lo activas y tiene email, se le creará cuenta con la contraseña <code className="bg-slate-200 px-1 rounded">CostaBrava2026</code>.
+                                </p>
+                            </div>
+                            <Switch
+                                checked={formData.createPortalAccount}
+                                onCheckedChange={(checked) => setFormData({ ...formData, createPortalAccount: checked })}
+                                disabled={!formData.email}
+                            />
+                        </div>
+                    )}
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-                        <Button type="submit" disabled={loading} className="bg-indigo-600 hover:bg-indigo-700">
+                        <Button type="submit" disabled={loading} className="bg-[#0C2241] hover:bg-[#1a365d] text-white">
                             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             {mode === 'create' ? 'Crear' : 'Guardar Cambios'}
                         </Button>

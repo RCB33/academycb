@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+import { PasswordForm } from "./password-form"
 
 export default async function ProfilePage() {
     const supabase = await createClient()
@@ -74,6 +75,8 @@ export default async function ProfilePage() {
                     </form>
                 </CardContent>
             </Card>
+
+            <PasswordForm />
 
             <Card className="border-destructive/20">
                 <CardHeader>

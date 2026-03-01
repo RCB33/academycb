@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button"
 import { Mail, Phone, Users, Calendar, ArrowLeft, Receipt, MessageCircle } from "lucide-react"
 import Link from 'next/link'
 import { GuardianDialog } from '../components/guardian-dialog'
+import { ResetPasswordButton } from './reset-password-button'
 import { notFound } from 'next/navigation'
 
-export default async function TutorProfilePage({ params }: { params: { id: string } }) {
-    const guardian = await getGuardianById(params.id)
+export default async function TutorProfilePage({ params }: { params: Promise<{ id: string }> | { id: string } }) {
+    const resolvedParams = await Promise.resolve(params)
+    const guardian = await getGuardianById(resolvedParams.id)
 
     if (!guardian) {
         notFound()
@@ -46,7 +48,8 @@ export default async function TutorProfilePage({ params }: { params: { id: strin
                     </div>
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap justify-end">
+                    {guardian.user_id && <ResetPasswordButton userId={guardian.user_id} />}
                     <Button variant="outline" className="text-green-600 border-green-200 bg-green-50 hover:bg-green-100">
                         <MessageCircle className="mr-2 h-4 w-4" /> WhatsApp
                     </Button>
