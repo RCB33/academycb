@@ -140,7 +140,18 @@ export default function TutorsMasterListPage() {
                                                                 Ver Ficha Tutor
                                                             </DropdownMenuItem>
                                                         </Link>
-                                                        <DropdownMenuItem>Editar Datos</DropdownMenuItem>
+                                                        <div onClick={(e) => e.stopPropagation()}>
+                                                            <GuardianDialog
+                                                                mode="edit"
+                                                                guardian={guardian}
+                                                                onUpdate={fetchGuardians}
+                                                                trigger={
+                                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                                        Editar Datos
+                                                                    </DropdownMenuItem>
+                                                                }
+                                                            />
+                                                        </div>
                                                         <DropdownMenuSeparator />
                                                         <DropdownMenuItem className="text-red-600">Eliminar</DropdownMenuItem>
                                                     </DropdownMenuContent>

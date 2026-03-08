@@ -38,25 +38,23 @@ export function GuardianNotesEditor({ guardianId, currentNotes }: Props) {
 
     if (!isEditing) {
         return (
-            <div className="group relative">
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={() => setIsEditing(true)}
-                >
-                    <Pencil className="h-4 w-4 text-slate-400" />
-                </Button>
+            <div className="relative">
                 {currentNotes ? (
-                    <p className="whitespace-pre-wrap">{currentNotes}</p>
+                    <div className="space-y-4">
+                        <p className="whitespace-pre-wrap">{currentNotes}</p>
+                        <div className="flex justify-end mt-2">
+                            <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                                <Pencil className="mr-2 h-4 w-4" /> Editar Notas
+                            </Button>
+                        </div>
+                    </div>
                 ) : (
-                    <p className="italic text-amber-700/50">No hay notas registradas para este tutor. Haz clic en el botón de edición para añadir notas.</p>
-                )}
-                {/* Fallback button for empty state if hovering isn't obvious */}
-                {!currentNotes && (
-                    <Button variant="outline" size="sm" className="mt-4" onClick={() => setIsEditing(true)}>
-                        <Pencil className="mr-2 h-4 w-4" /> Añadir Notas
-                    </Button>
+                    <div className="flex flex-col items-center justify-center py-4 space-y-3">
+                        <p className="italic text-amber-700/50 text-center">No hay notas registradas para este tutor.</p>
+                        <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                            <Pencil className="mr-2 h-4 w-4" /> Añadir Notas
+                        </Button>
+                    </div>
                 )}
             </div>
         )

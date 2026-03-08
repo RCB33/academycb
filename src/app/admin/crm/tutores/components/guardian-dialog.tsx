@@ -129,16 +129,18 @@ export function GuardianDialog({ mode, guardian, trigger, onUpdate }: Props) {
                             placeholder="+34 600 000 000"
                         />
                     </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor="notes">Notas Internas</Label>
-                        <Textarea
-                            id="notes"
-                            value={formData.notes}
-                            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                            placeholder="Instrucciones de cobro especial, horarios de contacto, etc."
-                            rows={3}
-                        />
-                    </div>
+                    {mode === 'create' && (
+                        <div className="grid gap-2">
+                            <Label htmlFor="notes">Notas Internas</Label>
+                            <Textarea
+                                id="notes"
+                                value={formData.notes}
+                                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                                placeholder="Instrucciones de cobro especial, horarios de contacto, etc."
+                                rows={3}
+                            />
+                        </div>
+                    )}
                     {mode === 'create' && (
                         <div className="flex items-center justify-between space-x-2 rounded-lg border p-4 bg-muted/50">
                             <div className="space-y-0.5">

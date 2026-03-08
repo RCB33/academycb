@@ -10,13 +10,22 @@ interface Props {
 }
 
 export function TutorProfileActions({ guardian }: Props) {
+    const formatWhatsAppNumber = (phone: string) => {
+        const cleaned = phone.replace(/\D/g, '')
+        // If it's a 9-digit number (typical Spanish mobile), prepend 34
+        if (cleaned.length === 9) {
+            return `34${cleaned}`
+        }
+        return cleaned
+    }
+
     return (
         <div className="flex gap-2 flex-wrap justify-end">
             {guardian.user_id && <ResetPasswordButton userId={guardian.user_id} />}
 
             {guardian.phone && (
                 <Button variant="outline" className="text-green-600 border-green-200 bg-green-50 hover:bg-green-100" asChild>
-                    <a href={`https://wa.me/${guardian.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
+                    <a href={`https://wa.me/${formatWhatsAppNumber(guardian.phone)}`} target="_blank" rel="noopener noreferrer">
                         <MessageCircle className="mr-2 h-4 w-4" /> WhatsApp
                     </a>
                 </Button>
