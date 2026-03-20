@@ -153,3 +153,81 @@ export async function getUnassignedPlayers() {
     }
     return data
 }
+
+export async function enrollPlayerWithPlan(data: {
+    childId: string
+    teamId: string
+    planId: string
+    paymentMethod: string // 'efectivo' | 'transferencia' | 'stripe'
+    monthlyPrice: number
+}) {
+    const supabase = await createClient()
+
+    // 1. Assign to team
+    const { error: teamError } = await supabase
+        .from('children')
+        .update({ team_id: data.teamId })
+        .eq('id', data.childId)
+
+    if (teamError) {
+        console.error('Error assigning player:', teamError)
+        return { success: false, error: "Error al asignar jugador" }
+    }
+
+    // 2. Get plan details
+    const { data: plan } = await supabase
+        .from('membership_plans')
+        .select('duration_months, frequency')
+        .eq('id', data.planId)
+        .single()
+
+    const durationMonths = plan?.duration_months || 12
+
+    // 3. Create membership
+    const startDate = new Date()
+    const endDate = new Date()
+    endDate.setMonth(endDate.getMonth() + durationMonths)
+
+    const { data: membership, error: memError } = await supabase
+        .from('academy_memberships')
+        .insert([{
+            child_id: data.childId,
+            plan_id: data.planId,
+            start_date: startDate.toISOString().split('T')[0],
+            end_date: endDate.toISOString().split('T')[0],
+            status: 'active',
+            payment_status: 'pending',
+            payment_method: data.paymentMethod,
+            monthly_price: data.monthlyPrice,
+        }])
+        .select('id')
+        .single()
+
+    if (memError) {
+        console.error('Error creating membership:', memError)
+        return { success: false, error: "Error al crear la membresía" }
+    }
+
+    // 4. Generate monthly payment records
+    if (membership) {
+        const payments = []
+        for (let i = 0; i < durationMonths; i++) {
+            const paymentDate = new Date(startDate)
+            paymentDate.setMonth(paymentDate.getMonth() + i)
+            payments.push({
+                type: 'academy',
+                ref_id: membership.id,
+                child_id: data.childId,
+                amount: data.monthlyPrice,
+                status: 'pending',
+                method: data.paymentMethod,
+                description: `Cuota ${plan?.frequency || 'mensual'} - ${paymentDate.toLocaleDateString('es', { month: 'long', year: 'numeric' })}`
+            })
+        }
+        await supabase.from('payments').insert(payments)
+    }
+
+    revalidatePath('/admin/academia')
+    revalidatePath('/admin/finanzas')
+    return { success: true }
+}

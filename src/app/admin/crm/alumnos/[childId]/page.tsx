@@ -49,7 +49,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
     const [documents, setDocuments] = useState<any[]>([])
     const [categories, setCategories] = useState<any[]>([])
     const [achievements, setAchievements] = useState<any[]>([])
-    const [payments, setPayments] = useState<any[]>([])
+    const [paymentsData, setPaymentsData] = useState<{ memberships: any[], payments: any[] }>({ memberships: [], payments: [] })
     const [plans, setPlans] = useState<any[]>([])
     const [studentAchievements, setStudentAchievements] = useState<any[]>([])
     const [signatures, setSignatures] = useState<any[]>([])
@@ -121,8 +121,8 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
             setCategories(cats || [])
 
             // 5. Fetch Payments & Plans
-            const studentPayments = await getStudentPayments(childId)
-            setPayments(studentPayments)
+            const studentPaymentsData = await getStudentPayments(childId)
+            setPaymentsData(studentPaymentsData)
 
             const { data: allPlans } = await supabase.from('membership_plans').select('*')
             setPlans(allPlans || [])
@@ -814,7 +814,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
                                 </CardHeader>
                                 <CardContent>
                                     <PaymentsList
-                                        payments={payments}
+                                        paymentsData={paymentsData}
                                         plans={plans}
                                         childId={childId}
                                         onRefresh={fetchStudentData}

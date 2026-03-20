@@ -303,7 +303,7 @@ export async function getAvailableChildrenForCampus(campusId: string) {
     // Get all children not already enrolled
     let query = supabase
         .from('children')
-        .select('id, full_name, birth_year, category:categories(name)')
+        .select('id, full_name, birth_year, category:categories(name), child_guardians(guardian:guardians(full_name, phone))')
         .order('full_name')
 
     if (enrolledIds.length > 0) {

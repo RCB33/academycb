@@ -591,10 +591,28 @@ function EnrollDialog({ open, onOpenChange, campusId, campusName, availableChild
     const [loading, setLoading] = useState(false)
     const [selectedChild, setSelectedChild] = useState<string>('')
     const [search, setSearch] = useState('')
+    const [emergencyContact, setEmergencyContact] = useState('')
+    const [emergencyPhone, setEmergencyPhone] = useState('')
 
     const filtered = availableChildren.filter(c =>
         c.full_name.toLowerCase().includes(search.toLowerCase())
     )
+
+    function handleSelectChild(childId: string) {
+        setSelectedChild(childId)
+        // Auto-fill emergency contact from child's primary guardian
+        const child = availableChildren.find(c => c.id === childId)
+        if (child?.child_guardians?.length > 0) {
+            const guardian = child.child_guardians[0].guardian
+            if (guardian) {
+                setEmergencyContact(guardian.full_name || '')
+                setEmergencyPhone(guardian.phone || '')
+            }
+        } else {
+            setEmergencyContact('')
+            setEmergencyPhone('')
+        }
+    }
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault()
@@ -611,8 +629,8 @@ function EnrollDialog({ open, onOpenChange, campusId, campusName, availableChild
             child_id: selectedChild,
             tshirt_size: (fd.get('tshirt_size') as string) || null,
             allergies: (fd.get('allergies') as string) || null,
-            emergency_contact: (fd.get('emergency_contact') as string) || null,
-            emergency_phone: (fd.get('emergency_phone') as string) || null,
+            emergency_contact: emergencyContact || null,
+            emergency_phone: emergencyPhone || null,
             notes: (fd.get('notes') as string) || null,
         })
 
@@ -622,14 +640,23 @@ function EnrollDialog({ open, onOpenChange, campusId, campusName, availableChild
             toast.success("Alumno inscrito correctamente")
             setSelectedChild('')
             setSearch('')
+            setEmergencyContact('')
+            setEmergencyPhone('')
             onOpenChange(false)
         } else {
             toast.error(res.error)
         }
     }
 
+    function handleClose() {
+        setSelectedChild('')
+        setSearch('')
+        setEmergencyContact('')
+        setEmergencyPhone('')
+    }
+
     return (
-        <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) { setSelectedChild(''); setSearch('') } }}>
+        <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) handleClose() }}>
             <DialogContent className="p-0 border-0 overflow-hidden bg-slate-50 max-w-md sm:rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
                 <div className="bg-yellow-500 p-5 flex flex-col items-center">
                     <div className="h-12 w-12 rounded-full bg-black/10 flex items-center justify-center mb-2">
@@ -654,7 +681,7 @@ function EnrollDialog({ open, onOpenChange, campusId, campusName, availableChild
                                     <button
                                         key={child.id}
                                         type="button"
-                                        onClick={() => setSelectedChild(child.id)}
+                                        onClick={() => handleSelectChild(child.id)}
                                         className={`w-full flex items-center gap-3 p-2.5 rounded-lg text-left transition-all text-sm
                                             ${selectedChild === child.id
                                                 ? 'bg-yellow-50 border-2 border-yellow-400'
@@ -695,13 +722,16 @@ function EnrollDialog({ open, onOpenChange, campusId, campusName, availableChild
                             <Label className="text-slate-700 font-bold uppercase text-[10px] tracking-wider flex items-center gap-1">
                                 <Phone className="h-3 w-3" /> Tel. Emergencia
                             </Label>
-                            <Input name="emergency_phone" placeholder="600 123 456" className="bg-white h-9 text-sm" />
+                            <Input value={emergencyPhone} onChange={(e) => setEmergencyPhone(e.target.value)} placeholder="600 123 456" className="bg-white h-9 text-sm" />
                         </div>
                     </div>
 
                     <div className="space-y-1.5">
                         <Label className="text-slate-700 font-bold uppercase text-[10px] tracking-wider">Contacto Emergencia</Label>
-                        <Input name="emergency_contact" placeholder="Nombre del contacto" className="bg-white h-9 text-sm" />
+                        <Input value={emergencyContact} onChange={(e) => setEmergencyContact(e.target.value)} placeholder="Nombre del contacto" className="bg-white h-9 text-sm" />
+                        {emergencyContact && (
+                            <p className="text-[10px] text-green-600 font-medium">✓ Auto-completado desde el tutor del alumno</p>
+                        )}
                     </div>
 
                     <div className="space-y-1.5">

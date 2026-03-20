@@ -6,37 +6,31 @@ import { revalidatePath } from 'next/cache'
 export async function getStudentPayments(childId: string) {
     const supabase = await createClient()
 
-    // Fetch Memberships (Cuotas)
-    const { data: memberships, error } = await supabase
+    // Fetch Memberships (Cuotas / Suscripciones)
+    const { data: memberships } = await supabase
         .from('academy_memberships')
         .select(`
             *,
-            plan:membership_plans(name, price)
+            plan:membership_plans(name, price, frequency)
         `)
         .eq('child_id', childId)
         .order('start_date', { ascending: false })
 
-    if (error) {
-        console.error('Error fetching payments:', error)
-        return []
-    }
+    // Fetch individual payments from payments table
+    const { data: paymentRecords } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('child_id', childId)
+        .order('created_at', { ascending: false })
 
-    return memberships
+    return {
+        memberships: memberships || [],
+        payments: paymentRecords || []
+    }
 }
 
 export async function createManualPayment(childId: string, data: any) {
     const supabase = await createClient()
-
-    // 1. Create a "Custom" membership/fee if needed, or just log a payment?
-    // For simplicity, we'll assume we are creating a membership record acting as a "Charge"
-    // But ideally we should have a generic "charges" table. 
-    // We'll use academy_memberships as "Charges" for now since it links to plans.
-
-    // Check if "Manual Payment" plan exists, if not create one or use a default.
-    // This is a simplification. Real app would have better structure.
-
-    // For now, let's just insert into academy_memberships with a specific plan.
-    // We'll assume the UI passes a valid plan_id.
 
     const { error } = await supabase
         .from('academy_memberships')
@@ -46,7 +40,9 @@ export async function createManualPayment(childId: string, data: any) {
             start_date: data.start_date,
             end_date: data.end_date,
             status: 'active',
-            payment_status: data.payment_status || 'pending'
+            payment_status: data.payment_status || 'pending',
+            payment_method: data.payment_method || 'efectivo',
+            monthly_price: data.monthly_price || null
         })
 
     if (error) return { success: false, error: error.message }
@@ -66,5 +62,19 @@ export async function updatePaymentStatus(membershipId: string, status: string, 
     if (error) return { success: false, error: error.message }
 
     revalidatePath(`/admin/crm/alumnos/${childId}`)
+    return { success: true }
+}
+
+export async function markPaymentAsPaid(paymentId: string) {
+    const supabase = await createClient()
+
+    const { error } = await supabase
+        .from('payments')
+        .update({ status: 'paid', paid_at: new Date().toISOString() })
+        .eq('id', paymentId)
+
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath('/admin/finanzas')
     return { success: true }
 }
