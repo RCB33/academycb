@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -8,17 +8,20 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
-    Dialog, DialogContent, DialogTitle
+    Dialog, DialogContent, DialogTitle, DialogHeader, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog"
 import {
-    DollarSign, TrendingUp, ArrowUpRight, Wallet, Download,
+    DollarSign, TrendingUp, Wallet, Download,
     Calendar, ShoppingBag, GraduationCap, Tent, Trophy, CreditCard, Users,
-    Plus, Trash2, Loader2, CheckCircle2, AlertCircle, Euro, FileText, ChevronLeft, ChevronRight
+    Plus, Trash2, Loader2, CheckCircle2, AlertCircle, Euro, FileText, ChevronLeft, ChevronRight,
+    Search, Filter, X, ArrowUpRight
 } from "lucide-react"
 import { getFinanceKPIs, getFinanceTransactions, type FinanceTransaction, type FinanceKPIs } from "@/app/actions/finance"
-import { getExpenses, createExpense, deleteExpense, getMonthlyPaymentGrid, type Expense } from "@/app/actions/settings"
-import { markPaymentAsPaid } from "@/app/actions/payments"
+import { getExpenses, createExpense, deleteExpense, getMonthlyPaymentGrid, getPlans, type Expense } from "@/app/actions/settings"
+import { markPaymentAsPaid, updatePaymentStatus } from "@/app/actions/payments"
+import { recordManualPayment } from "@/app/actions/settings"
 import { toast } from "sonner"
 
 const TYPE_CFG: Record<string, { label: string, icon: React.ReactNode, color: string }> = {
@@ -40,30 +43,36 @@ export default function FinancePage() {
     const [transactions, setTransactions] = useState<FinanceTransaction[]>([])
     const [expenses, setExpenses] = useState<Expense[]>([])
     const [paymentGrid, setPaymentGrid] = useState<any[]>([])
+    const [plans, setPlans] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [activeTab, setActiveTab] = useState('general')
     const [expenseDialogOpen, setExpenseDialogOpen] = useState(false)
+    const [manualPaymentOpen, setManualPaymentOpen] = useState(false)
     const [savingExpense, setSavingExpense] = useState(false)
+    const [savingManual, setSavingManual] = useState(false)
     const [markingId, setMarkingId] = useState<string | null>(null)
     
-    // Month picker for Cobros
+    // Cobros filters
+    const [cobrosSearch, setCobrosSearch] = useState('')
+    const [cobrosFilter, setCobrosFilter] = useState<'all' | 'pending' | 'paid'>('all')
+    
+    // Month picker
     const now = new Date()
     const [selectedMonth, setSelectedMonth] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`)
 
-    useEffect(() => {
-        fetchData()
-    }, [])
+    useEffect(() => { fetchAll() }, [])
 
     useEffect(() => {
         if (activeTab === 'cobros') fetchPaymentGrid()
         if (activeTab === 'gastos') fetchExpenses()
     }, [activeTab, selectedMonth])
 
-    async function fetchData() {
+    async function fetchAll() {
         setLoading(true)
-        const [k, t] = await Promise.all([getFinanceKPIs(), getFinanceTransactions()])
+        const [k, t, p] = await Promise.all([getFinanceKPIs(), getFinanceTransactions(), getPlans()])
         setKpis(k)
         setTransactions(t)
+        setPlans(p)
         setLoading(false)
     }
 
@@ -85,6 +94,46 @@ export default function FinancePage() {
 
     const monthLabel = new Date(selectedMonth + '-01').toLocaleDateString('es', { month: 'long', year: 'numeric' })
 
+    // Cobros stats & filtering
+    const filteredGrid = useMemo(() => {
+        let result = paymentGrid
+        if (cobrosSearch) {
+            const q = cobrosSearch.toLowerCase()
+            result = result.filter(r => r.childName.toLowerCase().includes(q) || (r.planName || '').toLowerCase().includes(q))
+        }
+        if (cobrosFilter === 'pending') result = result.filter(r => r.status !== 'paid')
+        if (cobrosFilter === 'paid') result = result.filter(r => r.status === 'paid')
+        return result
+    }, [paymentGrid, cobrosSearch, cobrosFilter])
+
+    const gridPaidTotal = paymentGrid.filter(g => g.status === 'paid').reduce((sum, g) => sum + (g.amount || 0), 0)
+    const gridPendingTotal = paymentGrid.filter(g => g.status !== 'paid').reduce((sum, g) => sum + (g.amount || 0), 0)
+    const gridTotalAmount = gridPaidTotal + gridPendingTotal
+    const gridPaidPct = gridTotalAmount > 0 ? Math.round((gridPaidTotal / gridTotalAmount) * 100) : 0
+
+    async function handleMarkPaid(paymentId: string | null, membershipId: string) {
+        if (!paymentId) {
+            // No payment record exists, mark membership directly
+            setMarkingId(membershipId)
+            const res = await updatePaymentStatus(membershipId, 'paid', '')
+            if (res.success) {
+                toast.success("Marcado como pagado")
+                fetchPaymentGrid()
+                fetchAll()
+            } else toast.error(res.error || 'Error')
+            setMarkingId(null)
+            return
+        }
+        setMarkingId(paymentId)
+        const res = await markPaymentAsPaid(paymentId)
+        if (res.success) {
+            toast.success("Cobro registrado")
+            fetchPaymentGrid()
+            fetchAll()
+        } else toast.error(res.error || 'Error')
+        setMarkingId(null)
+    }
+
     async function handleCreateExpense(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault()
         setSavingExpense(true)
@@ -101,7 +150,28 @@ export default function FinancePage() {
             toast.success("Gasto registrado")
             setExpenseDialogOpen(false)
             fetchExpenses()
-            fetchData() // Refresh KPIs
+            fetchAll()
+        } else toast.error(res.error)
+    }
+
+    async function handleManualPayment(e: React.FormEvent<HTMLFormElement>) {
+        e.preventDefault()
+        setSavingManual(true)
+        const fd = new FormData(e.currentTarget)
+        const res = await recordManualPayment({
+            child_id: fd.get('child_id') as string || '',
+            amount: parseFloat(fd.get('amount') as string),
+            type: fd.get('type') as string,
+            ref_id: fd.get('ref_id') as string || 'manual',
+            method: fd.get('method') as string,
+            description: fd.get('description') as string,
+        })
+        setSavingManual(false)
+        if (res.success) {
+            toast.success("Pago registrado correctamente")
+            setManualPaymentOpen(false)
+            fetchAll()
+            if (activeTab === 'cobros') fetchPaymentGrid()
         } else toast.error(res.error)
     }
 
@@ -111,26 +181,19 @@ export default function FinancePage() {
         if (res.success) {
             setExpenses(prev => prev.filter(e => e.id !== id))
             toast.success("Gasto eliminado")
-            fetchData()
+            fetchAll()
         } else toast.error(res.error)
-    }
-
-    async function handleMarkPaid(paymentId: string | null, membershipId: string) {
-        if (!paymentId) return
-        setMarkingId(paymentId)
-        const res = await markPaymentAsPaid(paymentId)
-        if (res.success) {
-            toast.success("Marcado como pagado")
-            fetchPaymentGrid()
-            fetchData()
-        } else toast.error(res.error || 'Error')
-        setMarkingId(null)
     }
 
     function exportCSV() {
         let csv = 'Concepto,Tipo,Fecha,Estado,Importe\n'
         transactions.forEach(tx => {
             csv += `"${tx.concept}","${tx.type}","${new Date(tx.date).toLocaleDateString()}","${tx.status}","${tx.amount}"\n`
+        })
+        // Add expenses
+        csv += '\nGASTOS\nConcepto,Categoría,Fecha,Importe\n'
+        expenses.forEach(e => {
+            csv += `"${e.concept}","${e.category}","${new Date(e.date).toLocaleDateString()}","${e.amount}"\n`
         })
         const blob = new Blob([csv], { type: 'text/csv' })
         const url = URL.createObjectURL(blob)
@@ -143,14 +206,11 @@ export default function FinancePage() {
     }
 
     const fmt = (n: number) => n.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    
-    // Expense totals
     const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0)
-    const gridPaidTotal = paymentGrid.filter(g => g.status === 'paid').reduce((sum, g) => sum + g.amount, 0)
-    const gridPendingTotal = paymentGrid.filter(g => g.status === 'pending').reduce((sum, g) => sum + g.amount, 0)
 
     return (
         <div className="space-y-6">
+            {/* Header */}
             <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
                 <div>
                     <h1 className="text-3xl font-black tracking-tight text-slate-900 flex items-center gap-3">
@@ -158,24 +218,31 @@ export default function FinancePage() {
                         Control Financiero
                     </h1>
                     <p className="text-muted-foreground font-medium text-sm flex items-center gap-2">
-                        <Calendar className="h-4 w-4" /> Datos en tiempo real
+                        <Calendar className="h-4 w-4" /> Gestión centralizada de cobros, pagos y gastos
                     </p>
                 </div>
-                <Button onClick={exportCSV} variant="outline" className="bg-white border-slate-200 shadow-sm">
-                    <Download className="mr-2 h-4 w-4" /> Exportar CSV
-                </Button>
+                <div className="flex gap-2">
+                    <Button onClick={() => setManualPaymentOpen(true)} className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold shadow-md">
+                        <Plus className="mr-2 h-4 w-4" /> Registrar Pago
+                    </Button>
+                    <Button onClick={exportCSV} variant="outline" className="bg-white border-slate-200 shadow-sm">
+                        <Download className="mr-2 h-4 w-4" /> CSV
+                    </Button>
+                </div>
             </div>
 
             {/* KPI ROW */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <KpiFinanceCard label="Ingresos Totales" value={loading ? '...' : `${fmt(kpis?.totalRevenue || 0)}€`}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+                <KpiCard label="Ingresos Totales" value={loading ? '...' : `${fmt(kpis?.totalRevenue || 0)}€`}
                     subtitle="Confirmados" color="yellow" icon={<DollarSign className="h-4 w-4" />} />
-                <KpiFinanceCard label="Pagos Pendientes" value={loading ? '...' : `${fmt(kpis?.pendingPayments || 0)}€`}
+                <KpiCard label="Pendiente Cobro" value={loading ? '...' : `${fmt(kpis?.pendingPayments || 0)}€`}
                     subtitle="Por cobrar" color="amber" icon={<Wallet className="h-4 w-4" />} />
-                <KpiFinanceCard label="Alumnos Activos" value={loading ? '...' : String(kpis?.activeStudents || 0)}
-                    subtitle="Con cuota activa" color="blue" icon={<Users className="h-4 w-4" />} />
-                <KpiFinanceCard label="Gastos del Mes" value={loading ? '...' : `${fmt(totalExpenses)}€`}
-                    subtitle="Registrados" color="red" icon={<FileText className="h-4 w-4" />} />
+                <KpiCard label="Alumnos Activos" value={loading ? '...' : String(kpis?.activeStudents || 0)}
+                    subtitle="Con membresía" color="blue" icon={<Users className="h-4 w-4" />} />
+                <KpiCard label="Gastos" value={loading ? '...' : `${fmt(totalExpenses)}€`}
+                    subtitle="Este período" color="red" icon={<FileText className="h-4 w-4" />} />
+                <KpiCard label="Beneficio Neto" value={loading ? '...' : `${fmt((kpis?.totalRevenue || 0) - totalExpenses)}€`}
+                    subtitle="Ingresos - Gastos" color="green" icon={<TrendingUp className="h-4 w-4" />} />
             </div>
 
             {/* TABS */}
@@ -192,7 +259,7 @@ export default function FinancePage() {
                     </TabsTrigger>
                 </TabsList>
 
-                {/* TAB: Vista General */}
+                {/* ══════════════ TAB: Vista General ══════════════ */}
                 <TabsContent value="general" className="space-y-6">
                     {/* Revenue Breakdown */}
                     <div className="grid gap-6 lg:grid-cols-7">
@@ -225,9 +292,7 @@ export default function FinancePage() {
                                             )
                                         })}
                                         {kpis.revenueBySource.every(r => r.amount === 0) && (
-                                            <div className="text-center py-10 text-sm text-slate-400">
-                                                No hay ingresos registrados aún
-                                            </div>
+                                            <div className="text-center py-10 text-sm text-slate-400">No hay ingresos registrados aún</div>
                                         )}
                                     </div>
                                 )}
@@ -237,46 +302,38 @@ export default function FinancePage() {
                         <Card className="lg:col-span-2 border-none shadow-xl bg-slate-900 text-white overflow-hidden relative">
                             <div className="absolute top-[-20px] right-[-20px] h-40 w-40 rounded-full bg-yellow-500/10 blur-3xl" />
                             <CardHeader>
-                                <CardTitle className="text-lg font-bold">Resumen Rápido</CardTitle>
-                                <CardDescription className="text-slate-400">Estado financiero actual</CardDescription>
+                                <CardTitle className="text-lg font-bold">Resumen</CardTitle>
                             </CardHeader>
-                            <CardContent className="space-y-5 pt-4">
+                            <CardContent className="space-y-5 pt-2">
                                 <div className="space-y-2">
                                     <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-slate-400">
-                                        <span>Cobrado</span>
-                                        <span className="text-green-400">{loading ? '...' : `${fmt(kpis?.totalRevenue || 0)}€`}</span>
+                                        <span>Cobrado</span><span className="text-green-400">{loading ? '...' : `${fmt(kpis?.totalRevenue || 0)}€`}</span>
                                     </div>
                                     <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden">
                                         <div className="h-full bg-green-400 rounded-full" style={{
-                                            width: `${kpis && (kpis.totalRevenue + kpis.pendingPayments) > 0 ?
-                                                Math.round((kpis.totalRevenue / (kpis.totalRevenue + kpis.pendingPayments)) * 100) : 0}%`
+                                            width: `${kpis && (kpis.totalRevenue + kpis.pendingPayments) > 0 ? Math.round((kpis.totalRevenue / (kpis.totalRevenue + kpis.pendingPayments)) * 100) : 0}%`
                                         }} />
                                     </div>
                                 </div>
                                 <div className="space-y-2">
                                     <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-slate-400">
-                                        <span>Pendiente</span>
-                                        <span className="text-amber-400">{loading ? '...' : `${fmt(kpis?.pendingPayments || 0)}€`}</span>
+                                        <span>Pendiente</span><span className="text-amber-400">{loading ? '...' : `${fmt(kpis?.pendingPayments || 0)}€`}</span>
                                     </div>
                                     <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden">
                                         <div className="h-full bg-amber-400 rounded-full" style={{
-                                            width: `${kpis && (kpis.totalRevenue + kpis.pendingPayments) > 0 ?
-                                                Math.round((kpis.pendingPayments / (kpis.totalRevenue + kpis.pendingPayments)) * 100) : 0}%`
+                                            width: `${kpis && (kpis.totalRevenue + kpis.pendingPayments) > 0 ? Math.round((kpis.pendingPayments / (kpis.totalRevenue + kpis.pendingPayments)) * 100) : 0}%`
                                         }} />
                                     </div>
                                 </div>
                                 <div className="space-y-2">
                                     <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-slate-400">
-                                        <span>Gastos</span>
-                                        <span className="text-red-400">{`${fmt(totalExpenses)}€`}</span>
+                                        <span>Gastos</span><span className="text-red-400">{fmt(totalExpenses)}€</span>
                                     </div>
                                 </div>
                                 <div className="pt-3 border-t border-white/10">
                                     <div className="flex justify-between font-bold">
                                         <span className="text-slate-300">Beneficio Neto</span>
-                                        <span className="text-yellow-400 text-lg font-black">
-                                            {fmt((kpis?.totalRevenue || 0) - totalExpenses)}€
-                                        </span>
+                                        <span className="text-yellow-400 text-lg font-black">{fmt((kpis?.totalRevenue || 0) - totalExpenses)}€</span>
                                     </div>
                                 </div>
                             </CardContent>
@@ -304,94 +361,133 @@ export default function FinancePage() {
                                 </TableHeader>
                                 <TableBody>
                                     {loading ? (
-                                        <TableRow>
-                                            <TableCell colSpan={5} className="h-32 text-center text-muted-foreground animate-pulse">Cargando movimientos...</TableCell>
-                                        </TableRow>
+                                        <TableRow><TableCell colSpan={5} className="h-32 text-center text-muted-foreground animate-pulse">Cargando...</TableCell></TableRow>
                                     ) : transactions.length === 0 ? (
-                                        <TableRow>
-                                            <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">No hay movimientos registrados</TableCell>
-                                        </TableRow>
-                                    ) : (
-                                        transactions.map((tx) => {
-                                            const typeCfg = TYPE_CFG[tx.type] || TYPE_CFG.pago
-                                            const statusCfg = STATUS_CFG[tx.status] || STATUS_CFG.pending
-                                            return (
-                                                <TableRow key={`${tx.type}-${tx.id}`} className="hover:bg-slate-50/50 transition-colors border-b border-slate-50 group">
-                                                    <TableCell className="py-3.5 pl-6">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className={`h-9 w-9 rounded-full flex items-center justify-center font-bold text-sm
-                                                                ${tx.type === 'cuota' ? 'bg-blue-50 text-blue-500' :
-                                                                tx.type === 'campus' ? 'bg-green-50 text-green-500' :
-                                                                tx.type === 'torneo' ? 'bg-yellow-50 text-yellow-500' :
-                                                                tx.type === 'tienda' ? 'bg-purple-50 text-purple-500' :
-                                                                'bg-slate-50 text-slate-400'}`}>
-                                                                {typeCfg.icon}
-                                                            </div>
-                                                            <div>
-                                                                <div className="font-bold text-sm text-slate-900 max-w-[250px] truncate">{tx.concept}</div>
-                                                                <div className="text-[10px] text-slate-400">{tx.id.slice(0, 8)}</div>
-                                                            </div>
+                                        <TableRow><TableCell colSpan={5} className="h-32 text-center text-muted-foreground">No hay movimientos</TableCell></TableRow>
+                                    ) : transactions.map((tx) => {
+                                        const typeCfg = TYPE_CFG[tx.type] || TYPE_CFG.pago
+                                        const statusCfg = STATUS_CFG[tx.status] || STATUS_CFG.pending
+                                        return (
+                                            <TableRow key={`${tx.type}-${tx.id}`} className="hover:bg-slate-50/50 transition-colors border-b border-slate-50">
+                                                <TableCell className="py-3.5 pl-6">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`h-9 w-9 rounded-full flex items-center justify-center font-bold text-sm
+                                                            ${tx.type === 'cuota' ? 'bg-blue-50 text-blue-500' :
+                                                            tx.type === 'campus' ? 'bg-green-50 text-green-500' :
+                                                            tx.type === 'torneo' ? 'bg-yellow-50 text-yellow-500' :
+                                                            tx.type === 'tienda' ? 'bg-purple-50 text-purple-500' :
+                                                            'bg-slate-50 text-slate-400'}`}>
+                                                            {typeCfg.icon}
                                                         </div>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Badge className={`${typeCfg.color} border-none font-bold text-[10px] uppercase`}>
-                                                            {typeCfg.label}
-                                                        </Badge>
-                                                    </TableCell>
-                                                    <TableCell className="text-xs font-medium text-slate-500">
-                                                        {new Date(tx.date).toLocaleDateString('es', { day: 'numeric', month: 'short' })}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Badge className={`${statusCfg.color} border-none font-bold text-[10px] uppercase`}>
-                                                            {statusCfg.label}
-                                                        </Badge>
-                                                    </TableCell>
-                                                    <TableCell className="text-right py-3.5 pr-6">
-                                                        <span className={`text-base font-black ${tx.status === 'paid' ? 'text-slate-900' : tx.status === 'pending' ? 'text-amber-600' : 'text-slate-300 line-through'}`}>
-                                                            {tx.amount.toLocaleString('es', { minimumFractionDigits: 2 })}€
-                                                        </span>
-                                                    </TableCell>
-                                                </TableRow>
-                                            )
-                                        })
-                                    )}
+                                                        <div>
+                                                            <div className="font-bold text-sm text-slate-900 max-w-[250px] truncate">{tx.concept}</div>
+                                                            <div className="text-[10px] text-slate-400">{tx.id.slice(0, 8)}</div>
+                                                        </div>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell><Badge className={`${typeCfg.color} border-none font-bold text-[10px] uppercase`}>{typeCfg.label}</Badge></TableCell>
+                                                <TableCell className="text-xs font-medium text-slate-500">{new Date(tx.date).toLocaleDateString('es', { day: 'numeric', month: 'short' })}</TableCell>
+                                                <TableCell><Badge className={`${statusCfg.color} border-none font-bold text-[10px] uppercase`}>{statusCfg.label}</Badge></TableCell>
+                                                <TableCell className="text-right py-3.5 pr-6">
+                                                    <span className={`text-base font-black ${tx.status === 'paid' ? 'text-slate-900' : tx.status === 'pending' ? 'text-amber-600' : 'text-slate-300 line-through'}`}>
+                                                        {tx.amount.toLocaleString('es', { minimumFractionDigits: 2 })}€
+                                                    </span>
+                                                </TableCell>
+                                            </TableRow>
+                                        )
+                                    })}
                                 </TableBody>
                             </Table>
                         </CardContent>
                     </Card>
                 </TabsContent>
 
-                {/* TAB: Cobros del Mes */}
+                {/* ══════════════ TAB: Cobros del Mes ══════════════ */}
                 <TabsContent value="cobros" className="space-y-4">
-                    {/* Month Picker */}
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => navigateMonth(-1)}>
-                                <ChevronLeft className="h-4 w-4" />
-                            </Button>
-                            <span className="text-lg font-black text-slate-900 capitalize min-w-[180px] text-center">{monthLabel}</span>
-                            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => navigateMonth(1)}>
-                                <ChevronRight className="h-4 w-4" />
+                    {/* Month nav + % bar */}
+                    <div className="flex flex-col gap-4">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => navigateMonth(-1)}>
+                                    <ChevronLeft className="h-4 w-4" />
+                                </Button>
+                                <span className="text-lg font-black text-slate-900 capitalize min-w-[180px] text-center">{monthLabel}</span>
+                                <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => navigateMonth(1)}>
+                                    <ChevronRight className="h-4 w-4" />
+                                </Button>
+                            </div>
+                            <Button onClick={() => setManualPaymentOpen(true)} className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold">
+                                <Plus className="mr-2 h-4 w-4" /> Registrar Pago Manual
                             </Button>
                         </div>
-                        <div className="flex gap-4">
-                            <Badge className="bg-green-100 text-green-700 border-none text-sm px-4 py-1.5">
-                                ✓ Cobrado: {fmt(gridPaidTotal)}€
-                            </Badge>
-                            <Badge className="bg-amber-100 text-amber-700 border-none text-sm px-4 py-1.5">
-                                ⏳ Pendiente: {fmt(gridPendingTotal)}€
-                            </Badge>
+
+                        {/* Collection Progress */}
+                        <Card className="border-none shadow-lg bg-white p-4">
+                            <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-4">
+                                    <Badge className="bg-green-100 text-green-700 border-none text-sm px-4 py-1.5">
+                                        ✓ Cobrado: {fmt(gridPaidTotal)}€
+                                    </Badge>
+                                    <Badge className="bg-amber-100 text-amber-700 border-none text-sm px-4 py-1.5">
+                                        ⏳ Pendiente: {fmt(gridPendingTotal)}€
+                                    </Badge>
+                                </div>
+                                <span className="text-2xl font-black text-slate-900">{gridPaidPct}%</span>
+                            </div>
+                            <div className="h-4 w-full bg-slate-100 rounded-full overflow-hidden">
+                                <div className="h-full bg-gradient-to-r from-green-400 to-green-500 rounded-full transition-all duration-700" style={{ width: `${gridPaidPct}%` }} />
+                            </div>
+                            <p className="text-[10px] text-slate-400 mt-1">
+                                {paymentGrid.filter(g => g.status === 'paid').length} de {paymentGrid.length} alumnos han pagado este mes
+                            </p>
+                        </Card>
+
+                        {/* Search + Filters */}
+                        <div className="flex items-center gap-3">
+                            <div className="relative flex-1">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                <Input
+                                    placeholder="Buscar alumno por nombre..."
+                                    value={cobrosSearch}
+                                    onChange={e => setCobrosSearch(e.target.value)}
+                                    className="pl-10 bg-white border-slate-200"
+                                />
+                                {cobrosSearch && (
+                                    <button onClick={() => setCobrosSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2">
+                                        <X className="h-4 w-4 text-slate-400" />
+                                    </button>
+                                )}
+                            </div>
+                            <div className="flex rounded-lg border border-slate-200 bg-white overflow-hidden">
+                                {[
+                                    { key: 'all' as const, label: 'Todos' },
+                                    { key: 'pending' as const, label: '⏳ Pendientes' },
+                                    { key: 'paid' as const, label: '✓ Cobrados' },
+                                ].map(f => (
+                                    <button
+                                        key={f.key}
+                                        onClick={() => setCobrosFilter(f.key)}
+                                        className={`px-4 py-2 text-xs font-bold transition-all ${cobrosFilter === f.key ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-50'}`}
+                                    >
+                                        {f.label}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     </div>
 
                     {/* Payment Grid */}
                     <Card className="border-none shadow-xl bg-white overflow-hidden">
                         <CardContent className="p-0">
-                            {paymentGrid.length === 0 ? (
+                            {filteredGrid.length === 0 ? (
                                 <div className="text-center py-16 text-slate-400">
                                     <Euro className="h-12 w-12 mx-auto mb-3 text-slate-200" />
-                                    <p className="font-bold">No hay cobros para este mes</p>
-                                    <p className="text-xs">Inscribe alumnos en la academia para generar cobros automáticos</p>
+                                    <p className="font-bold">{paymentGrid.length === 0 ? 'No hay cobros para este mes' : 'No se encontraron resultados'}</p>
+                                    <p className="text-xs">
+                                        {paymentGrid.length === 0
+                                            ? 'Inscribe alumnos en Academia para generar cobros automáticos'
+                                            : 'Prueba con otros filtros o búsqueda'}
+                                    </p>
                                 </div>
                             ) : (
                                 <Table>
@@ -407,8 +503,8 @@ export default function FinancePage() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {paymentGrid.map((row, i) => (
-                                            <TableRow key={i} className={`border-b border-slate-50 ${row.status === 'paid' ? 'bg-green-50/20' : ''}`}>
+                                        {filteredGrid.map((row, i) => (
+                                            <TableRow key={i} className={`border-b border-slate-50 hover:bg-slate-50/50 transition-colors ${row.status === 'paid' ? 'bg-green-50/20' : ''}`}>
                                                 <TableCell className="pl-6">
                                                     <div className="flex items-center gap-2">
                                                         <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold ${row.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
@@ -421,37 +517,29 @@ export default function FinancePage() {
                                                 <TableCell className="text-xs font-medium text-slate-700">{row.planName || '—'}</TableCell>
                                                 <TableCell>
                                                     <span className="text-xs">
-                                                        {row.paymentMethod === 'efectivo' ? '💵' : row.paymentMethod === 'transferencia' ? '🏦' : '💳'} {row.paymentMethod}
+                                                        {row.paymentMethod === 'efectivo' ? '💵' : row.paymentMethod === 'transferencia' ? '🏦' : '💳'} {row.paymentMethod || 'N/D'}
                                                     </span>
                                                 </TableCell>
-                                                <TableCell>
-                                                    <span className="font-black text-sm text-slate-900">{row.amount}€</span>
-                                                </TableCell>
+                                                <TableCell><span className="font-black text-sm text-slate-900">{row.amount}€</span></TableCell>
                                                 <TableCell>
                                                     {row.status === 'paid' ? (
-                                                        <Badge className="bg-green-100 text-green-700 border-none text-[10px]">
-                                                            <CheckCircle2 className="h-3 w-3 mr-1" /> Pagado
-                                                        </Badge>
+                                                        <Badge className="bg-green-100 text-green-700 border-none text-[10px]"><CheckCircle2 className="h-3 w-3 mr-1" /> Pagado</Badge>
                                                     ) : (
-                                                        <Badge className="bg-amber-100 text-amber-700 border-none text-[10px]">
-                                                            <AlertCircle className="h-3 w-3 mr-1" /> Pendiente
-                                                        </Badge>
+                                                        <Badge className="bg-amber-100 text-amber-700 border-none text-[10px]"><AlertCircle className="h-3 w-3 mr-1" /> Pendiente</Badge>
                                                     )}
                                                 </TableCell>
                                                 <TableCell className="text-right pr-6">
-                                                    {row.status !== 'paid' && row.paymentId && (
+                                                    {row.status !== 'paid' ? (
                                                         <Button
                                                             size="sm"
-                                                            variant="ghost"
-                                                            className="text-xs text-green-600 hover:bg-green-50"
-                                                            disabled={markingId === row.paymentId}
+                                                            className="text-xs bg-green-500 hover:bg-green-600 text-white font-bold h-8"
+                                                            disabled={markingId === (row.paymentId || row.membershipId)}
                                                             onClick={() => handleMarkPaid(row.paymentId, row.membershipId)}
                                                         >
-                                                            {markingId === row.paymentId ? <Loader2 className="h-3 w-3 animate-spin" /> : '✓ Cobrar'}
+                                                            {markingId === (row.paymentId || row.membershipId) ? <Loader2 className="h-3 w-3 animate-spin" /> : <>✓ Cobrar</>}
                                                         </Button>
-                                                    )}
-                                                    {row.status === 'paid' && row.paidAt && (
-                                                        <span className="text-[10px] text-green-500">{new Date(row.paidAt).toLocaleDateString()}</span>
+                                                    ) : (
+                                                        <span className="text-[10px] text-green-500">{row.paidAt ? new Date(row.paidAt).toLocaleDateString() : 'Cobrado'}</span>
                                                     )}
                                                 </TableCell>
                                             </TableRow>
@@ -463,17 +551,13 @@ export default function FinancePage() {
                     </Card>
                 </TabsContent>
 
-                {/* TAB: Gastos */}
+                {/* ══════════════ TAB: Gastos ══════════════ */}
                 <TabsContent value="gastos" className="space-y-4">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => navigateMonth(-1)}>
-                                <ChevronLeft className="h-4 w-4" />
-                            </Button>
+                            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => navigateMonth(-1)}><ChevronLeft className="h-4 w-4" /></Button>
                             <span className="text-lg font-black text-slate-900 capitalize min-w-[180px] text-center">{monthLabel}</span>
-                            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => navigateMonth(1)}>
-                                <ChevronRight className="h-4 w-4" />
-                            </Button>
+                            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => navigateMonth(1)}><ChevronRight className="h-4 w-4" /></Button>
                         </div>
                         <div className="flex items-center gap-4">
                             <Badge className="bg-red-100 text-red-700 border-none text-sm px-4 py-1.5">Total: {fmt(totalExpenses)}€</Badge>
@@ -489,7 +573,7 @@ export default function FinancePage() {
                                 <div className="text-center py-16 text-slate-400">
                                     <FileText className="h-12 w-12 mx-auto mb-3 text-slate-200" />
                                     <p className="font-bold">No hay gastos este mes</p>
-                                    <p className="text-xs">Registra tus gastos para un control financiero completo</p>
+                                    <p className="text-xs">Registra gastos para un control financiero completo</p>
                                 </div>
                             ) : (
                                 <Table>
@@ -507,9 +591,7 @@ export default function FinancePage() {
                                         {expenses.map(exp => (
                                             <TableRow key={exp.id} className="border-b border-slate-50 hover:bg-red-50/20 transition-colors group">
                                                 <TableCell className="pl-6 font-bold text-sm text-slate-900">{exp.concept}</TableCell>
-                                                <TableCell>
-                                                    <Badge className="bg-slate-100 text-slate-600 border-none text-[10px] uppercase">{exp.category}</Badge>
-                                                </TableCell>
+                                                <TableCell><Badge className="bg-slate-100 text-slate-600 border-none text-[10px] uppercase">{exp.category}</Badge></TableCell>
                                                 <TableCell className="text-xs text-slate-500">{new Date(exp.date).toLocaleDateString()}</TableCell>
                                                 <TableCell className="text-xs text-slate-400 max-w-[200px] truncate">{exp.notes || '—'}</TableCell>
                                                 <TableCell className="text-right font-black text-red-600">{exp.amount}€</TableCell>
@@ -528,7 +610,60 @@ export default function FinancePage() {
                 </TabsContent>
             </Tabs>
 
-            {/* Expense Dialog */}
+            {/* ══════════════ DIALOG: Registrar Pago Manual ══════════════ */}
+            <Dialog open={manualPaymentOpen} onOpenChange={setManualPaymentOpen}>
+                <DialogContent className="p-0 border-0 overflow-hidden bg-slate-50 max-w-md sm:rounded-2xl shadow-2xl">
+                    <div className="bg-yellow-500 p-5 flex flex-col items-center">
+                        <div className="h-12 w-12 rounded-full bg-black/10 flex items-center justify-center mb-2">
+                            <CreditCard className="h-6 w-6 text-black" />
+                        </div>
+                        <DialogTitle className="text-lg font-black text-black tracking-tight uppercase">
+                            Registrar Pago Manual
+                        </DialogTitle>
+                    </div>
+                    <form onSubmit={handleManualPayment} className="p-5 space-y-4">
+                        <div className="space-y-2">
+                            <Label className="text-slate-700 font-bold uppercase text-xs tracking-wider">Descripción *</Label>
+                            <Input name="description" required placeholder="Ej. Cuota marzo 2026 - Juan García" className="bg-white" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-2">
+                                <Label className="text-slate-700 font-bold uppercase text-[10px] tracking-wider">Importe (€) *</Label>
+                                <Input name="amount" type="number" step="0.01" required placeholder="40.00" className="bg-white" />
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="text-slate-700 font-bold uppercase text-[10px] tracking-wider">Tipo</Label>
+                                <select name="type" className="flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm">
+                                    <option value="academy">🎓 Academia</option>
+                                    <option value="campus">🏕️ Campus</option>
+                                    <option value="tournament">🏆 Torneo</option>
+                                    <option value="shop">🛍️ Tienda</option>
+                                    <option value="other">📦 Otro</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-slate-700 font-bold uppercase text-[10px] tracking-wider">Método de Pago</Label>
+                            <select name="method" className="flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm">
+                                <option value="efectivo">💵 Efectivo</option>
+                                <option value="transferencia">🏦 Transferencia</option>
+                                <option value="tarjeta">💳 Tarjeta</option>
+                            </select>
+                        </div>
+                        <input type="hidden" name="child_id" value="" />
+                        <input type="hidden" name="ref_id" value="manual" />
+                        <div className="pt-3 flex justify-end gap-3 border-t">
+                            <Button type="button" variant="ghost" onClick={() => setManualPaymentOpen(false)}>Cancelar</Button>
+                            <Button type="submit" disabled={savingManual} className="bg-black hover:bg-slate-800 text-white font-bold px-6">
+                                {savingManual && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                                Registrar Pago
+                            </Button>
+                        </div>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* ══════════════ DIALOG: Registrar Gasto ══════════════ */}
             <Dialog open={expenseDialogOpen} onOpenChange={setExpenseDialogOpen}>
                 <DialogContent className="p-0 border-0 overflow-hidden bg-slate-50 max-w-md sm:rounded-2xl shadow-2xl">
                     <div className="bg-red-500 p-5 flex flex-col items-center">
@@ -542,7 +677,7 @@ export default function FinancePage() {
                     <form onSubmit={handleCreateExpense} className="p-5 space-y-4">
                         <div className="space-y-2">
                             <Label className="text-slate-700 font-bold uppercase text-xs tracking-wider">Concepto *</Label>
-                            <Input name="concept" required placeholder="Ej. Alquiler campo, Material deportivo..." className="bg-white" />
+                            <Input name="concept" required placeholder="Ej. Alquiler campo, Material..." className="bg-white" />
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-2">
@@ -585,31 +720,27 @@ export default function FinancePage() {
 }
 
 // ─── KPI Card ───
-function KpiFinanceCard({ label, value, subtitle, color, icon }: {
+function KpiCard({ label, value, subtitle, color, icon }: {
     label: string, value: string, subtitle: string, color: string, icon: React.ReactNode
 }) {
-    const colors: Record<string, { bar: string, bg: string, text: string, icon: string }> = {
-        yellow: { bar: 'bg-yellow-500', bg: 'bg-yellow-50', text: 'text-yellow-500', icon: 'text-yellow-500' },
-        amber: { bar: 'bg-amber-500', bg: 'bg-amber-50', text: 'text-amber-500', icon: 'text-amber-500' },
-        blue: { bar: 'bg-blue-500', bg: 'bg-blue-50', text: 'text-blue-500', icon: 'text-blue-500' },
-        red: { bar: 'bg-red-500', bg: 'bg-red-50', text: 'text-red-500', icon: 'text-red-500' },
+    const colors: Record<string, { bar: string, bg: string, text: string }> = {
+        yellow: { bar: 'bg-yellow-500', bg: 'bg-yellow-50', text: 'text-yellow-500' },
+        amber: { bar: 'bg-amber-500', bg: 'bg-amber-50', text: 'text-amber-500' },
+        blue: { bar: 'bg-blue-500', bg: 'bg-blue-50', text: 'text-blue-500' },
+        red: { bar: 'bg-red-500', bg: 'bg-red-50', text: 'text-red-500' },
+        green: { bar: 'bg-green-500', bg: 'bg-green-50', text: 'text-green-500' },
     }
     const c = colors[color] || colors.yellow
-
     return (
         <Card className="border-none shadow-lg bg-white overflow-hidden group">
             <div className={`h-1.5 ${c.bar}`} />
             <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{label}</CardTitle>
-                <div className={`h-8 w-8 rounded-lg ${c.bg} flex items-center justify-center ${c.icon} group-hover:scale-110 transition-transform`}>
-                    {icon}
-                </div>
+                <div className={`h-8 w-8 rounded-lg ${c.bg} flex items-center justify-center ${c.text} group-hover:scale-110 transition-transform`}>{icon}</div>
             </CardHeader>
             <CardContent>
-                <div className="text-3xl font-black text-slate-900">{value}</div>
-                <div className={`flex items-center gap-1 mt-1 font-bold text-xs ${c.text}`}>
-                    {subtitle}
-                </div>
+                <div className="text-2xl font-black text-slate-900">{value}</div>
+                <div className={`flex items-center gap-1 mt-1 font-bold text-xs ${c.text}`}>{subtitle}</div>
             </CardContent>
         </Card>
     )
