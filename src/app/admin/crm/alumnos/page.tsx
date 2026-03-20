@@ -19,6 +19,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 import { CreateStudentDialog } from "@/components/admin/create-student-dialog"
+import { deleteStudent } from "@/app/actions/students"
+import { toast } from "sonner"
 
 export default function CRMMasterListPage() {
     const [students, setStudents] = useState<any[]>([])
@@ -58,6 +60,20 @@ export default function CRMMasterListPage() {
         const matchesYear = selectedYear === 'all' || s.birth_year?.toString() === selectedYear
         return matchesSearch && matchesCategory && matchesYear
     })
+
+    const handleArchive = async (id: string, name: string) => {
+        if (!confirm(`¿Estás seguro de que quieres eliminar a ${name}? Esta acción no se puede deshacer.`)) return
+        
+        setLoading(true)
+        const result = await deleteStudent(id)
+        if (result.success) {
+            toast.success("Alumno eliminado correctamente")
+            fetchStudents()
+        } else {
+            toast.error("Error al eliminar: " + result.error)
+            setLoading(false)
+        }
+    }
 
     return (
         <div className="space-y-6">
@@ -198,9 +214,19 @@ export default function CRMMasterListPage() {
                                                                 Ver Perfil 360º
                                                             </DropdownMenuItem>
                                                         </Link>
-                                                        <DropdownMenuItem>Editar Datos</DropdownMenuItem>
+                                                        <Link href={`/admin/crm/alumnos/${student.id}?edit=true`}>
+                                                            <DropdownMenuItem>Editar Datos</DropdownMenuItem>
+                                                        </Link>
                                                         <DropdownMenuSeparator />
-                                                        <DropdownMenuItem className="text-red-600">Archivar</DropdownMenuItem>
+                                                        <DropdownMenuItem 
+                                                            className="text-red-600"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                handleArchive(student.id, student.full_name)
+                                                            }}
+                                                        >
+                                                            Archivar
+                                                        </DropdownMenuItem>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
                                             </td>

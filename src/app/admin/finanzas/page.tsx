@@ -1,279 +1,297 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
-    DollarSign,
-    TrendingUp,
-    ArrowUpRight,
-    ArrowDownRight,
-    CreditCard,
-    Download,
-    Plus,
-    Calendar,
-    Filter,
-    ShoppingBag,
-    Wallet
+    DollarSign, TrendingUp, ArrowUpRight, Wallet, Download,
+    Calendar, ShoppingBag, GraduationCap, Tent, Trophy, CreditCard, Users
 } from "lucide-react"
-import { RevenueAreaChart } from "@/components/admin/revenue-area-chart"
+import { getFinanceKPIs, getFinanceTransactions, type FinanceTransaction, type FinanceKPIs } from "@/app/actions/finance"
+
+const TYPE_CFG: Record<string, { label: string, icon: React.ReactNode, color: string }> = {
+    'cuota': { label: 'Cuota', icon: <GraduationCap className="h-3.5 w-3.5" />, color: 'bg-blue-100 text-blue-700' },
+    'campus': { label: 'Campus', icon: <Tent className="h-3.5 w-3.5" />, color: 'bg-green-100 text-green-700' },
+    'torneo': { label: 'Torneo', icon: <Trophy className="h-3.5 w-3.5" />, color: 'bg-yellow-100 text-yellow-700' },
+    'tienda': { label: 'Tienda', icon: <ShoppingBag className="h-3.5 w-3.5" />, color: 'bg-purple-100 text-purple-700' },
+    'pago': { label: 'Pago', icon: <CreditCard className="h-3.5 w-3.5" />, color: 'bg-slate-100 text-slate-700' },
+}
+
+const STATUS_CFG: Record<string, { label: string, color: string }> = {
+    'paid': { label: 'Cobrado', color: 'bg-green-100 text-green-700' },
+    'pending': { label: 'Pendiente', color: 'bg-amber-100 text-amber-700' },
+    'cancelled': { label: 'Cancelado', color: 'bg-red-100 text-red-700' },
+}
 
 export default function FinancePage() {
-    const [stats, setStats] = useState({
-        totalRevenue: "12,450.00 €",
-        pendingPayments: "1,200.00 €",
-        monthlyGrowth: "+12.5%",
-        activeSubscriptions: "142"
-    })
-
-    const [transactions, setTransactions] = useState<any[]>([])
+    const [kpis, setKpis] = useState<FinanceKPIs | null>(null)
+    const [transactions, setTransactions] = useState<FinanceTransaction[]>([])
     const [loading, setLoading] = useState(true)
-    const supabase = createClient()
 
     useEffect(() => {
-        async function fetchFinanceData() {
+        async function fetchData() {
             setLoading(true)
-            // Fetch Orders from shop as a start
-            const { data: orders } = await supabase
-                .from('orders')
-                .select('*')
-                .order('created_at', { ascending: false })
-                .limit(10)
-
-            if (orders) {
-                setTransactions(orders)
-            } else {
-                // Mock transactions if DB is empty
-                setTransactions([
-                    { id: '1', customer_name: 'Jorge Messi', total_amount: 45.00, status: 'completed', created_at: new Date().toISOString(), type: 'Cuota' },
-                    { id: '2', customer_name: 'Mounir Nasraoui', total_amount: 120.00, status: 'completed', created_at: new Date(Date.now() - 86400000).toISOString(), type: 'Tienda' },
-                    { id: '3', customer_name: 'Pablo Páez', total_amount: 45.00, status: 'pending', created_at: new Date(Date.now() - 172800000).toISOString(), type: 'Cuota' },
-                    { id: '4', customer_name: 'Fernando González', total_amount: 85.00, status: 'completed', created_at: new Date(Date.now() - 259200000).toISOString(), type: 'Campus' },
-                ])
-            }
+            const [k, t] = await Promise.all([getFinanceKPIs(), getFinanceTransactions()])
+            setKpis(k)
+            setTransactions(t)
             setLoading(false)
         }
-        fetchFinanceData()
-    }, [supabase])
+        fetchData()
+    }, [])
+
+    const fmt = (n: number) => n.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
     return (
         <div className="space-y-6">
             <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-black tracking-tight text-slate-900">Control Financiero</h1>
+                    <h1 className="text-3xl font-black tracking-tight text-slate-900 flex items-center gap-3">
+                        <DollarSign className="h-8 w-8 text-yellow-500" />
+                        Control Financiero
+                    </h1>
                     <p className="text-muted-foreground font-medium text-sm flex items-center gap-2">
-                        <Calendar className="h-4 w-4" /> Periodo: Febrero 2026
+                        <Calendar className="h-4 w-4" /> Datos en tiempo real
                     </p>
                 </div>
-                <div className="flex gap-2">
-                    <Button variant="outline" className="bg-white border-slate-200 shadow-sm">
-                        <Download className="mr-2 h-4 w-4" /> Reporte Mensual
-                    </Button>
-                    <Button className="bg-indigo-600 hover:bg-indigo-700 shadow-md">
-                        <Plus className="mr-2 h-4 w-4" /> Registrar Cobro
-                    </Button>
-                </div>
+                <Button variant="outline" className="bg-white border-slate-200 shadow-sm">
+                    <Download className="mr-2 h-4 w-4" /> Exportar CSV
+                </Button>
             </div>
 
             {/* KPI ROW */}
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <Card className="border-none shadow-lg bg-white overflow-hidden group">
-                    <div className="h-1 bg-indigo-500"></div>
+                    <div className="h-1.5 bg-yellow-500" />
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-xs font-bold uppercase tracking-widest text-slate-500">Ingresos Totales</CardTitle>
-                        <div className="h-8 w-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 group-hover:scale-110 transition-transform">
+                        <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Ingresos Totales</CardTitle>
+                        <div className="h-8 w-8 rounded-lg bg-yellow-50 flex items-center justify-center text-yellow-500 group-hover:scale-110 transition-transform">
                             <DollarSign className="h-4 w-4" />
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-3xl font-black text-slate-900">{stats.totalRevenue}</div>
+                        <div className="text-3xl font-black text-slate-900">
+                            {loading ? '...' : `${fmt(kpis?.totalRevenue || 0)}€`}
+                        </div>
                         <div className="flex items-center gap-1 mt-1 font-bold text-xs text-green-600">
-                            <ArrowUpRight className="h-3 w-3" /> {stats.monthlyGrowth}
-                            <span className="text-slate-400 font-medium">vs mes anterior</span>
+                            <ArrowUpRight className="h-3 w-3" /> Confirmados
                         </div>
                     </CardContent>
                 </Card>
 
                 <Card className="border-none shadow-lg bg-white overflow-hidden group">
-                    <div className="h-1 bg-slate-900"></div>
+                    <div className="h-1.5 bg-amber-500" />
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-xs font-bold uppercase tracking-widest text-slate-500">Pagos Pendientes</CardTitle>
-                        <div className="h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-900 group-hover:scale-110 transition-transform">
+                        <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Pagos Pendientes</CardTitle>
+                        <div className="h-8 w-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-500 group-hover:scale-110 transition-transform">
                             <Wallet className="h-4 w-4" />
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-3xl font-black text-slate-900">{stats.pendingPayments}</div>
-                        <div className="flex items-center gap-1 mt-1 font-bold text-xs text-red-500">
-                            <TrendingUp className="h-3 w-3 rotate-180" /> 12 Facturas
-                            <span className="text-slate-400 font-medium"> sin cobrar</span>
+                        <div className="text-3xl font-black text-amber-600">
+                            {loading ? '...' : `${fmt(kpis?.pendingPayments || 0)}€`}
+                        </div>
+                        <div className="flex items-center gap-1 mt-1 font-bold text-xs text-amber-500">
+                            <TrendingUp className="h-3 w-3" /> Por cobrar
                         </div>
                     </CardContent>
                 </Card>
 
                 <Card className="border-none shadow-lg bg-white overflow-hidden group">
-                    <div className="h-1 bg-indigo-400/50"></div>
+                    <div className="h-1.5 bg-blue-500" />
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-xs font-bold uppercase tracking-widest text-slate-500">Suscripciones</CardTitle>
-                        <div className="h-8 w-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-600 group-hover:scale-110 transition-transform">
+                        <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Alumnos Activos</CardTitle>
+                        <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform">
+                            <Users className="h-4 w-4" />
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-3xl font-black text-slate-900">
+                            {loading ? '...' : kpis?.activeStudents || 0}
+                        </div>
+                        <div className="flex items-center gap-1 mt-1 font-bold text-xs text-blue-500">
+                            Con cuota activa
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card className="border-none shadow-lg bg-white overflow-hidden group">
+                    <div className="h-1.5 bg-slate-300" />
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Total Movimientos</CardTitle>
+                        <div className="h-8 w-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 group-hover:scale-110 transition-transform">
                             <CreditCard className="h-4 w-4" />
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-3xl font-black text-slate-900">{stats.activeSubscriptions}</div>
-                        <div className="flex items-center gap-1 mt-1 font-bold text-xs text-indigo-600">
-                            +4 nuevas <span className="text-slate-400 font-medium">esta semana</span>
+                        <div className="text-3xl font-black text-slate-900">
+                            {loading ? '...' : transactions.length}
                         </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="border-none shadow-lg bg-white overflow-hidden group">
-                    <div className="h-1 bg-green-500/50"></div>
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-xs font-bold uppercase tracking-widest text-slate-500">Ventas Tienda</CardTitle>
-                        <div className="h-8 w-8 rounded-lg bg-green-50 flex items-center justify-center text-green-600 group-hover:scale-110 transition-transform">
-                            <ShoppingBag className="h-4 w-4" />
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-3xl font-black text-slate-900">845,00 €</div>
-                        <div className="flex items-center gap-1 mt-1 font-bold text-xs text-green-600">
-                            <ArrowUpRight className="h-3 w-3" /> +18.4%
-                            <span className="text-slate-400 font-medium">en productos</span>
+                        <div className="flex items-center gap-1 mt-1 font-bold text-xs text-slate-400">
+                            Transacciones registradas
                         </div>
                     </CardContent>
                 </Card>
             </div>
 
-            {/* CHART SECTION */}
+            {/* REVENUE BY SOURCE */}
             <div className="grid gap-6 lg:grid-cols-7">
                 <Card className="lg:col-span-5 border-none shadow-xl bg-white">
-                    <CardHeader className="flex flex-row items-center justify-between border-b border-slate-50 pb-6">
-                        <div>
-                            <CardTitle className="text-xl font-bold italic tracking-tight underline decoration-indigo-200 underline-offset-4">Rendimiento Mensual</CardTitle>
-                            <CardDescription>Evolución de ingresos recurrentes y puntuales</CardDescription>
-                        </div>
-                        <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-lg border">
-                            <Button variant="ghost" size="sm" className="h-8 text-[10px] uppercase font-bold px-3 bg-white shadow-sm hover:bg-white">Ingresos</Button>
-                            <Button variant="ghost" size="sm" className="h-8 text-[10px] uppercase font-bold px-3 text-slate-400">Gastos</Button>
-                        </div>
+                    <CardHeader className="border-b border-slate-50 pb-4">
+                        <CardTitle className="text-lg font-bold">Desglose por Fuente</CardTitle>
+                        <CardDescription>Distribución de ingresos confirmados</CardDescription>
                     </CardHeader>
                     <CardContent className="pt-6">
-                        <RevenueAreaChart />
+                        {kpis && (
+                            <div className="space-y-4">
+                                {kpis.revenueBySource.filter(r => r.amount > 0).map((source) => {
+                                    const total = kpis.totalRevenue || 1
+                                    const pct = Math.round((source.amount / total) * 100)
+                                    const colorMap: Record<string, string> = {
+                                        'Cuotas': 'bg-blue-500', 'Campus': 'bg-green-500',
+                                        'Torneos': 'bg-yellow-500', 'Tienda': 'bg-purple-500', 'Pagos': 'bg-slate-400'
+                                    }
+                                    return (
+                                        <div key={source.source} className="space-y-2">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm font-bold text-slate-700">{source.source}</span>
+                                                <span className="text-sm font-black text-slate-900">{fmt(source.amount)}€ <span className="text-xs text-slate-400 font-medium">({pct}%)</span></span>
+                                            </div>
+                                            <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+                                                <div className={`h-full rounded-full transition-all ${colorMap[source.source] || 'bg-slate-400'}`}
+                                                    style={{ width: `${pct}%` }} />
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                                {kpis.revenueBySource.every(r => r.amount === 0) && (
+                                    <div className="text-center py-10 text-sm text-slate-400">
+                                        No hay ingresos registrados aún
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
 
                 <Card className="lg:col-span-2 border-none shadow-xl bg-slate-900 text-white overflow-hidden relative">
-                    <div className="absolute top-[-20px] right-[-20px] h-40 w-40 rounded-full bg-indigo-500/10 blur-3xl"></div>
+                    <div className="absolute top-[-20px] right-[-20px] h-40 w-40 rounded-full bg-yellow-500/10 blur-3xl" />
                     <CardHeader>
-                        <CardTitle className="text-lg font-bold">Estado de Caja</CardTitle>
-                        <CardDescription className="text-slate-400">Distribución de capital</CardDescription>
+                        <CardTitle className="text-lg font-bold">Resumen Rápido</CardTitle>
+                        <CardDescription className="text-slate-400">Estado financiero actual</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-6 pt-4">
+                    <CardContent className="space-y-5 pt-4">
                         <div className="space-y-2">
                             <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-slate-400">
-                                <span>Banco (Sabadell)</span>
-                                <span>82%</span>
+                                <span>Cobrado</span>
+                                <span className="text-green-400">{loading ? '...' : `${fmt(kpis?.totalRevenue || 0)}€`}</span>
                             </div>
                             <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden">
-                                <div className="h-full bg-indigo-500" style={{ width: '82%' }}></div>
+                                <div className="h-full bg-green-400 rounded-full" style={{
+                                    width: `${kpis && (kpis.totalRevenue + kpis.pendingPayments) > 0 ?
+                                        Math.round((kpis.totalRevenue / (kpis.totalRevenue + kpis.pendingPayments)) * 100) : 0}%`
+                                }} />
                             </div>
                         </div>
                         <div className="space-y-2">
                             <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-slate-400">
-                                <span>Pasarelas (Stripe)</span>
-                                <span>15%</span>
+                                <span>Pendiente</span>
+                                <span className="text-amber-400">{loading ? '...' : `${fmt(kpis?.pendingPayments || 0)}€`}</span>
                             </div>
                             <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden">
-                                <div className="h-full bg-green-400" style={{ width: '15%' }}></div>
-                            </div>
-                        </div>
-                        <div className="space-y-2">
-                            <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-slate-400">
-                                <span>Efectivo</span>
-                                <span>3%</span>
-                            </div>
-                            <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden">
-                                <div className="h-full bg-amber-400" style={{ width: '3%' }}></div>
+                                <div className="h-full bg-amber-400 rounded-full" style={{
+                                    width: `${kpis && (kpis.totalRevenue + kpis.pendingPayments) > 0 ?
+                                        Math.round((kpis.pendingPayments / (kpis.totalRevenue + kpis.pendingPayments)) * 100) : 0}%`
+                                }} />
                             </div>
                         </div>
 
-                        <div className="pt-6 border-t border-white/10">
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Próxima acción recomendada</p>
-                            <div className="bg-indigo-600/20 border border-indigo-500/30 p-4 rounded-xl">
-                                <p className="text-xs font-medium text-indigo-300">Hay 3 alumnos con mensualidades vencidas hace más de 5 días.</p>
-                                <Button variant="link" className="text-xs text-white p-0 h-auto mt-2 font-black">Notificar a padres por WhatsApp</Button>
+                        {kpis && kpis.pendingPayments > 0 && (
+                            <div className="pt-4 border-t border-white/10">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Acción recomendada</p>
+                                <div className="bg-amber-600/20 border border-amber-500/30 p-3 rounded-xl">
+                                    <p className="text-xs font-medium text-amber-300">
+                                        Hay {fmt(kpis.pendingPayments)}€ pendientes de cobro. Revisa los movimientos.
+                                    </p>
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </CardContent>
                 </Card>
             </div>
 
             {/* TRANSACTIONS TABLE */}
             <Card className="border-none shadow-xl bg-white overflow-hidden">
-                <CardHeader className="flex flex-row items-center justify-between border-b border-slate-50 py-6">
+                <CardHeader className="flex flex-row items-center justify-between border-b border-slate-50 py-5">
                     <div>
-                        <CardTitle className="text-xl font-bold">Últimos Movimientos</CardTitle>
-                        <CardDescription>Listado detallado de transacciones recientes</CardDescription>
+                        <CardTitle className="text-lg font-bold">Últimos Movimientos</CardTitle>
+                        <CardDescription>Transacciones de todos los departamentos</CardDescription>
                     </div>
-                    <Button variant="outline" size="sm" className="h-9 border-slate-200">
-                        <Filter className="mr-2 h-4 w-4" /> Filtros Avanzados
-                    </Button>
                 </CardHeader>
                 <CardContent className="p-0">
                     <Table>
                         <TableHeader>
-                            <TableRow className="bg-slate-50/50 hover:bg-slate-50/50 border-b border-slate-100 group">
-                                <TableHead className="font-bold text-slate-500 uppercase text-[10px] tracking-widest pl-8">Concepto / Cliente</TableHead>
+                            <TableRow className="bg-slate-50/50 hover:bg-slate-50/50 border-b border-slate-100">
+                                <TableHead className="font-bold text-slate-500 uppercase text-[10px] tracking-widest pl-6">Concepto</TableHead>
                                 <TableHead className="font-bold text-slate-500 uppercase text-[10px] tracking-widest">Tipo</TableHead>
                                 <TableHead className="font-bold text-slate-500 uppercase text-[10px] tracking-widest">Fecha</TableHead>
                                 <TableHead className="font-bold text-slate-500 uppercase text-[10px] tracking-widest">Estado</TableHead>
-                                <TableHead className="font-bold text-slate-500 uppercase text-[10px] tracking-widest text-right pr-8">Importe</TableHead>
+                                <TableHead className="font-bold text-slate-500 uppercase text-[10px] tracking-widest text-right pr-6">Importe</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {loading ? (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="h-32 text-center text-muted-foreground animate-pulse">Cargando transacciones...</TableCell>
+                                    <TableCell colSpan={5} className="h-32 text-center text-muted-foreground animate-pulse">Cargando movimientos...</TableCell>
+                                </TableRow>
+                            ) : transactions.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">No hay movimientos registrados</TableCell>
                                 </TableRow>
                             ) : (
-                                transactions.map((tx) => (
-                                    <TableRow key={tx.id} className="hover:bg-slate-50/50 transition-colors border-b border-slate-50 group">
-                                        <TableCell className="py-4 pl-8">
-                                            <div className="flex items-center gap-3">
-                                                <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-500 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
-                                                    {(tx.customer_name || 'U').charAt(0).toUpperCase()}
+                                transactions.map((tx) => {
+                                    const typeCfg = TYPE_CFG[tx.type] || TYPE_CFG.pago
+                                    const statusCfg = STATUS_CFG[tx.status] || STATUS_CFG.pending
+                                    return (
+                                        <TableRow key={`${tx.type}-${tx.id}`} className="hover:bg-slate-50/50 transition-colors border-b border-slate-50 group">
+                                            <TableCell className="py-3.5 pl-6">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`h-9 w-9 rounded-full flex items-center justify-center font-bold text-sm
+                                                        ${tx.type === 'cuota' ? 'bg-blue-50 text-blue-500' :
+                                                        tx.type === 'campus' ? 'bg-green-50 text-green-500' :
+                                                        tx.type === 'torneo' ? 'bg-yellow-50 text-yellow-500' :
+                                                        tx.type === 'tienda' ? 'bg-purple-50 text-purple-500' :
+                                                        'bg-slate-50 text-slate-400'}`}>
+                                                        {typeCfg.icon}
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-bold text-sm text-slate-900 max-w-[250px] truncate">{tx.concept}</div>
+                                                        <div className="text-[10px] text-slate-400">{tx.id.slice(0, 8)}</div>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <div className="font-bold text-slate-900">{tx.customer_name || 'Venta Web'}</div>
-                                                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Ref: {tx.id.slice(0, 8)}</div>
-                                                </div>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge variant="secondary" className="bg-slate-100 text-slate-600 font-bold text-[10px] uppercase">
-                                                {tx.type || 'Venta Shop'}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell className="text-xs font-medium text-slate-500">
-                                            {new Date(tx.created_at).toLocaleDateString()}
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge className={`font-bold text-[10px] uppercase border-none ${tx.status === 'completed' || tx.status === 'paid' ? 'bg-green-100 text-green-700' :
-                                                tx.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                                                    'bg-slate-100 text-slate-700'
-                                                }`}>
-                                                {tx.status === 'completed' || tx.status === 'paid' ? 'Completado' : 'Pendiente'}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell className="text-right py-4 pr-8">
-                                            <span className="text-lg font-black text-slate-900">{tx.total_amount || tx.total_price} €</span>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge className={`${typeCfg.color} border-none font-bold text-[10px] uppercase`}>
+                                                    {typeCfg.label}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="text-xs font-medium text-slate-500">
+                                                {new Date(tx.date).toLocaleDateString('es', { day: 'numeric', month: 'short' })}
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge className={`${statusCfg.color} border-none font-bold text-[10px] uppercase`}>
+                                                    {statusCfg.label}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="text-right py-3.5 pr-6">
+                                                <span className={`text-base font-black ${tx.status === 'paid' ? 'text-slate-900' : tx.status === 'pending' ? 'text-amber-600' : 'text-slate-300 line-through'}`}>
+                                                    {tx.amount.toLocaleString('es', { minimumFractionDigits: 2 })}€
+                                                </span>
+                                            </TableCell>
+                                        </TableRow>
+                                    )
+                                })
                             )}
                         </TableBody>
                     </Table>

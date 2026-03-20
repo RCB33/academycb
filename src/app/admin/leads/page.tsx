@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { toast } from 'sonner'
 import { format } from 'date-fns'
+import { convertLead } from '@/app/actions/leads'
 
 export default function AdminLeadsPage() {
     const [leads, setLeads] = useState<any[]>([])
@@ -35,6 +36,18 @@ export default function AdminLeadsPage() {
         else {
             toast.success("Estado actualizado")
             fetchLeads()
+        }
+    }
+
+    async function handleConvert(id: string) {
+        toast.loading("Convirtiendo lead...")
+        const result = await convertLead(id)
+        toast.dismiss()
+        if (result.success) {
+            toast.success("Lead convertido a Alumno con éxito")
+            fetchLeads()
+        } else {
+            toast.error("Error al convertir: " + result.error)
         }
     }
 
@@ -82,7 +95,7 @@ export default function AdminLeadsPage() {
                             {/* Quick Actions */}
                             <div className="flex gap-2 mt-4 pt-4 border-t">
                                 <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => updateStatus(lead.id, 'contacted')}>Contactado</Button>
-                                <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => updateStatus(lead.id, 'enrolled')}>Inscrito</Button>
+                                <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => handleConvert(lead.id)}>Inscrito</Button>
                                 <Button size="sm" variant="ghost" className="text-xs text-red-500" onClick={() => updateStatus(lead.id, 'lost')}>Descartar</Button>
                             </div>
                         </CardContent>

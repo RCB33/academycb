@@ -105,3 +105,32 @@ export async function deleteEvent(id: string) {
         return { success: false, error: error.message }
     }
 }
+
+export async function updateEvent(id: string, data: z.infer<typeof EventSchema>) {
+    const supabase = await createClient()
+
+    // Check auth
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: "No autorizado" }
+
+    const validated = EventSchema.safeParse(data)
+    if (!validated.success) {
+        return { success: false, error: "Datos inválidos" }
+    }
+
+    try {
+        const { error } = await supabase
+            .from('calendar_events')
+            .update({
+                ...validated.data,
+            })
+            .eq('id', id)
+
+        if (error) throw error
+
+        revalidatePath('/admin/dashboard')
+        return { success: true }
+    } catch (error: any) {
+        return { success: false, error: error.message }
+    }
+}

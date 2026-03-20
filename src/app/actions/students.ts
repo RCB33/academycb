@@ -218,3 +218,21 @@ export async function unlinkGuardian(childId: string, guardianId: string) {
     revalidatePath(`/admin/crm/alumnos/${childId}`)
     return { success: true }
 }
+
+export async function deleteStudent(id: string) {
+    const supabase = await createClient()
+
+    try {
+        const { error } = await supabase
+            .from('children')
+            .delete()
+            .eq('id', id)
+
+        if (error) throw error
+
+        revalidatePath('/admin/crm/alumnos')
+        return { success: true }
+    } catch (error: any) {
+        return { success: false, error: error.message }
+    }
+}

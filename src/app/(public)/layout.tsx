@@ -40,7 +40,7 @@ export default function PublicLayout({
                         <div className="flex items-center space-x-2 md:space-x-4">
                             <HeaderCart />
                             <Link href="/portal">
-                                <Button variant="outline" size="sm" className="hidden sm:flex border-white text-white hover:bg-white hover:text-navy font-heading font-bold uppercase tracking-wide">
+                                <Button variant="outline" size="sm" className="hidden sm:flex border-white bg-white text-navy hover:bg-gray-100 hover:text-navy font-heading font-bold uppercase tracking-wide">
                                     Acceso Familias
                                 </Button>
                             </Link>

@@ -5,7 +5,8 @@ import { ChevronLeft, Calendar as CalendarIcon, MapPin, Search } from 'lucide-re
 import { AttendanceClient } from './attendance-client'
 import { Input } from '@/components/ui/input' // Optional, for future use
 
-export default async function SessionDetailsPage({ params }: { params: { id: string } }) {
+export default async function SessionDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params
     const supabase = await createClient()
 
     // 1. Validate Access
@@ -22,7 +23,7 @@ export default async function SessionDetailsPage({ params }: { params: { id: str
     const { data: event, error: eventError } = await supabase
         .from('calendar_events')
         .select('*, categories(name)')
-        .eq('id', params.id)
+        .eq('id', id)
         .single()
 
     if (!event || eventError) {

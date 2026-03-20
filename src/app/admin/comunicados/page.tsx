@@ -1,25 +1,24 @@
 import { createClient } from '@/lib/supabase/server'
-import { BroadcastClient } from './broadcast-client'
+import { ComunicadosClient } from './comunicados-client'
+import { getBroadcastHistory, getCategoriesWithTeams } from '@/app/actions/whatsapp'
 
 export const dynamic = 'force-dynamic'
 
 export default async function ComunicadosPage() {
-    const supabase = await createClient()
-
-    // Fetch categories for the dropdown
-    const { data: categories } = await supabase
-        .from('categories')
-        .select('id, name')
-        .order('name')
-
-    // Optional: Fetch previous broadcast logs if we had a table for it
+    const [{ categories, teams }, history] = await Promise.all([
+        getCategoriesWithTeams(),
+        getBroadcastHistory()
+    ])
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6">
-            <h1 className="text-3xl font-bold tracking-tight">Comunicados (WhatsApp Broadcast)</h1>
-            <p className="text-muted-foreground">Envía notificaciones instantáneas de WhatsApp a todos los tutores de un equipo o categoría específica.</p>
-
-            <BroadcastClient categories={categories || []} />
+        <div className="max-w-5xl mx-auto space-y-6">
+            <div>
+                <h1 className="text-3xl font-black tracking-tight text-slate-900 flex items-center gap-3">
+                    📢 Centro de Comunicados
+                </h1>
+                <p className="text-muted-foreground text-sm">Envía mensajes a padres y tutores por WhatsApp o Email</p>
+            </div>
+            <ComunicadosClient categories={categories} teams={teams} history={history} />
         </div>
     )
 }

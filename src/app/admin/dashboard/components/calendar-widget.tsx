@@ -80,7 +80,7 @@ function WorkerFilter({ name, count, color, active, avatarUrl }: { name: string,
     )
 }
 
-function EventPill({ event, view = 'month' }: { event: CalendarEvent, view?: 'month' | 'week' | 'list' }) {
+function EventPill({ event, view = 'month', onClick }: { event: CalendarEvent, view?: 'month' | 'week' | 'list', onClick?: (e: React.MouseEvent) => void }) {
     const time = new Date(event.start_date).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
 
     // Style mappings based on color
@@ -105,7 +105,7 @@ function EventPill({ event, view = 'month' }: { event: CalendarEvent, view?: 'mo
 
     if (view === 'list') {
         return (
-            <div className={`flex items-center p-4 rounded-xl border border-slate-100 bg-white hover:shadow-md transition-all gap-4 mb-3 group`}>
+            <div onClick={onClick} className={`flex items-center p-4 rounded-xl border border-slate-100 bg-white hover:shadow-md transition-all gap-4 mb-3 group cursor-pointer`}>
                 <div className={`w-1.5 self-stretch rounded-full ${currentDot}`} />
                 <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
@@ -132,7 +132,7 @@ function EventPill({ event, view = 'month' }: { event: CalendarEvent, view?: 'mo
     }
 
     return (
-        <div className={`
+        <div onClick={onClick} className={`
             text-[10px] w-full p-1.5 rounded-r-md border-l-[3px] mb-1 truncate font-medium
             flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity relative group
             ${currentStyle}
@@ -158,6 +158,7 @@ export function CalendarWidget({ initialView = 'month' }: { initialView?: 'month
     const [currentDate, setCurrentDate] = useState(new Date())
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
     const [isDialogOpen, setIsDialogOpen] = useState(false)
+    const [eventToEdit, setEventToEdit] = useState<CalendarEvent | null>(null)
     const [events, setEvents] = useState<CalendarEvent[]>([])
     const [view, setView] = useState<'month' | 'week' | 'list'>(initialView)
     const [selectedWorker, setSelectedWorker] = useState<string | null>(null)
@@ -229,7 +230,7 @@ export function CalendarWidget({ initialView = 'month' }: { initialView?: 'month
                     <p className="text-muted-foreground text-sm mt-1">Gestiona los entrenamientos y eventos</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold h-9 gap-2 shadow-md transition-all hover:scale-105" onClick={() => setIsDialogOpen(true)}>
+                    <Button className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold h-9 gap-2 shadow-md transition-all hover:scale-105" onClick={() => { setEventToEdit(null); setIsDialogOpen(true) }}>
                         <Plus className="h-4 w-4" /> Crear Evento
                     </Button>
                 </div>
@@ -335,8 +336,8 @@ export function CalendarWidget({ initialView = 'month' }: { initialView?: 'month
                                                 {format(day, "d")}
                                             </span>
                                         </div>
-                                        <div className="flex flex-col gap-1 pointer-events-none">
-                                            {dayEvents.slice(0, 4).map((ev) => <EventPill key={ev.id} event={ev} />)}
+                                        <div className="flex flex-col gap-1 pointer-events-auto">
+                                            {dayEvents.slice(0, 4).map((ev) => <EventPill key={ev.id} event={ev} onClick={(e) => { e.stopPropagation(); setEventToEdit(ev); setIsDialogOpen(true); }} />)}
                                             {dayEvents.length > 4 && (
                                                 <span className="text-[10px] text-muted-foreground font-medium pl-2">+{dayEvents.length - 4} más</span>
                                             )}
@@ -380,7 +381,7 @@ export function CalendarWidget({ initialView = 'month' }: { initialView?: 'month
                                 return (
                                     <div
                                         key={day.toString()}
-                                        onClick={() => { setSelectedDate(day); setIsDialogOpen(true) }}
+                                        onClick={() => { setSelectedDate(day); setEventToEdit(null); setIsDialogOpen(true) }}
                                         className={`
                                             border-r border-slate-100 p-2 min-h-full cursor-pointer transition-colors group relative
                                             ${isTodayDate ? 'bg-blue-50/5' : ''}
@@ -388,7 +389,7 @@ export function CalendarWidget({ initialView = 'month' }: { initialView?: 'month
                                         `}
                                     >
                                         <div className="flex flex-col gap-2">
-                                            {dayEvents.map((ev) => <EventPill key={ev.id} event={ev} />)}
+                                            {dayEvents.map((ev) => <EventPill key={ev.id} event={ev} onClick={(e) => { e.stopPropagation(); setEventToEdit(ev); setIsDialogOpen(true); }} />)}
                                         </div>
                                         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none">
                                             <Plus className="w-8 h-8 text-black/10" />
@@ -433,8 +434,8 @@ export function CalendarWidget({ initialView = 'month' }: { initialView?: 'month
                                         </div>
                                         <div className="pl-4 border-l-2 border-slate-100 space-y-2">
                                             {grouped[dateKey].map((ev: any) => (
-                                                <div onClick={() => { setSelectedDate(new Date(ev.start_date)); setIsDialogOpen(true); }}>
-                                                    <EventPill key={ev.id} event={ev} view="list" />
+                                                <div key={ev.id}>
+                                                    <EventPill event={ev} view="list" onClick={(e) => { e.stopPropagation(); setSelectedDate(new Date(ev.start_date)); setEventToEdit(ev); setIsDialogOpen(true); }} />
                                                 </div>
                                             ))}
                                         </div>
@@ -450,6 +451,7 @@ export function CalendarWidget({ initialView = 'month' }: { initialView?: 'month
                 isOpen={isDialogOpen}
                 setIsOpen={setIsDialogOpen}
                 selectedDate={selectedDate}
+                eventToEdit={eventToEdit}
                 onEventCreated={() => {
                     // In a real app we would refetch or update optimistic state
                     window.location.reload()

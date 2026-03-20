@@ -17,7 +17,7 @@ export default async function AdminVideotecaPage() {
             <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
                 <div>
                     <h1 className="text-3xl font-black tracking-tight text-slate-900 flex items-center gap-3">
-                        <Video className="h-8 w-8 text-indigo-600" />
+                        <Video className="h-8 w-8 text-yellow-500" />
                         Videoteca
                     </h1>
                     <p className="text-muted-foreground font-medium text-sm">

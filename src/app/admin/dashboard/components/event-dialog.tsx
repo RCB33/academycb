@@ -21,7 +21,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { useState, useEffect } from "react"
-import { createEvent, getWorkers } from "@/app/actions/calendar"
+import { createEvent, getWorkers, updateEvent, deleteEvent } from "@/app/actions/calendar"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import { format } from "date-fns"
@@ -32,10 +32,11 @@ interface EventDialogProps {
     isOpen: boolean
     setIsOpen: (open: boolean) => void
     selectedDate: Date | undefined
+    eventToEdit?: any
     onEventCreated: () => void
 }
 
-export function EventDialog({ isOpen, setIsOpen, selectedDate, onEventCreated }: EventDialogProps) {
+export function EventDialog({ isOpen, setIsOpen, selectedDate, eventToEdit, onEventCreated }: EventDialogProps) {
     const [title, setTitle] = useState("")
     const [description, setDescription] = useState("")
     const [loading, setLoading] = useState(false)
@@ -60,8 +61,36 @@ export function EventDialog({ isOpen, setIsOpen, selectedDate, onEventCreated }:
             supabase.from('categories').select('id, name').order('name').then(({ data }) => {
                 if (data) setCategories(data)
             })
+
+            if (eventToEdit) {
+                setTitle(eventToEdit.title)
+                setDescription(eventToEdit.description || "")
+                setColor(eventToEdit.color)
+                setSelectedWorker(eventToEdit.worker_id || "none")
+                setSelectedCategory(eventToEdit.category_id || "none")
+                setLocation(eventToEdit.location || "")
+                setIsAllDay(eventToEdit.is_all_day)
+                
+                if (!eventToEdit.is_all_day) {
+                    const start = new Date(eventToEdit.start_date)
+                    const end = eventToEdit.end_date ? new Date(eventToEdit.end_date) : start
+                    setStartTime(`${start.getHours().toString().padStart(2, '0')}:${start.getMinutes().toString().padStart(2, '0')}`)
+                    setEndTime(`${end.getHours().toString().padStart(2, '0')}:${end.getMinutes().toString().padStart(2, '0')}`)
+                }
+            } else {
+                // Reset form on new open
+                setTitle("")
+                setDescription("")
+                setSelectedWorker("none")
+                setSelectedCategory("none")
+                setLocation("")
+                setColor("blue")
+                setIsAllDay(true)
+                setStartTime("10:00")
+                setEndTime("11:30")
+            }
         }
-    }, [isOpen])
+    }, [isOpen, eventToEdit])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -97,10 +126,12 @@ export function EventDialog({ isOpen, setIsOpen, selectedDate, onEventCreated }:
                 location: location || null
             }
 
-            const res = await createEvent(formData)
+            const res = eventToEdit 
+                ? await updateEvent(eventToEdit.id, formData)
+                : await createEvent(formData)
 
             if (res.success) {
-                toast.success("Evento creado correctamente")
+                toast.success(eventToEdit ? "Evento actualizado correctamente" : "Evento creado correctamente")
                 // Reset form
                 setTitle("")
                 setDescription("")
@@ -122,12 +153,33 @@ export function EventDialog({ isOpen, setIsOpen, selectedDate, onEventCreated }:
         }
     }
 
+    const handleDelete = async () => {
+        if (!eventToEdit) return
+        if (!confirm("¿Estás seguro de que quieres eliminar este evento?")) return
+
+        setLoading(true)
+        try {
+            const res = await deleteEvent(eventToEdit.id)
+            if (res.success) {
+                toast.success("Evento eliminado")
+                setIsOpen(false)
+                onEventCreated()
+            } else {
+                toast.error(res.error)
+            }
+        } catch(e) {
+            toast.error("Error al eliminar")
+        } finally {
+            setLoading(false)
+        }
+    }
+
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogContent className="p-0 border-0 overflow-visible bg-slate-50 max-w-md sm:rounded-2xl shadow-2xl">
                 <div className="bg-yellow-500 p-6 flex flex-col gap-1 rounded-t-2xl">
                     <DialogTitle className="text-2xl font-black text-black tracking-tight">
-                        NUEVO EVENTO
+                        {eventToEdit ? "EDITAR EVENTO" : "NUEVO EVENTO"}
                     </DialogTitle>
                     <DialogDescription className="text-black/80 font-medium">
                         {selectedDate ? format(selectedDate, "EEEE, d 'de' MMMM", { locale: es }) : "Selecciona una fecha"}
@@ -278,13 +330,26 @@ export function EventDialog({ isOpen, setIsOpen, selectedDate, onEventCreated }:
                         </div>
                     </div>
 
-                    <div className="flex justify-end pt-4">
+                    <div className="flex justify-between pt-4 gap-4">
+                        {eventToEdit ? (
+                            <Button
+                                type="button"
+                                variant="destructive"
+                                disabled={loading}
+                                onClick={handleDelete}
+                                className="h-11 px-6 rounded-xl shadow-sm"
+                            >
+                                Eliminar
+                            </Button>
+                        ) : (
+                            <div /> // Placeholder for spacing using flex-between
+                        )}
                         <Button
                             type="submit"
                             disabled={loading}
-                            className="bg-black hover:bg-slate-800 text-white font-bold h-11 px-8 rounded-xl w-full transition-all shadow-lg hover:shadow-xl disabled:opacity-70"
+                            className="bg-black hover:bg-slate-800 text-white font-bold h-11 px-8 rounded-xl transition-all shadow-lg hover:shadow-xl disabled:opacity-70"
                         >
-                            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Guardar Evento"}
+                            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : eventToEdit ? "Actualizar Evento" : "Guardar Evento"}
                         </Button>
                     </div>
                 </form>

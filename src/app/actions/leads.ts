@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
 const leadSchema = z.object({
@@ -58,4 +59,47 @@ export async function submitLead(prevState: LeadState, formData: FormData) {
         success: true,
         message: "¡Gracias! Te contactaremos pronto.",
     }
+}
+
+export async function convertLead(id: string) {
+    const supabase = await createClient()
+
+    // 1. Get lead
+    const { data: lead } = await supabase.from('leads').select('*').eq('id', id).single()
+    if (!lead) return { success: false, error: "Lead no encontrado" }
+
+    // 2. Create student
+    const { data: child, error: childError } = await supabase.from('children').insert({
+        full_name: lead.child_name,
+        birth_year: lead.birth_year,
+        birth_date: `${lead.birth_year}-01-01` // Fallback date
+    }).select().single()
+
+    if (childError) return { success: false, error: childError.message }
+
+    // 3. Create guardian
+    const { data: guardian, error: guardianError } = await supabase.from('guardians').insert({
+        full_name: lead.guardian_name,
+        email: lead.email || null,
+        phone: lead.phone || ''
+    }).select().single()
+
+    if (guardianError) return { success: false, error: guardianError.message }
+
+    // 4. Link child and guardian
+    await supabase.from('child_guardians').insert({
+        child_id: child.id,
+        guardian_id: guardian.id,
+        relationship: 'Tutor',
+        is_primary: true
+    })
+
+    // 5. Update lead status
+    await supabase.from('leads').update({ status: 'enrolled' }).eq('id', id)
+
+    revalidatePath('/admin/leads')
+    revalidatePath('/admin/crm/alumnos')
+    revalidatePath('/admin/crm/tutores')
+
+    return { success: true }
 }

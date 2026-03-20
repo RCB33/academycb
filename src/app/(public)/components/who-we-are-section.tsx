@@ -65,7 +65,7 @@ export default function WhoWeAreSection() {
                         ))}
                     </div>
                     <p className="text-xl md:text-2xl text-white font-light italic leading-relaxed">
-                        "En Academy Costa Brava, no solo entrenamos futbolistas; cultivamos la pasión, la integridad y el espíritu competitivo necesario para triunfar en la vida y en el campo."
+                        &quot;En Academy Costa Brava, no solo entrenamos futbolistas; cultivamos la pasión, la integridad y el espíritu competitivo necesario para triunfar en la vida y en el campo.&quot;
                     </p>
                     <div className="mt-6 font-heading text-gold font-bold uppercase tracking-wider">— Dirección Académica</div>
                 </div>

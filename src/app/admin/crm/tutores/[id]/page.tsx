@@ -6,9 +6,10 @@ import { Mail, Phone, Users, Calendar, ArrowLeft, Receipt, MessageCircle } from 
 import { GuardianNotesEditor } from './notes-editor'
 import { TutorProfileActions } from './tutor-profile-actions'
 import { notFound } from 'next/navigation'
+import Link from 'next/link'
 
-export default async function TutorProfilePage({ params }: { params: Promise<{ id: string }> | { id: string } }) {
-    const resolvedParams = await Promise.resolve(params)
+export default async function TutorProfilePage({ params }: { params: Promise<{ id: string }> }) {
+    const resolvedParams = await params
     const guardian = await getGuardianById(resolvedParams.id)
 
     if (!guardian) {

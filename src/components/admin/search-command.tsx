@@ -96,7 +96,7 @@ export function SearchCommand() {
                     onValueChange={setQuery}
                 />
                 <CommandList className="scrollbar-hide">
-                    <CommandEmpty>No se encontraron resultados para "{query}".</CommandEmpty>
+                    <CommandEmpty>No se encontraron resultados para &quot;{query}&quot;.</CommandEmpty>
 
                     {loading && (
                         <div className="p-4 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">

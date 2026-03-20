@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { getGuardians } from '@/app/actions/guardians'
+import { getGuardians, deleteGuardian } from '@/app/actions/guardians'
+import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
@@ -43,6 +44,20 @@ export default function TutorsMasterListPage() {
             (g.phone && g.phone.includes(search))
         return matchesSearch
     })
+
+    const handleDelete = async (id: string, name: string) => {
+        if (!confirm(`¿Estás seguro de que quieres eliminar a ${name}?`)) return
+        
+        setLoading(true)
+        const result = await deleteGuardian(id)
+        if (result.success) {
+            toast.success("Tutor eliminado correctamente")
+            fetchGuardians()
+        } else {
+            toast.error("Error al eliminar: " + result.error)
+            setLoading(false)
+        }
+    }
 
     return (
         <div className="space-y-6">
@@ -153,7 +168,15 @@ export default function TutorsMasterListPage() {
                                                             />
                                                         </div>
                                                         <DropdownMenuSeparator />
-                                                        <DropdownMenuItem className="text-red-600">Eliminar</DropdownMenuItem>
+                                                        <DropdownMenuItem 
+                                                            className="text-red-600"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                handleDelete(guardian.id, guardian.full_name)
+                                                            }}
+                                                        >
+                                                            Eliminar
+                                                        </DropdownMenuItem>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
                                             </td>

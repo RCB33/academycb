@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { LayoutDashboard, Users, UserPlus, Activity, CreditCard, Settings, FileText, LogOut, Trophy, ShoppingBag, Briefcase, MessageSquare, CalendarDays, Video, MessageCircle } from "lucide-react"
+import { LayoutDashboard, Users, UserPlus, Activity, CreditCard, Settings, FileText, LogOut, Trophy, ShoppingBag, Briefcase, MessageSquare, CalendarDays, Video, MessageCircle, TrendingUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { createClient } from '@/lib/supabase/client'
 import { createClient as createServerClient } from '@/lib/supabase/server'
@@ -63,6 +63,7 @@ export default async function AdminLayout({
                         </div>
                         <div className="space-y-1">
                             <NavItem href="/admin/crm/alumnos" icon={<Users size={18} />} label="Alumnos 360º" />
+                            <NavItem href="/admin/seguimiento" icon={<TrendingUp size={18} />} label="Seguimiento" />
                             <NavItem href="/admin/leads" icon={<MessageSquare size={18} />} label="Solicitudes Web" />
                             <NavItem href="/admin/crm/tutores" icon={<UserPlus size={18} />} label="Tutores" />
                             <NavItem href="/admin/crm/trabajadores" icon={<Briefcase size={18} />} label="Trabajadores" />
