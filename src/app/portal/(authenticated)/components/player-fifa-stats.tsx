@@ -6,6 +6,7 @@ import { TrendingUp, Award, Activity } from "lucide-react"
 import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, Radar, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts'
 import { motion } from "framer-motion"
 import { FifaCard } from "@/components/fifa-card"
+import { PlayerEvolutionChart } from "@/components/admin/player-evolution-chart"
 
 // Mock data types for now, will receive real props
 type Stats = {
@@ -60,21 +61,7 @@ export default function PlayerFIFAStats({ stats, history, child }: { stats: Stat
                     </CardContent>
                 </Card>
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><TrendingUp className="w-5 h-5 text-primary" /> Evolución OVR</CardTitle>
-                    </CardHeader>
-                    <CardContent className="h-[200px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={history}>
-                                <XAxis dataKey="date" fontSize={12} tickLine={false} axisLine={false} />
-                                <YAxis domain={[0, 99]} hide />
-                                <Tooltip />
-                                <Line type="monotone" dataKey="ovr" stroke="#2563eb" strokeWidth={3} dot={{ r: 4 }} />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </CardContent>
-                </Card>
+                <PlayerEvolutionChart metricsHistory={history} />
             </div>
         </div>
     )

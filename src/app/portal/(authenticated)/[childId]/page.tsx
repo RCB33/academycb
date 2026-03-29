@@ -4,6 +4,7 @@ import PlayerFIFAStats from '../components/player-fifa-stats'
 import { TrophyCard } from '@/components/portal/trophy-card'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Activity, CalendarDays, Medal, Trophy } from 'lucide-react'
 import { format } from 'date-fns' // assuming date-fns might be handy, or just native Date
 import { es } from 'date-fns/locale'
@@ -37,12 +38,8 @@ export default async function ChildPage({ params }: { params: Promise<{ childId:
 
     const latestMetric = metrics?.[0] || { pace: 50, shooting: 50, passing: 50, dribbling: 50, defending: 50, physical: 50, discipline: 50 }
 
-    // Calculate history OVRs
-    const history = metrics?.map(m => {
-        const vals = [m.pace, m.shooting, m.passing, m.dribbling, m.defending, m.physical]
-        const ovr = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)
-        return { date: m.recorded_at, ovr }
-    }).reverse() || []
+    // Pass raw metrics history to the chart component
+    const history = metrics || []
 
     // Fetch Notes
     const { data: notes } = await supabase
@@ -59,6 +56,19 @@ export default async function ChildPage({ params }: { params: Promise<{ childId:
         .from('child_achievements')
         .select('*')
         .eq('child_id', childId)
+
+    const nextTrophy = allAchievements?.find(a => !childAchievements?.some(ca => ca.achievement_id === a.id))
+
+    // Fetch Next Event
+    const now = new Date().toISOString()
+    const { data: upcomingEvents } = await supabase
+        .from('calendar_events')
+        .select('*')
+        .eq('category_id', child.category_id)
+        .gte('start_date', now)
+        .order('start_date', { ascending: true })
+        .limit(1)
+    const nextEvent = upcomingEvents?.[0]
 
     // Fetch Gallery
     const { data: galleryImages } = await supabase
@@ -89,6 +99,74 @@ export default async function ChildPage({ params }: { params: Promise<{ childId:
                         <ShareProfile token={child.public_share_token} childName={child.full_name} />
                     )}
                 </div>
+            </div>
+
+            {/* Gamification / Upcoming Dashboard */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Next Event */}
+                <Card className="bg-gradient-to-r from-slate-900 to-slate-800 text-white border-none shadow-lg overflow-hidden relative">
+                    <div className="absolute right-0 top-0 opacity-10 transform translate-x-4 -translate-y-4">
+                        <CalendarDays className="h-32 w-32" />
+                    </div>
+                    <CardContent className="p-6 relative z-10">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <p className="text-yellow-500 font-bold uppercase tracking-wider text-[10px] mb-1">Próximo Evento</p>
+                                {nextEvent ? (
+                                    <>
+                                        <h3 className="text-xl font-black mb-1">{nextEvent.title}</h3>
+                                        <p className="text-slate-300 text-sm flex items-center gap-1.5 mb-4">
+                                            <CalendarDays className="w-4 h-4" />
+                                            {new Date(nextEvent.start_date).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })} • {new Date(nextEvent.start_date).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                                        </p>
+                                        <div className="flex gap-2">
+                                            <Button size="sm" className="bg-yellow-500 text-slate-900 hover:bg-yellow-400 font-bold text-xs h-8">Ver Detalles</Button>
+                                            <Button size="sm" variant="outline" className="border-slate-600 text-white hover:bg-slate-700 hover:text-white font-bold text-xs h-8">Ausencia</Button>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <h3 className="text-xl font-black mb-1 text-slate-300">Sin eventos</h3>
+                                        <p className="text-slate-500 text-sm mb-4">No hay entrenamientos ni partidos próximos.</p>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Next Trophy */}
+                <Card className="bg-gradient-to-r from-yellow-500 to-amber-600 text-white border-none shadow-lg overflow-hidden relative">
+                    <div className="absolute right-0 top-0 opacity-20 transform translate-x-4 -translate-y-4">
+                        <Trophy className="h-32 w-32" />
+                    </div>
+                    <CardContent className="p-6 relative z-10">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <p className="text-amber-900 font-bold uppercase tracking-wider text-[10px] mb-1">Siguiente Desafío</p>
+                                {nextTrophy ? (
+                                    <>
+                                        <h3 className="text-xl font-black mb-1 text-slate-900">{nextTrophy.name}</h3>
+                                        <p className="text-amber-900 text-sm mb-4 line-clamp-2 max-w-[85%] font-medium">
+                                            {nextTrophy.description}
+                                        </p>
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex-1 bg-black/10 h-2 rounded-full overflow-hidden min-w-[120px]">
+                                                <div className="bg-slate-900 h-full w-[65%]" />
+                                            </div>
+                                            <span className="text-[10px] uppercase font-black text-slate-900">En progreso</span>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <h3 className="text-xl font-black mb-1 text-slate-900">¡Todo Desbloqueado!</h3>
+                                        <p className="text-amber-900 text-sm mb-4">Has conseguido todos los trofeos actuales.</p>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
 
             {/* FIFA Stats Section */}

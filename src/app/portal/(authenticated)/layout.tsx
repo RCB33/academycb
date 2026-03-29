@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Home, Calendar as CalendarIcon, FileText, User, Settings, LogOut, Download, Trophy, Bell, ShoppingBag, Video, Store } from "lucide-react"
+import { Home, Calendar as CalendarIcon, FileText, User, Settings, LogOut, Download, Trophy, Bell, ShoppingBag, Video, Store, MessageSquare } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { NotificationBell } from "@/components/ui/notification-bell"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -60,6 +60,11 @@ export default async function AuthenticatedLayout({
                     <Link href="/portal/dashboard">
                         <Button variant="ghost" className="w-full justify-start">
                             <Home className="mr-2 h-4 w-4" /> Inicio
+                        </Button>
+                    </Link>
+                    <Link href="/portal/comunicados">
+                        <Button variant="ghost" className="w-full justify-start text-yellow-600 font-bold hover:text-yellow-700 hover:bg-yellow-50">
+                            <MessageSquare className="mr-2 h-4 w-4" /> Comunicados
                         </Button>
                     </Link>
                     <Link href="/portal/profile">

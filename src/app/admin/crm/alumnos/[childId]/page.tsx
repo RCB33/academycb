@@ -22,6 +22,7 @@ import { ArrowLeft, User, Phone, Mail, MapPin, Calendar, CreditCard, ShoppingBag
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { PlayerRadarChart } from "@/components/admin/player-radar-chart"
+import { PlayerEvolutionChart } from "@/components/admin/player-evolution-chart"
 import { DocumentUploader } from "@/components/admin/document-uploader"
 import { getStudentDocuments } from "@/app/actions/documents"
 import { updateStudentMetrics } from "@/app/actions/metrics"
@@ -44,6 +45,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
     const { childId } = use(params)
     const [student, setStudent] = useState<any>(null)
     const [metrics, setMetrics] = useState<any>(null)
+    const [metricsHistory, setMetricsHistory] = useState<any[]>([])
     const [tempMetrics, setTempMetrics] = useState<any>(null)
     const [isEditingMetrics, setIsEditingMetrics] = useState(false)
     const [documents, setDocuments] = useState<any[]>([])
@@ -88,21 +90,22 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
             const cNotes = await getCoachNotes(childId)
             setCoachNotes(cNotes || [])
 
-            // 1. Fetch Metrics
+            // 1. Fetch Metrics (All history)
             const { data: metricsData } = await supabase
                 .from('child_metrics')
                 .select('*')
                 .eq('child_id', childId)
                 .order('recorded_at', { ascending: false })
-                .limit(1)
 
             if (metricsData && metricsData.length > 0) {
                 setMetrics(metricsData[0])
                 setTempMetrics(metricsData[0])
+                setMetricsHistory(metricsData)
             } else {
                 const defaultMetrics = { pace: 85, shooting: 92, passing: 91, dribbling: 95, defending: 45, physical: 70 }
                 setMetrics(defaultMetrics)
                 setTempMetrics(defaultMetrics)
+                setMetricsHistory([])
             }
 
             // 2. Fetch Documents
@@ -562,18 +565,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
                                 </Card>
                             </div>
 
-                            <Card className="border-none shadow-xl bg-white overflow-hidden">
-                                <CardHeader className="bg-slate-900 text-white">
-                                    <CardTitle className="text-lg font-bold">Evolución del Jugador</CardTitle>
-                                    <CardDescription className="text-slate-400">Progreso histórico del OVR medio</CardDescription>
-                                </CardHeader>
-                                <CardContent className="p-8 flex items-center justify-center h-48 italic text-slate-400 bg-slate-50/50">
-                                    <div className="flex flex-col items-center gap-2">
-                                        <TrendingUp className="h-8 w-8 opacity-20" />
-                                        <p className="text-sm">Gráfico de evolución histórica próximamente</p>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                            <PlayerEvolutionChart metricsHistory={metricsHistory} />
                         </TabsContent>
 
                         <TabsContent value="overview" className="space-y-6">

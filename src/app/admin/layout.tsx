@@ -132,6 +132,11 @@ export default async function AdminLayout({
                         <div className="h-9 w-9 rounded-full bg-indigo-600 flex items-center justify-center text-xs font-bold text-white shadow-sm ring-2 ring-indigo-100 shrink-0">
                             {user.email?.charAt(0).toUpperCase()}
                         </div>
+                        <form action={signOut}>
+                            <button title="Cerrar Sesión" className="h-9 w-9 ml-2 rounded-full hover:bg-slate-100 flex items-center justify-center text-red-500 hover:text-red-600 transition-colors">
+                                <LogOut size={18} />
+                            </button>
+                        </form>
                     </div>
                 </header>
 

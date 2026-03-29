@@ -292,27 +292,16 @@ export default function AjustesPage() {
                                 </div>
                             </div>
 
-                            <form onSubmit={handleSaveSettings} className="space-y-4">
-                                <div className="space-y-2">
-                                    <Label className="text-slate-700 font-bold uppercase text-xs tracking-wider">Stripe Publishable Key</Label>
-                                    <Input
-                                        name="stripe_publishable_key"
-                                        defaultValue={settings.stripe_publishable_key || ''}
-                                        placeholder="pk_live_..."
-                                        className="bg-white font-mono text-sm"
-                                        disabled
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label className="text-slate-700 font-bold uppercase text-xs tracking-wider">Stripe Secret Key</Label>
-                                    <Input
-                                        name="stripe_secret_key"
-                                        type="password"
-                                        defaultValue={settings.stripe_secret_key || ''}
-                                        placeholder="sk_live_..."
-                                        className="bg-white font-mono text-sm"
-                                        disabled
-                                    />
+                            <div className="space-y-4">
+                                <div className="flex flex-col md:flex-row items-center justify-between p-5 border border-slate-200 rounded-xl bg-white shadow-sm">
+                                    <div className="flex flex-col mb-4 md:mb-0">
+                                        <h4 className="font-bold text-slate-800 text-base">Cuenta de Stripe</h4>
+                                        <p className="text-sm text-slate-500">Conecta tu cuenta para recibir pagos automáticos por tarjeta.</p>
+                                    </div>
+                                    <Button type="button" variant="outline" className="border-indigo-200 text-indigo-700 font-bold bg-indigo-50 hover:bg-indigo-100 min-w-[200px]" disabled>
+                                        <Lock className="w-4 h-4 mr-2" />
+                                        Conectar Stripe
+                                    </Button>
                                 </div>
                                 <div className="pt-4 border-t">
                                     <h3 className="font-bold text-sm text-slate-700 mb-3">Métodos de Pago Activos</h3>
@@ -340,7 +329,7 @@ export default function AjustesPage() {
                                         </div>
                                     </div>
                                 </div>
-                            </form>
+                            </div>
                         </CardContent>
                     </Card>
                 </TabsContent>
