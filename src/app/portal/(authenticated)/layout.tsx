@@ -93,7 +93,7 @@ export default async function AuthenticatedLayout({
                         </Button>
                     </Link>
                     <Link href="/portal/tienda">
-                        <Button variant="ghost" className="w-full text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 justify-start font-bold bg-indigo-50/50">
+                        <Button variant="ghost" className="w-full justify-start">
                             <Store className="mr-2 h-4 w-4" /> Tienda
                         </Button>
                     </Link>

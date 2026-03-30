@@ -24,6 +24,9 @@ export default function PlayerFIFAStats({ stats, history, child }: { stats: Stat
     const values = [stats.pace, stats.shooting, stats.passing, stats.dribbling, stats.defending, stats.physical]
     const ovr = Math.round(values.reduce((a, b) => a + b, 0) / values.length)
 
+    // Calculate Gamification Level (1 to 10)
+    const level = Math.max(1, Math.min(10, Math.floor(ovr / 10)))
+
     const radarData = [
         { subject: 'S3-PAC', A: stats.pace, fullMark: 99 },
         { subject: 'TIR-SHO', A: stats.shooting, fullMark: 99 },
@@ -42,7 +45,14 @@ export default function PlayerFIFAStats({ stats, history, child }: { stats: Stat
             <div className="lg:col-span-2 space-y-6">
                 <Card>
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><Activity className="w-5 h-5 text-primary" /> Análisis Técnico</CardTitle>
+                        <CardTitle className="flex items-center justify-between w-full">
+                            <div className="flex items-center gap-2">
+                                <Activity className="w-5 h-5 text-primary" /> Análisis Técnico
+                            </div>
+                            <div className="px-3 py-1 bg-gradient-to-r from-yellow-500 to-amber-600 text-white shadow-sm text-[10px] font-black uppercase tracking-widest rounded-full">
+                                Nivel {level}
+                            </div>
+                        </CardTitle>
                     </CardHeader>
                     <CardContent className="h-[300px] w-full flex justify-center">
                         <ResponsiveContainer width="100%" height="100%">

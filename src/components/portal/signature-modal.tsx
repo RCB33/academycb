@@ -75,6 +75,7 @@ export function SignatureModal({ isOpen, onClose, guardianId, documentType, docu
                     <DialogDescription className="text-center text-slate-500">
                         Por favor, firma en el recuadro inferior para aceptar las condiciones del documento:
                         <strong className="block mt-1 text-slate-700">{documentType} (v{documentVersion})</strong>
+                        <a href="/terminos" target="_blank" className="text-indigo-600 hover:underline mt-2 inline-block font-bold text-xs" >🔗 Leer términos y condiciones completos</a>
                     </DialogDescription>
                 </DialogHeader>
 

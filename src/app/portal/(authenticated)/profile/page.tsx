@@ -20,6 +20,21 @@ export default async function ProfilePage() {
         .eq('id', user.id)
         .single()
 
+    const { data: guardian } = await supabase
+        .from('guardians')
+        .select(`
+            phone,
+            child_guardians(
+                relationship,
+                child:children(
+                    full_name,
+                    category:categories(name)
+                )
+            )
+        `)
+        .eq('user_id', user.id)
+        .single()
+
     return (
         <div className="max-w-2xl mx-auto space-y-6">
             <h1 className="text-3xl font-bold tracking-tight">Mi Perfil</h1>
@@ -57,6 +72,15 @@ export default async function ProfilePage() {
                             />
                         </div>
                         <div className="grid gap-2">
+                            <Label htmlFor="phone">Teléfono de Contacto</Label>
+                            <Input
+                                id="phone"
+                                name="phone"
+                                defaultValue={guardian?.phone || ''}
+                                placeholder="Tu número de teléfono"
+                            />
+                        </div>
+                        <div className="grid gap-2">
                             <Label htmlFor="email">Correo Electrónico</Label>
                             <Input
                                 id="email"
@@ -73,6 +97,30 @@ export default async function ProfilePage() {
                             Guardar Cambios
                         </Button>
                     </form>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Jugadores Asignados</CardTitle>
+                    <CardDescription>Alumnos bajo tu tutoría en la academia.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {(!guardian?.child_guardians || guardian.child_guardians.length === 0) ? (
+                        <p className="text-sm text-slate-500">No tienes ningún jugador asignado.</p>
+                    ) : (
+                        <div className="space-y-3">
+                            {guardian.child_guardians.map((cg: any, i: number) => (
+                                <div key={i} className="flex justify-between items-center p-3 bg-slate-50 rounded-lg border border-slate-100">
+                                    <div>
+                                        <p className="font-bold text-slate-900">{cg.child?.full_name}</p>
+                                        <p className="text-xs text-slate-500 font-medium">{cg.child?.category?.name || 'Academia'} • {cg.relationship}</p>
+                                    </div>
+                                    <Badge variant="outline" className="bg-white">Asignado</Badge>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 

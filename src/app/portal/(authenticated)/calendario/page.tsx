@@ -14,17 +14,17 @@ export default async function FamilyCalendarPage() {
     }
 
     // 1. Get the profile of the guardian
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
+    const { data: guardian } = await supabase
+        .from('guardians')
+        .select('id')
+        .eq('user_id', user.id)
         .single()
 
     // 2. Find children linked to this guardian
     const { data: childrenLinks } = await supabase
-        .from('guardian_children')
+        .from('child_guardians')
         .select('child_id')
-        .eq('guardian_id', user.id)
+        .eq('guardian_id', guardian?.id)
 
     const childIds = childrenLinks?.map(link => link.child_id) || []
 
