@@ -12,13 +12,13 @@ import { toast } from "sonner"
 
 export default function CartDrawer() {
     const {
-        cart,
+        items: cart,
         isCartOpen,
         setIsCartOpen,
-        removeItem,
+        removeFromCart: removeItem,
         updateQuantity,
-        totalPrice,
-        totalItems,
+        cartTotal: totalPrice,
+        cartCount: totalItems,
         clearCart
     } = useCart()
 
@@ -45,7 +45,8 @@ export default function CartDrawer() {
                 items: cart.map(item => ({
                     product_name: item.name,
                     quantity: item.quantity,
-                    price: item.price
+                    price: item.price,
+                    size: item.size
                 }))
             })
 
@@ -171,7 +172,7 @@ export default function CartDrawer() {
                                         <div key={item.id} className="flex gap-4 items-center">
                                             <div className="relative h-24 w-24 flex-shrink-0 rounded-2xl overflow-hidden bg-gray-100 border">
                                                 <Image
-                                                    src={item.image}
+                                                    src={item.image_url || '/placeholder.png'}
                                                     alt={item.name}
                                                     fill
                                                     className="object-cover"

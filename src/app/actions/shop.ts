@@ -10,7 +10,8 @@ const OrderSchema = z.object({
     items: z.array(z.object({
         product_name: z.string(),
         quantity: z.number().min(1),
-        price: z.number().min(0)
+        price: z.number().min(0),
+        size: z.string().optional()
     })).min(1, "El carrito está vacío"),
     total_amount: z.number().min(0)
 })
@@ -32,7 +33,7 @@ export async function submitOrderJson(data: {
     customer_name: string
     customer_email: string
     customer_phone: string
-    items: { product_name: string; quantity: number; price: number }[]
+    items: { product_name: string; quantity: number; price: number; size?: string }[]
     total_amount: number
 }) {
     const supabase = await createClient()
@@ -67,7 +68,8 @@ export async function submitOrderJson(data: {
             order_id: order.id,
             product_name: item.product_name,
             quantity: item.quantity,
-            price: item.price
+            price: item.price,
+            size: item.size || null
         }))
 
         const { error: itemsError } = await supabase
