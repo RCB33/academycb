@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { Inter, Rajdhani, Figtree } from 'next/font/google';
 import './globals.css';
 import { Toaster } from 'sonner';
+import { Providers } from '@/app/providers';
+import CartDrawer from '@/app/(public)/components/cart-drawer';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const rajdhani = Rajdhani({
@@ -28,8 +30,11 @@ export default function RootLayout({
     return (
         <html lang="es">
             <body className={`${inter.variable} ${rajdhani.variable} ${figtree.variable} font-sans antialiased`}>
-                {children}
-                <Toaster position="top-center" richColors />
+                <Providers>
+                    {children}
+                    <CartDrawer />
+                    <Toaster position="top-center" richColors />
+                </Providers>
             </body>
         </html>
     );
