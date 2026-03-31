@@ -63,7 +63,7 @@ export default async function AuthenticatedLayout({
                         </Button>
                     </Link>
                     <Link href="/portal/comunicados">
-                        <Button variant="ghost" className="w-full justify-start text-yellow-600 font-bold hover:text-yellow-700 hover:bg-yellow-50">
+                        <Button variant="ghost" className="w-full justify-start">
                             <MessageSquare className="mr-2 h-4 w-4" /> Comunicados
                         </Button>
                     </Link>
