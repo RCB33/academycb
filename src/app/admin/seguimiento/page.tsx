@@ -1,17 +1,27 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import Link from 'next/link'
-import { TrendingUp, Medal, Trophy, Star, ChevronRight, Filter, Download } from "lucide-react"
+import { TrendingUp, Medal, Trophy, Star, ChevronRight, Filter, Download, X } from "lucide-react"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { toast } from "sonner"
 
 export default function AdminSeguimientoPage() {
     const [students, setStudents] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
+    const [selectedCategory, setSelectedCategory] = useState<string>('all')
     const supabase = createClient()
 
     useEffect(() => {
@@ -32,16 +42,43 @@ export default function AdminSeguimientoPage() {
                     let ovr = 0
                     if (lastMetric) {
                         const vals = [lastMetric.pace, lastMetric.shooting, lastMetric.passing, lastMetric.dribbling, lastMetric.defending, lastMetric.physical]
-                        ovr = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)
+                        ovr = Math.round(vals.reduce((a: number, b: number) => a + b, 0) / vals.length)
                     }
                     return { ...child, ovr, last_metric_date: lastMetric?.recorded_at }
                 }))
-                setStudents(enriched.sort((a, b) => b.ovr - a.ovr)) // Sort by OVR desc
+                setStudents(enriched.sort((a, b) => b.ovr - a.ovr))
             }
             setLoading(false)
         }
         fetchData()
     }, [supabase])
+
+    // Category filter options
+    const categories = useMemo(() =>
+        Array.from(new Set(students.map(s => s.category?.name).filter(Boolean))).sort()
+    , [students])
+
+    // Filtered list
+    const filtered = useMemo(() => {
+        if (selectedCategory === 'all') return students
+        return students.filter(s => s.category?.name === selectedCategory)
+    }, [students, selectedCategory])
+
+    // CSV Export
+    function exportCSV() {
+        let csv = 'Posición,Jugador,Categoría,OVR,Última Actualización\n'
+        filtered.forEach((s, i) => {
+            csv += `${i + 1},"${s.full_name}","${s.category?.name || 'Sin categoría'}",${s.ovr > 0 ? s.ovr : 'N/D'},"${s.last_metric_date ? new Date(s.last_metric_date).toLocaleDateString() : 'Pendiente'}"\n`
+        })
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `ranking_seguimiento${selectedCategory !== 'all' ? '_' + selectedCategory : ''}.csv`
+        a.click()
+        URL.revokeObjectURL(url)
+        toast.success("CSV de ranking exportado")
+    }
 
     return (
         <div className="space-y-8">
@@ -51,21 +88,46 @@ export default function AdminSeguimientoPage() {
                     <p className="text-muted-foreground font-medium">Ranking de rendimiento basado en métricas oficiales</p>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline" className="bg-white border-slate-200">
-                        <Filter className="mr-2 h-4 w-4" /> Filtrar por Categoría
-                    </Button>
-                    <Button className="bg-slate-900 hover:bg-black text-white">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" className="bg-white border-slate-200 gap-2">
+                                <Filter className="h-4 w-4" />
+                                {selectedCategory !== 'all' ? selectedCategory : 'Categoría'}
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-[200px] bg-white">
+                            <DropdownMenuLabel>Filtrar por Categoría</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => setSelectedCategory('all')}>
+                                Todas las Categorías
+                            </DropdownMenuItem>
+                            {categories.map((cat: string) => (
+                                <DropdownMenuItem key={cat} onClick={() => setSelectedCategory(cat)}>
+                                    {cat}
+                                </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    {selectedCategory !== 'all' && (
+                        <Button variant="ghost" size="icon" className="h-9 w-9 hover:bg-red-50 hover:text-red-600"
+                            onClick={() => setSelectedCategory('all')}>
+                            <X className="h-4 w-4" />
+                        </Button>
+                    )}
+
+                    <Button className="bg-slate-900 hover:bg-black text-white" onClick={exportCSV}>
                         <Download className="mr-2 h-4 w-4" /> Exportar Reporte
                     </Button>
                 </div>
             </div>
 
             {/* TOP 3 CARDS */}
-            {!loading && students.length >= 3 && (
+            {!loading && filtered.length >= 3 && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <PodiumCard student={students[1]} rank={2} color="bg-slate-300" icon={<Medal className="h-6 w-6 text-slate-500" />} />
-                    <PodiumCard student={students[0]} rank={1} color="bg-amber-400" icon={<Trophy className="h-8 w-8 text-amber-900" />} highlight />
-                    <PodiumCard student={students[2]} rank={3} color="bg-orange-300" icon={<Medal className="h-6 w-6 text-orange-600" />} />
+                    <PodiumCard student={filtered[1]} rank={2} color="bg-slate-300" icon={<Medal className="h-6 w-6 text-slate-500" />} />
+                    <PodiumCard student={filtered[0]} rank={1} color="bg-amber-400" icon={<Trophy className="h-8 w-8 text-amber-900" />} highlight />
+                    <PodiumCard student={filtered[2]} rank={3} color="bg-orange-300" icon={<Medal className="h-6 w-6 text-orange-600" />} />
                 </div>
             )}
 
@@ -73,7 +135,10 @@ export default function AdminSeguimientoPage() {
                 <CardHeader className="bg-slate-50 border-b border-slate-100 flex flex-row items-center justify-between py-6">
                     <div>
                         <CardTitle className="text-xl font-bold">Clasificación General</CardTitle>
-                        <CardDescription>Puntuación MEDIA (OVR) de todos los jugadores activos</CardDescription>
+                        <CardDescription>
+                            Puntuación MEDIA (OVR) de todos los jugadores activos
+                            {selectedCategory !== 'all' && <span className="ml-1 font-bold text-indigo-600">— {selectedCategory}</span>}
+                        </CardDescription>
                     </div>
                     <Star className="h-6 w-6 text-amber-400 fill-amber-400" />
                 </CardHeader>
@@ -96,8 +161,14 @@ export default function AdminSeguimientoPage() {
                                         Calculando ranking de rendimiento...
                                     </TableCell>
                                 </TableRow>
+                            ) : filtered.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
+                                        No hay jugadores en esta categoría
+                                    </TableCell>
+                                </TableRow>
                             ) : (
-                                students.map((student, index) => (
+                                filtered.map((student, index) => (
                                     <TableRow
                                         key={student.id}
                                         className="hover:bg-indigo-50/30 transition-colors border-b border-slate-50 cursor-pointer group"

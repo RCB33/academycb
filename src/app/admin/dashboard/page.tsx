@@ -10,20 +10,43 @@ import { AcademyHealth } from "./components/academy-health"
 export default async function AdminDashboard() {
     const supabase = await createClient()
 
-    // Fetch Stats (Simulated or Real counts)
+    // ── Real KPIs ──
     const { count: studentCount } = await supabase.from('children').select('*', { count: 'exact', head: true })
     const { count: leadCount } = await supabase.from('leads').select('*', { count: 'exact', head: true }).eq('status', 'new')
 
-    // Real Revenue calculation
-    const { data: payments } = await supabase
+    // Revenue: current month vs previous month
+    const now = new Date()
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+    const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString()
+    const endOfPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59).toISOString()
+
+    const { data: currentPayments } = await supabase
         .from('payments')
         .select('amount')
         .eq('status', 'paid')
+    
+    const { data: prevMonthPayments } = await supabase
+        .from('payments')
+        .select('amount')
+        .eq('status', 'paid')
+        .gte('paid_at', startOfPrevMonth)
+        .lte('paid_at', endOfPrevMonth)
 
-    const totalRevenueSum = payments?.reduce((acc, curr) => acc + Number(curr.amount), 0) || 0
-    const totalRevenue = totalRevenueSum > 0
-        ? new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(totalRevenueSum)
-        : "12.350 €" // Fallback to mock for visual impact if no real data
+    const totalRevenueSum = currentPayments?.reduce((acc, curr) => acc + Number(curr.amount), 0) || 0
+    const prevMonthSum = prevMonthPayments?.reduce((acc, curr) => acc + Number(curr.amount), 0) || 0
+    
+    const totalRevenue = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(totalRevenueSum)
+
+    const growthPct = prevMonthSum > 0
+        ? Math.round(((totalRevenueSum - prevMonthSum) / prevMonthSum) * 100)
+        : 0
+
+    // New students this week
+    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
+    const { count: newStudentsWeek } = await supabase
+        .from('children')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', oneWeekAgo)
 
     return (
         <div className="space-y-6">
@@ -38,7 +61,13 @@ export default async function AdminDashboard() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-navy">{totalRevenue}</div>
-                        <p className="text-xs text-green-600 font-medium">+20.1% mes pasado</p>
+                        {growthPct !== 0 ? (
+                            <p className={`text-xs font-medium ${growthPct > 0 ? 'text-green-600' : 'text-red-500'}`}>
+                                {growthPct > 0 ? '+' : ''}{growthPct}% vs mes anterior
+                            </p>
+                        ) : (
+                            <p className="text-xs text-slate-400 font-medium">Sin datos del mes anterior</p>
+                        )}
                     </CardContent>
                 </Card>
                 <Card className="bg-white hover:shadow-md transition-shadow">
@@ -48,7 +77,9 @@ export default async function AdminDashboard() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-navy">{studentCount || 0}</div>
-                        <p className="text-xs text-green-600 font-medium">+5 nuevos esta semana</p>
+                        <p className="text-xs text-slate-500 font-medium">
+                            {(newStudentsWeek || 0) > 0 ? `+${newStudentsWeek} nuevos esta semana` : 'Sin altas esta semana'}
+                        </p>
                     </CardContent>
                 </Card>
                 <Card className="bg-white hover:shadow-md transition-shadow">
