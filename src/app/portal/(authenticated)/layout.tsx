@@ -102,11 +102,6 @@ export default async function AuthenticatedLayout({
                             <Download className="mr-2 h-4 w-4" /> Descargas
                         </Button>
                     </Link>
-                    <Link href="/portal/settings">
-                        <Button variant="ghost" className="w-full justify-start">
-                            <Settings className="mr-2 h-4 w-4" /> Ajustes
-                        </Button>
-                    </Link>
                 </nav>
                 <div className="p-4 border-t shrink-0">
                     <div className="flex items-center justify-between mb-4 px-2">
