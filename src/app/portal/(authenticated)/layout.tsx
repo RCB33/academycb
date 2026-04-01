@@ -1,11 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Home, Calendar as CalendarIcon, FileText, User, Settings, LogOut, Download, Trophy, Bell, ShoppingBag, Video, Store, MessageSquare } from "lucide-react"
+import { LogOut, Trophy } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { NotificationBell } from "@/components/ui/notification-bell"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { GlobalSignatureGuard } from "@/components/portal/global-signature-guard"
+import { SidebarNav } from "@/components/portal/sidebar-nav"
 
 export default async function AuthenticatedLayout({
     children,
@@ -56,53 +56,7 @@ export default async function AuthenticatedLayout({
                         <span>Portal Familias</span>
                     </Link>
                 </div>
-                <nav className="flex-1 p-4 space-y-2">
-                    <Link href="/portal/dashboard">
-                        <Button variant="ghost" className="w-full justify-start">
-                            <Home className="mr-2 h-4 w-4" /> Inicio
-                        </Button>
-                    </Link>
-                    <Link href="/portal/comunicados">
-                        <Button variant="ghost" className="w-full justify-start">
-                            <MessageSquare className="mr-2 h-4 w-4" /> Comunicados
-                        </Button>
-                    </Link>
-                    <Link href="/portal/profile">
-                        <Button variant="ghost" className="w-full justify-start">
-                            <User className="mr-2 h-4 w-4" /> Mi Perfil
-                        </Button>
-                    </Link>
-                    <Link href="/portal/calendario">
-                        <Button variant="ghost" className="w-full justify-start">
-                            <CalendarIcon className="mr-2 h-4 w-4" /> Mi Calendario
-                        </Button>
-                    </Link>
-                    <Link href="/portal/videoteca">
-                        <Button variant="ghost" className="w-full justify-start">
-                            <Video className="mr-2 h-4 w-4" /> Videoteca
-                        </Button>
-                    </Link>
-                    <Link href="/portal/documentos">
-                        <Button variant="ghost" className="w-full justify-start">
-                            <FileText className="mr-2 h-4 w-4" /> Documentos
-                        </Button>
-                    </Link>
-                    <Link href="/portal/pagos">
-                        <Button variant="ghost" className="w-full justify-start">
-                            <ShoppingBag className="mr-2 h-4 w-4" /> Pagos
-                        </Button>
-                    </Link>
-                    <Link href="/portal/tienda">
-                        <Button variant="ghost" className="w-full justify-start">
-                            <Store className="mr-2 h-4 w-4" /> Tienda
-                        </Button>
-                    </Link>
-                    <Link href="/portal/descargas">
-                        <Button variant="ghost" className="w-full justify-start">
-                            <Download className="mr-2 h-4 w-4" /> Descargas
-                        </Button>
-                    </Link>
-                </nav>
+                <SidebarNav />
                 <div className="p-4 border-t shrink-0">
                     <div className="flex items-center justify-between mb-4 px-2">
                         <div className="flex items-center space-x-3 overflow-hidden">
