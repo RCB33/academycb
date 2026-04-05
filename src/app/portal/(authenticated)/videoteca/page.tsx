@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
-import { Video, PlayCircle } from "lucide-react"
+import { Video, PlayCircle, GraduationCap, Tent, Trophy, Users, UserCircle } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import Image from "next/image"
@@ -8,14 +8,19 @@ import { Button } from "@/components/ui/button"
 
 export const dynamic = 'force-dynamic'
 
+const CONTEXT_CFG: Record<string, { label: string, color: string }> = {
+    academia: { label: 'Academia', color: 'bg-blue-500' },
+    campus: { label: 'Campus', color: 'bg-green-500' },
+    torneo: { label: 'Torneo', color: 'bg-yellow-500' },
+}
+
 export default async function FamilyVideotecaPage() {
     const supabase = await createClient()
 
-    // 1. Get current user
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return null
 
-    // 2. Get children associated with this guardian to find their category IDs
+    // Get children associated with this guardian
     const { data: guardians } = await supabase
         .from('guardians')
         .select(`
@@ -32,30 +37,41 @@ export default async function FamilyVideotecaPage() {
         .single()
 
     const childCategories: string[] = []
+    const childIds: string[] = []
     if (guardians?.child_guardians) {
         guardians.child_guardians.forEach((cg: any) => {
             if (cg.children?.category_id && !childCategories.includes(cg.children.category_id)) {
                 childCategories.push(cg.children.category_id)
             }
+            if (cg.children?.id) {
+                childIds.push(cg.children.id)
+            }
         })
     }
 
-    // 3. Fetch media assets for those categories
+    // Fetch media assets: by category OR individually assigned to this child
     let assets: any[] = []
-    if (childCategories.length > 0) {
+    if (childCategories.length > 0 || childIds.length > 0) {
+        // Get videos for the category (general) + individual videos for this child
         const { data } = await supabase
             .from('media_assets')
             .select(`
                 *,
-                categories(name)
+                categories(name),
+                teams(name),
+                children(full_name)
             `)
-            .in('category_id', childCategories)
+            .or(
+                [
+                    childCategories.length > 0 ? `category_id.in.(${childCategories.join(',')})` : null,
+                    childIds.length > 0 ? `child_id.in.(${childIds.join(',')})` : null,
+                ].filter(Boolean).join(',')
+            )
             .order('created_at', { ascending: false })
 
         assets = data || []
     }
 
-    // Fallback logic for thumbnail
     const getYoutubeId = (url: string) => {
         const match = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/)
         return match ? match[1] : null
@@ -88,8 +104,10 @@ export default async function FamilyVideotecaPage() {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {assets.map((asset) => {
-                        const vId = getYoutubeId(asset.video_url);
-                        const thumb = asset.thumbnail_url || (vId ? `https://img.youtube.com/vi/${vId}/maxresdefault.jpg` : null);
+                        const vId = getYoutubeId(asset.video_url)
+                        const thumb = asset.thumbnail_url || (vId ? `https://img.youtube.com/vi/${vId}/maxresdefault.jpg` : null)
+                        const ctx = CONTEXT_CFG[asset.context || 'academia'] || CONTEXT_CFG.academia
+                        const isIndividual = !!asset.child_id
 
                         return (
                             <Link href={asset.video_url} target="_blank" rel="noopener noreferrer" key={asset.id} className="block group">
@@ -97,12 +115,7 @@ export default async function FamilyVideotecaPage() {
                                     <div className="relative aspect-video bg-slate-900 overflow-hidden">
                                         {thumb ? (
                                             <div className="w-full h-full relative opacity-90 group-hover:opacity-100 transition-opacity duration-300">
-                                                <Image
-                                                    src={thumb}
-                                                    alt={asset.title}
-                                                    fill
-                                                    className="object-cover group-hover:scale-105 transition-transform duration-700"
-                                                />
+                                                <Image src={thumb} alt={asset.title} fill className="object-cover group-hover:scale-105 transition-transform duration-700" />
                                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
                                                 <div className="absolute inset-0 flex items-center justify-center">
                                                     <div className="h-14 w-14 bg-indigo-600/90 backdrop-blur-sm rounded-full flex items-center justify-center border-2 border-white/50 shadow-[0_0_20px_rgba(79,70,229,0.5)] group-hover:scale-110 group-hover:bg-indigo-500 transition-all duration-300">
@@ -115,10 +128,21 @@ export default async function FamilyVideotecaPage() {
                                                 <PlayCircle className="h-16 w-16 text-indigo-500/50" />
                                             </div>
                                         )}
-                                        <div className="absolute top-3 left-3 flex gap-2">
-                                            <Badge className="bg-white/10 backdrop-blur-md text-white border-none font-bold shadow-sm">
-                                                {asset.categories?.name}
+                                        <div className="absolute top-3 left-3 flex gap-1.5 flex-wrap">
+                                            <Badge className={`${ctx.color} text-white border-none font-bold text-[9px] uppercase tracking-widest shadow-sm`}>
+                                                {ctx.label}
                                             </Badge>
+                                            {asset.categories?.name && (
+                                                <Badge className="bg-white/10 backdrop-blur-md text-white border-none font-bold shadow-sm">
+                                                    {asset.categories.name}
+                                                </Badge>
+                                            )}
+                                            {isIndividual && (
+                                                <Badge className="bg-indigo-500 text-white border-none font-bold text-[9px] shadow-sm">
+                                                    <UserCircle className="h-2.5 w-2.5 mr-1" />
+                                                    Para ti
+                                                </Badge>
+                                            )}
                                         </div>
                                     </div>
                                     <CardContent className="p-5">
@@ -135,7 +159,7 @@ export default async function FamilyVideotecaPage() {
                                                 {new Date(asset.created_at).toLocaleDateString()}
                                             </span>
                                             <Button variant="ghost" size="sm" className="h-8 text-indigo-600 hover:bg-indigo-50 font-bold p-0 px-2">
-                                                Ver en YouTube
+                                                Ver Vídeo
                                             </Button>
                                         </div>
                                     </CardContent>

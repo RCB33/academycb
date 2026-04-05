@@ -222,8 +222,11 @@ export default function FinancePage() {
                     </p>
                 </div>
                 <div className="flex gap-2">
-                    <Button onClick={() => setManualPaymentOpen(true)} className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold shadow-md">
-                        <Plus className="mr-2 h-4 w-4" /> Registrar Pago
+                    <Button onClick={() => setManualPaymentOpen(true)} className="bg-green-600 hover:bg-green-700 text-white font-bold shadow-md">
+                        <Plus className="mr-2 h-4 w-4" /> 💰 Registrar Ingreso
+                    </Button>
+                    <Button onClick={() => setExpenseDialogOpen(true)} className="bg-red-500 hover:bg-red-600 text-white font-bold shadow-md">
+                        <Plus className="mr-2 h-4 w-4" /> 📝 Registrar Gasto
                     </Button>
                     <Button onClick={exportCSV} variant="outline" className="bg-white border-slate-200 shadow-sm">
                         <Download className="mr-2 h-4 w-4" /> CSV
@@ -618,7 +621,7 @@ export default function FinancePage() {
                             <CreditCard className="h-6 w-6 text-black" />
                         </div>
                         <DialogTitle className="text-lg font-black text-black tracking-tight uppercase">
-                            Registrar Pago Manual
+                            Registrar Ingreso
                         </DialogTitle>
                     </div>
                     <form onSubmit={handleManualPayment} className="p-5 space-y-4">
@@ -654,9 +657,9 @@ export default function FinancePage() {
                         <input type="hidden" name="ref_id" value="manual" />
                         <div className="pt-3 flex justify-end gap-3 border-t">
                             <Button type="button" variant="ghost" onClick={() => setManualPaymentOpen(false)}>Cancelar</Button>
-                            <Button type="submit" disabled={savingManual} className="bg-black hover:bg-slate-800 text-white font-bold px-6">
+                            <Button type="submit" disabled={savingManual} className="bg-green-600 hover:bg-green-700 text-white font-bold px-6">
                                 {savingManual && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                                Registrar Pago
+                                Registrar Ingreso
                             </Button>
                         </div>
                     </form>

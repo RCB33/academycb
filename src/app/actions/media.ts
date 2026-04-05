@@ -6,12 +6,17 @@ import { revalidatePath } from 'next/cache'
 export type MediaAsset = {
     id: string
     category_id: string | null
+    team_id: string | null
+    child_id: string | null
+    context: string
     title: string
     description: string | null
     video_url: string
     thumbnail_url: string | null
     created_at: string
     categories?: { name: string }
+    teams?: { name: string }
+    children?: { full_name: string }
 }
 
 export async function createMediaAsset(data: {
@@ -19,6 +24,9 @@ export async function createMediaAsset(data: {
     description?: string
     video_url: string
     category_id: string
+    team_id?: string | null
+    child_id?: string | null
+    context?: string
 }) {
     const supabase = await createClient()
 
@@ -36,6 +44,9 @@ export async function createMediaAsset(data: {
             description: data.description || null,
             video_url: data.video_url,
             category_id: data.category_id,
+            team_id: data.team_id || null,
+            child_id: data.child_id || null,
+            context: data.context || 'academia',
             thumbnail_url: thumbnail_url
         }])
 
@@ -45,6 +56,7 @@ export async function createMediaAsset(data: {
     }
 
     revalidatePath('/admin/videoteca')
+    revalidatePath('/portal/videoteca')
     return { success: true }
 }
 
@@ -55,7 +67,9 @@ export async function getMediaAssets(categoryId?: string) {
         .from('media_assets')
         .select(`
             *,
-            categories(name)
+            categories(name),
+            teams(name),
+            children(full_name)
         `)
         .order('created_at', { ascending: false })
 
@@ -87,5 +101,36 @@ export async function deleteMediaAsset(id: string) {
     }
 
     revalidatePath('/admin/videoteca')
+    revalidatePath('/portal/videoteca')
     return { success: true }
+}
+
+export async function getTeamsForCategory(categoryId: string) {
+    const supabase = await createClient()
+    const { data, error } = await supabase
+        .from('teams')
+        .select('id, name')
+        .eq('category_id', categoryId)
+        .order('name')
+
+    if (error) {
+        console.error("Error fetching teams:", error)
+        return []
+    }
+    return data || []
+}
+
+export async function getChildrenForTeam(teamId: string) {
+    const supabase = await createClient()
+    const { data, error } = await supabase
+        .from('team_players')
+        .select('child:children(id, full_name)')
+        .eq('team_id', teamId)
+        .order('created_at', { ascending: false })
+
+    if (error) {
+        console.error("Error fetching children:", error)
+        return []
+    }
+    return (data || []).map((d: any) => d.child).filter(Boolean)
 }
