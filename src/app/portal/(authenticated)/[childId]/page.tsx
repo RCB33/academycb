@@ -72,10 +72,17 @@ export default async function ChildPage({ params }: { params: Promise<{ childId:
 
     // Fetch Gallery
     const { data: galleryImages } = await supabase
-        .from('media')
-        .select('*')
+        .from('media_assets')
+        .select('id, url')
         .eq('child_id', childId)
+        .eq('media_type', 'image')
         .order('created_at', { ascending: false })
+
+    const signedGalleryImages = await Promise.all((galleryImages || []).map(async (image) => {
+        if (!image.url || image.url.startsWith('http')) return image
+        const { data } = await supabase.storage.from('gallery').createSignedUrl(image.url, 3600)
+        return { ...image, url: data?.signedUrl || '' }
+    }))
 
     return (
         <div className="space-y-8">
@@ -96,7 +103,7 @@ export default async function ChildPage({ params }: { params: Promise<{ childId:
                         coachNotes={notes && notes.length > 0 ? notes[0].content : "Sin observaciones recientes."}
                     />
                     {child.public_share_token && (
-                        <ShareProfile token={child.public_share_token} childName={child.full_name} />
+                        <ShareProfile token={child.public_share_token} childId={child.id} childName={child.full_name} />
                     )}
                 </div>
             </div>
@@ -212,8 +219,8 @@ export default async function ChildPage({ params }: { params: Promise<{ childId:
                 <div className="lg:col-span-full">
                     <PhotoGallery
                         childId={childId}
-                        initialImages={galleryImages || []}
-                        canEdit={true}
+                        initialImages={signedGalleryImages.filter(image => image.url)}
+                        canEdit={false}
                     />
                 </div>
 

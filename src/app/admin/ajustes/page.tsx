@@ -53,7 +53,12 @@ export default function AjustesPage() {
         for (const [key, value] of fd.entries()) {
             updates[key] = value as string
         }
-        await updateSettings(updates)
+        const result = await updateSettings(updates)
+        if (!result.success) {
+            setSaving(false)
+            toast.error(result.error || 'No se pudieron guardar los ajustes')
+            return
+        }
         setSettings(prev => ({ ...prev, ...updates }))
         setSaving(false)
         toast.success("Ajustes guardados")
@@ -164,6 +169,20 @@ export default function AjustesPage() {
                                 <div className="space-y-2">
                                     <Label className="text-slate-700 font-bold uppercase text-xs tracking-wider">Dirección</Label>
                                     <Input name="academy_address" defaultValue={settings.academy_address || ''} placeholder="Calle Ejemplo 123, 17230 Palamós" className="bg-white" />
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label className="text-slate-700 font-bold uppercase text-xs tracking-wider">WhatsApp público</Label>
+                                        <Input name="academy_whatsapp" defaultValue={settings.academy_whatsapp || ''} placeholder="+34 600 000 000" className="bg-white" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-slate-700 font-bold uppercase text-xs tracking-wider">Temporada actual</Label>
+                                        <Input name="current_season" defaultValue={settings.current_season || ''} placeholder="2026/2027" className="bg-white" />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-slate-700 font-bold uppercase text-xs tracking-wider">Portal público de resultados</Label>
+                                    <Input name="tournaments_url" type="url" defaultValue={settings.tournaments_url || ''} placeholder="https://..." className="bg-white" />
                                 </div>
                                 <div className="flex justify-end pt-4 border-t">
                                     <Button type="submit" disabled={saving} className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold px-8">

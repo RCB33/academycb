@@ -41,7 +41,7 @@ export function LoginForm() {
                 toast.success("Bienvenido")
                 router.refresh()
 
-                if (profile?.role === 'admin' || user?.email === 'rokecordoba@gmail.com') {
+                if (profile?.role === 'admin') {
                     router.push('/admin/dashboard')
                 } else {
                     router.push('/portal/dashboard')
@@ -73,7 +73,6 @@ export function LoginForm() {
                     <div className="space-y-2">
                         <div className="flex items-center justify-between">
                             <Label htmlFor="password" className="text-white">Contraseña</Label>
-                            <a href="#" className="text-xs text-primary hover:underline">¿Olvidaste tu contraseña?</a>
                         </div>
                         <Input
                             id="password"

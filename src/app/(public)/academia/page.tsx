@@ -1,7 +1,13 @@
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "lucide-react"
 import Image from "next/image"
+import Link from "next/link"
 import { CarouselCustom } from "@/components/ui/carousel-custom"
+import { Button } from "@/components/ui/button"
+
+export const metadata = {
+    title: 'Academia de fútbol',
+    description: 'Conoce la metodología y el programa formativo de Academy Costa Brava.'
+}
 
 export default function AcademyPage() {
     const galleryImages = [
@@ -20,7 +26,6 @@ export default function AcademyPage() {
         <div className="min-h-screen bg-navy text-white">
             {/* Hero Section */}
             <div className="relative py-20 md:py-32 overflow-hidden">
-                <div className="absolute inset-0 bg-[url('/bg-texture.png')] opacity-10 mix-blend-overlay"></div> {/* Optional texture helper */}
                 <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-gold/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2"></div>
 
                 <div className="container relative z-10">
@@ -70,7 +75,7 @@ export default function AcademyPage() {
                                 </div>
                                 <div>
                                     <h4 className="font-heading font-bold text-2xl text-white mb-2 group-hover:text-gold transition-colors">Desarrollo Físico</h4>
-                                    <p className="text-gray-400">Coordinación, velocidad y prevención de lesiones con tecnología biométrica.</p>
+                                    <p className="text-gray-400">Trabajo de coordinación, velocidad, movilidad y hábitos para una práctica deportiva segura.</p>
                                 </div>
                             </li>
                         </ul>
@@ -106,49 +111,12 @@ export default function AcademyPage() {
                     </div>
                 </div>
 
-                {/* Plans Section */}
-                <div className="text-center mb-16">
-                    <h2 className="font-heading text-4xl font-bold mb-6 text-white">Planes de Formación</h2>
-                    <p className="text-xl text-gray-300">Elige la opción que mejor se adapte a tus necesidades.</p>
-                </div>
-
-                <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-                    {/* Monthly Plan */}
-                    <Card className="bg-navy-light border-white/10 text-white hover:border-gold/50 transition-all hover:-translate-y-2 duration-300">
-                        <CardHeader>
-                            <CardTitle className="text-2xl font-heading text-gold">Mensual</CardTitle>
-                            <CardDescription className="text-gray-400">Flexibilidad total</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-5xl font-bold mb-2">40€<span className="text-sm font-normal text-gray-400">/mes</span></div>
-                            <p className="text-sm text-gray-300 mt-4 border-t border-white/10 pt-4">Pago mes a mes sin compromiso de permanencia.</p>
-                        </CardContent>
-                    </Card>
-
-                    {/* Quarterly Plan */}
-                    <Card className="bg-gradient-to-b from-navy to-navy-light border-gold text-white relative overflow-hidden transform scale-105 shadow-2xl shadow-gold/10">
-                        <div className="absolute top-0 right-0 bg-gold text-navy font-bold text-xs px-3 py-1 rounded-bl-lg">POPULAR</div>
-                        <CardHeader>
-                            <CardTitle className="text-3xl font-heading text-gold">Trimestral</CardTitle>
-                            <CardDescription className="text-gray-300">Compromiso y ahorro</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-5xl font-bold mb-2">110€<span className="text-sm font-normal text-gray-400">/trimestre</span></div>
-                            <p className="text-sm text-gray-300 mt-4 border-t border-white/10 pt-4">Ahorra un mes al año. Ideal para evaluaciones periódicas.</p>
-                        </CardContent>
-                    </Card>
-
-                    {/* Annual Plan */}
-                    <Card className="bg-navy-light border-white/10 text-white hover:border-gold/50 transition-all hover:-translate-y-2 duration-300">
-                        <CardHeader>
-                            <CardTitle className="text-2xl font-heading text-gold">Anual</CardTitle>
-                            <CardDescription className="text-gray-400">La mejor opción</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-5xl font-bold mb-2">400€<span className="text-sm font-normal text-gray-400">/temporada</span></div>
-                            <p className="text-sm text-gray-300 mt-4 border-t border-white/10 pt-4">Pago único. Incluye equipación de regalo.</p>
-                        </CardContent>
-                    </Card>
+                <div className="max-w-3xl mx-auto rounded-3xl border border-gold/20 bg-navy-light p-10 text-center">
+                    <h2 className="font-heading text-4xl font-bold mb-5 text-white">Grupos, horarios y tarifas</h2>
+                    <p className="text-lg text-gray-300 mb-8">Las condiciones dependen de la edad, el grupo y la convocatoria activa. Solicita la información vigente directamente a la academia.</p>
+                    <Button asChild size="lg" className="bg-gold text-navy font-bold">
+                        <Link href="/contacto">Solicitar información</Link>
+                    </Button>
                 </div>
             </div>
         </div>

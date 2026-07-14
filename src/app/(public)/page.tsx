@@ -2,11 +2,13 @@ import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { ArrowRight, Star, Shield, Zap, TrendingUp, Users, Trophy } from "lucide-react"
+import { ArrowRight, Star, Shield, Zap, TrendingUp, HeartHandshake } from "lucide-react"
 import LeadWidget from "./components/lead-widget"
 import WhoWeAreSection from "./components/who-we-are-section"
+import { getPublicSettings } from "@/lib/public-settings"
 
-export default function LandingPage() {
+export default async function LandingPage() {
+    const settings = await getPublicSettings()
     return (
         <div className="flex flex-col min-h-screen font-sans text-foreground">
 
@@ -29,7 +31,7 @@ export default function LandingPage() {
                 <div className="container relative z-10 flex flex-col items-center text-center px-4">
                     <div className="inline-block animate-fade-in-up">
                         <span className="inline-flex items-center rounded-full border border-gold/30 bg-gold/10 px-4 py-1.5 text-sm font-bold text-gold backdrop-blur-md mb-8 tracking-wider">
-                            <Star className="mr-2 h-4 w-4 fill-gold" /> TEMPORADA 2025/2026
+                            <Star className="mr-2 h-4 w-4 fill-gold" /> {settings.current_season ? `TEMPORADA ${settings.current_season}` : 'INSCRIPCIONES ABIERTAS'}
                         </span>
                     </div>
 
@@ -39,8 +41,8 @@ export default function LandingPage() {
                     </h1>
 
                     <p className="max-w-2xl text-lg md:text-xl text-gray-200 mb-10 font-light leading-relaxed">
-                        Formación de élite en el corazón del Mediterráneo.
-                        Tecnología, metodología profesional y valores.
+                        Formación futbolística en la Costa Brava.
+                        Entrenamiento, seguimiento y valores dentro y fuera del campo.
                     </p>
 
                     <div className="flex flex-col sm:flex-row gap-5 w-full sm:w-auto">
@@ -60,19 +62,18 @@ export default function LandingPage() {
             </section>
 
 
-            {/* STATS STRIP */}
+            {/* PRINCIPLES STRIP */}
             <section className="py-12 bg-navy border-b border-white/5">
                 <div className="container">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
                         {[
-                            { label: "JUGADORES", value: "250+", icon: Users },
-                            { label: "ENTRENADORES", value: "15", icon: Shield },
-                            { label: "TITULOS", value: "45", icon: Trophy },
-                            { label: "PROYECCIÓN", value: "100%", icon: TrendingUp },
+                            { label: "TÉCNICA", icon: Zap },
+                            { label: "TÁCTICA", icon: TrendingUp },
+                            { label: "EQUIPO", icon: Shield },
+                            { label: "VALORES", icon: HeartHandshake },
                         ].map((stat, i) => (
                             <div key={i} className="flex flex-col items-center justify-center p-4">
                                 <stat.icon className="h-8 w-8 text-secondary mb-3 opacity-80" />
-                                <span className="font-heading text-4xl md:text-5xl font-bold text-white mb-1">{stat.value}</span>
                                 <span className="text-xs font-bold tracking-widest text-gray-400 uppercase">{stat.label}</span>
                             </div>
                         ))}
@@ -142,15 +143,14 @@ export default function LandingPage() {
             {/* PROGRAMS SPLIT */}
             <section className="grid md:grid-cols-2 min-h-[600px]">
                 <div className="relative group overflow-hidden bg-navy flex items-center justify-center p-12">
-                    <div className="absolute inset-0 bg-[url('/pattern-grid.svg')] opacity-5"></div>
                     <div className="relative z-10 max-w-md text-center md:text-left">
                         <span className="text-secondary font-bold tracking-widest uppercase text-sm mb-4 block">Formación Continua</span>
                         <h3 className="font-heading text-5xl font-bold text-white mb-6 uppercase">Academia <br /> Anual</h3>
                         <p className="text-gray-300 mb-8 text-lg">
                             Para jugadores que buscan desarrollo a largo plazo. Temporada completa de septiembre a junio.
                         </p>
-                        <Button variant="link" className="text-white hover:text-secondary p-0 text-xl font-heading font-bold uppercase decoration-2 underline-offset-8">
-                            Ver Detalles <ArrowRight className="ml-2" />
+                        <Button asChild variant="link" className="text-white hover:text-secondary p-0 text-xl font-heading font-bold uppercase decoration-2 underline-offset-8">
+                            <Link href="/academia">Ver detalles <ArrowRight className="ml-2" /></Link>
                         </Button>
                     </div>
                 </div>
@@ -162,8 +162,8 @@ export default function LandingPage() {
                         <p className="text-gray-600 mb-8 text-lg">
                             Semanas de inmersión total. Fútbol, diversión y convivencia en instalaciones de primer nivel.
                         </p>
-                        <Button variant="link" className="text-navy hover:text-primary p-0 text-xl font-heading font-bold uppercase decoration-2 underline-offset-8">
-                            Próximas Fechas <ArrowRight className="ml-2" />
+                        <Button asChild variant="link" className="text-navy hover:text-primary p-0 text-xl font-heading font-bold uppercase decoration-2 underline-offset-8">
+                            <Link href="/campus">Próximas fechas <ArrowRight className="ml-2" /></Link>
                         </Button>
                     </div>
                 </div>
@@ -184,7 +184,7 @@ export default function LandingPage() {
                                 <span className="text-gold">Empieza Aquí</span>
                             </h2>
                             <p className="text-xl text-gray-300 mb-8 max-w-lg">
-                                Déjanos guiarte. Responde unas breves preguntas y nuestro sistema te recomendará el plan perfecto.
+                                Cuéntanos qué estás buscando y el equipo de la academia te orientará sobre las opciones disponibles.
                             </p>
 
                             <div className="flex flex-col gap-4">
@@ -192,7 +192,7 @@ export default function LandingPage() {
                                     <div className="h-10 w-10 rounded-full bg-secondary/10 flex items-center justify-center">
                                         <div className="h-3 w-3 rounded-full bg-secondary animate-pulse" />
                                     </div>
-                                    <span className="font-medium">Respuesta inmediata</span>
+                                    <span className="font-medium">Respuesta personalizada</span>
                                 </div>
                                 <div className="flex items-center gap-4 text-white/80">
                                     <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -205,7 +205,7 @@ export default function LandingPage() {
 
                         <div className="w-full md:w-[500px]">
                             <div className="bg-white rounded-3xl p-2 shadow-2xl shadow-navy-light/50">
-                                <LeadWidget />
+                                <LeadWidget whatsappNumber={settings.academy_whatsapp || settings.academy_phone} />
                             </div>
                         </div>
                     </div>

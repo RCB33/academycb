@@ -4,37 +4,21 @@ import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
 
 const OrderSchema = z.object({
-    customer_name: z.string().min(2, "El nombre es obligatorio"),
-    customer_email: z.string().email("Email inválido"),
-    customer_phone: z.string().min(6, "Teléfono inválido"),
+    customer_name: z.string().trim().min(2, "El nombre es obligatorio").max(120),
+    customer_email: z.string().trim().email("Email inválido").max(200),
+    customer_phone: z.string().trim().min(6, "Teléfono inválido").max(30),
     items: z.array(z.object({
-        product_name: z.string(),
-        quantity: z.number().min(1),
-        price: z.number().min(0),
-        size: z.string().optional()
-    })).min(1, "El carrito está vacío"),
-    total_amount: z.number().min(0)
+        product_id: z.string().uuid(),
+        quantity: z.number().int().min(1).max(20),
+        size: z.string().trim().max(20).optional()
+    })).min(1, "El carrito está vacío").max(20),
 })
-
-export async function submitOrder(prevState: any, formData: FormData) {
-    const supabase = await createClient()
-
-    // Extract items from hidden field or construct from separate inputs handled by Client Component
-    // Ideally, the client component sends the full JSON, but Server Actions with Forms usually take FormData.
-    // We can also accept a raw JSON object if we call it directly from JS, but let's stick to a structured approach.
-
-    // Actually, for a cart checkout, passing a JSON object as an argument to the action is cleaner than FormData 
-    // when we have nested arrays (items). Next.js Server Actions support direct arguments.
-
-    return { error: "Use submitOrderJson instead" }
-}
 
 export async function submitOrderJson(data: {
     customer_name: string
     customer_email: string
     customer_phone: string
-    items: { product_name: string; quantity: number; price: number; size?: string }[]
-    total_amount: number
+    items: { product_id: string; quantity: number; size?: string }[]
 }) {
     const supabase = await createClient()
 
@@ -45,40 +29,18 @@ export async function submitOrderJson(data: {
         return { success: false, error: errorMsg }
     }
 
-    const { customer_name, customer_email, customer_phone, items, total_amount } = validated.data
+    const { customer_name, customer_email, customer_phone, items } = validated.data
 
     try {
-        // 1. Create Order
-        const { data: order, error: orderError } = await supabase
-            .from('orders')
-            .insert({
-                customer_name,
-                customer_email,
-                customer_phone,
-                total_amount,
-                status: 'pending'
-            })
-            .select()
-            .single()
+        const { data: orderId, error } = await supabase.rpc('place_store_order', {
+            customer_name_input: customer_name,
+            customer_email_input: customer_email,
+            customer_phone_input: customer_phone,
+            items_input: items
+        })
 
-        if (orderError) throw orderError
-
-        // 2. Create Order Items
-        const orderItems = items.map(item => ({
-            order_id: order.id,
-            product_name: item.product_name,
-            quantity: item.quantity,
-            price: item.price,
-            size: item.size || null
-        }))
-
-        const { error: itemsError } = await supabase
-            .from('order_items')
-            .insert(orderItems)
-
-        if (itemsError) throw itemsError
-
-        return { success: true, orderId: order.id }
+        if (error) throw error
+        return { success: true, orderId }
 
     } catch (error) {
         console.error('Order Error:', error)

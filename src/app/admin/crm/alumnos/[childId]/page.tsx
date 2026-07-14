@@ -102,7 +102,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
                 setTempMetrics(metricsData[0])
                 setMetricsHistory(metricsData)
             } else {
-                const defaultMetrics = { pace: 85, shooting: 92, passing: 91, dribbling: 95, defending: 45, physical: 70 }
+                const defaultMetrics = { pace: 0, shooting: 0, passing: 0, dribbling: 0, defending: 0, physical: 0 }
                 setMetrics(defaultMetrics)
                 setTempMetrics(defaultMetrics)
                 setMetricsHistory([])
@@ -157,7 +157,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
             setIsEditingMetrics(false)
             toast.success("Métricas actualizadas")
         } else {
-            alert("Error al actualizar métricas")
+            toast.error("Error al actualizar métricas")
         }
         setIsSavingMetrics(false)
     }
@@ -183,7 +183,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
             setStudent({ ...student, avatar_url: result.url })
             toast.success("Foto actualizada")
         } else {
-            alert("Error al subir foto")
+            toast.error("Error al subir foto")
         }
         setIsUploadingAvatar(false)
     }
@@ -468,7 +468,11 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
                                         <CardTitle className="text-lg font-black tracking-tight flex items-center gap-2">
                                             <TrendingUp className="h-5 w-5 text-yellow-500" /> Perfil de Atributos
                                         </CardTitle>
-                                        <CardDescription className="text-xs font-medium uppercase tracking-wider">Última evaluación: 12/02/2026</CardDescription>
+                                        <CardDescription className="text-xs font-medium uppercase tracking-wider">
+                                            {metricsHistory.length > 0 
+                                                ? `Última evaluación: ${new Date(metricsHistory[0].recorded_at).toLocaleDateString('es')}` 
+                                                : 'Sin evaluaciones registradas'}
+                                        </CardDescription>
                                     </CardHeader>
                                     <CardContent className="pt-0 relative">
                                         {metrics ? (
@@ -642,14 +646,21 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
 
                                 <Card className="border-none shadow-md bg-white">
                                     <CardHeader>
-                                        <CardTitle className="text-lg font-black">Timeline de Actividad</CardTitle>
+                                        <CardTitle className="text-lg font-black">Resumen del expediente</CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        <div className="space-y-6 relative ml-4">
-                                            <div className="absolute left-[-1.15rem] top-2 h-[calc(100%-1rem)] w-0.5 bg-slate-100"></div>
-                                            <ActivityItem icon={<Activity className="text-yellow-600" />} title="Asistencia a Entrenamiento" date="Hoy, 18:30" description="Campo 1 - Entrenamiento Técnico" />
-                                            <ActivityItem icon={<Wallet className="text-green-600" />} title="Confirmación de Pago" date="Lun 10 Feb, 10:15" description="Cuota Febrero 2026 - PayPal" />
-                                            <ActivityItem icon={<FileText className="text-blue-600" />} title="Documento Actualizado" date="Vie 07 Feb, 14:00" description="Ficha Médica renovada por el tutor" />
+                                        <div className="grid grid-cols-2 gap-4">
+                                            {[
+                                                ['Evaluaciones', metricsHistory.length],
+                                                ['Pagos', paymentsData.payments.length],
+                                                ['Documentos', documents.length],
+                                                ['Firmas', signatures.length],
+                                            ].map(([label, value]) => (
+                                                <div key={String(label)} className="rounded-xl border border-slate-100 bg-slate-50 p-4 text-center">
+                                                    <p className="text-2xl font-black text-slate-900">{value}</p>
+                                                    <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</p>
+                                                </div>
+                                            ))}
                                         </div>
                                     </CardContent>
                                 </Card>
@@ -902,22 +913,6 @@ function MetricBar({ label, value, color, editable, onChange }: { label: string,
                     ></div>
                 </div>
             )}
-        </div>
-    )
-}
-
-function ActivityItem({ icon, title, date, description }: { icon: React.ReactNode, title: string, date: string, description: string }) {
-    return (
-        <div className="relative flex gap-4">
-            <div className="absolute left-[-1.5rem] mt-1 h-3 w-3 rounded-full bg-white border-2 border-slate-900 shadow-sm z-10"></div>
-            <div className="h-10 w-10 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100 shrink-0">
-                {icon}
-            </div>
-            <div>
-                <p className="font-bold text-sm text-slate-900 leading-none mb-1">{title}</p>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight mb-2">{date}</p>
-                <p className="text-xs text-slate-500">{description}</p>
-            </div>
         </div>
     )
 }

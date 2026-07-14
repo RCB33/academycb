@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { LayoutDashboard, Users, UserPlus, Activity, CreditCard, Settings, FileText, LogOut, Trophy, ShoppingBag, Briefcase, MessageSquare, CalendarDays, Video, MessageCircle, TrendingUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { createClient } from '@/lib/supabase/client'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { SearchCommand } from "@/components/admin/search-command"

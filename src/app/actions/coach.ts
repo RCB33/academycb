@@ -1,13 +1,10 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { requireAcademyStaff } from '@/lib/auth'
 
 export async function markAttendance(childId: string, attendance: 'present' | 'absent' | 'excused', sessionDate: string) {
-    const supabase = await createClient()
-
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Not authenticated')
+    const { supabase, user } = await requireAcademyStaff()
 
     // Find if record exists
     const { data: existing } = await supabase

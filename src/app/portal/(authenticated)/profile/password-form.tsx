@@ -23,8 +23,8 @@ export function PasswordForm() {
             return
         }
 
-        if (password.length < 6) {
-            toast.error('La contraseña debe tener al menos 6 caracteres')
+        if (password.length < 10) {
+            toast.error('La contraseña debe tener al menos 10 caracteres')
             return
         }
 
@@ -64,6 +64,8 @@ export function PasswordForm() {
                         <Input
                             id="new_password"
                             type="password"
+                            autoComplete="new-password"
+                            minLength={10}
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             placeholder="******"
@@ -75,6 +77,8 @@ export function PasswordForm() {
                         <Input
                             id="confirm_password"
                             type="password"
+                            autoComplete="new-password"
+                            minLength={10}
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             placeholder="******"

@@ -1,27 +1,33 @@
-import { FileText } from "lucide-react"
+import { LegalPage } from '../components/legal-page'
+
+export const metadata = {
+    title: 'Condiciones generales',
+    description: 'Condiciones generales de participación y uso de los servicios de Academy Costa Brava.'
+}
 
 export default function TerminosPage() {
     return (
-        <div className="max-w-4xl mx-auto py-24 px-6 md:px-12 text-slate-700">
-            <h1 className="text-3xl font-black text-slate-900 mb-8 flex items-center gap-3">
-                <FileText className="text-indigo-600" />
-                Condiciones Generales de la Academia
-            </h1>
-            <div className="prose prose-slate max-w-none">
-                <p>Las presentes condiciones regulan el uso de los servicios de la academia deportiva. Se recomienda leer detenidamente antes de formalizar la inscripción.</p>
-                
-                <h3>1. Objeto y Ámbito de Aplicación</h3>
-                <p>El objeto de este documento es establecer las normas de comportamiento, pagos y derechos de imagen para todos los jugadores inscritos en la academia.</p>
-                
-                <h3>2. Obligaciones y Comportamiento (Fair Play)</h3>
-                <p>Se espera de todos los jugadores un comportamiento ejemplar tanto dentro como fuera del campo. El respeto a los compañeros, entrenadores y árbitros es innegociable.</p>
-
-                <h3>3. Cuotas y Pagos</h3>
-                <p>Las cuotas deberán ser abonadas del 1 al 5 de cada mes. En caso de impago reincidente, la academia se reserva el derecho de suspender la participación del alumno.</p>
-                
-                <h3>4. Derechos de Imagen</h3>
-                <p>Al firmar el consentimiento, los tutores legales autorizan a la academia al uso de las fotografías y vídeos tomados durante entrenamientos y partidos para uso exclusivo en la plataforma interna (Videoteca) y redes oficiales de la academia.</p>
-            </div>
-        </div>
+        <LegalPage title="Condiciones generales">
+            <section>
+                <h2>1. Ámbito</h2>
+                <p>Estas condiciones establecen unas reglas generales para la participación en actividades de la academia. Las fechas, horarios, precios, edades, plazas y condiciones particulares válidas son las comunicadas para cada inscripción.</p>
+            </section>
+            <section>
+                <h2>2. Inscripción y pagos</h2>
+                <p>La plaza se considera confirmada cuando la academia acepta la inscripción y se cumplen las condiciones de pago comunicadas. Cualquier política de cancelación o devolución deberá constar en la convocatoria o documento de inscripción correspondiente.</p>
+            </section>
+            <section>
+                <h2>3. Salud, seguridad y convivencia</h2>
+                <p>Los tutores deben informar de circunstancias médicas, alergias o necesidades relevantes. Los participantes deben respetar a compañeros, personal, instalaciones y normas de seguridad. La academia podrá adoptar medidas proporcionadas ante conductas graves o reiteradas.</p>
+            </section>
+            <section>
+                <h2>4. Imágenes y comunicaciones</h2>
+                <p>El tratamiento o publicación de fotografías y vídeos se regirá por la autorización específica otorgada por los tutores. Las comunicaciones operativas se enviarán por los canales facilitados durante la inscripción.</p>
+            </section>
+            <section>
+                <h2>5. Condiciones particulares</h2>
+                <p>En caso de diferencia, prevalecen las condiciones particulares aceptadas para la actividad concreta. La academia deberá facilitar una copia o acceso duradero a las condiciones aceptadas.</p>
+            </section>
+        </LegalPage>
     )
 }

@@ -1,7 +1,9 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { requireAcademyStaff } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
+
+const createClient = async () => (await requireAcademyStaff()).supabase
 
 export async function getCoachNotes(childId: string) {
     const supabase = await createClient()

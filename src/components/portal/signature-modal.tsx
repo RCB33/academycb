@@ -103,7 +103,7 @@ export function SignatureModal({ isOpen, onClose, guardianId, documentType, docu
                 </div>
 
                 <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 mb-6 text-xs text-slate-500 leading-relaxed text-center">
-                    Al firmar este documento, certifico que soy el tutor legal y acepto todas las cláusulas establecidas en los términos de la academia. Entiendo que esta firma digital tiene plena validez legal.
+                    Al firmar este documento, declaro que soy el tutor legal y que he leído y acepto las condiciones de la academia. La firma y sus datos técnicos quedarán registrados como evidencia de aceptación.
                 </div>
 
                 <DialogFooter className="flex-col sm:flex-row gap-2">

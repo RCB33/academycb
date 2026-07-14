@@ -69,7 +69,12 @@ export default async function FamilyVideotecaPage() {
             )
             .order('created_at', { ascending: false })
 
-        assets = data || []
+        assets = await Promise.all((data || []).map(async (asset: any) => {
+            if (!asset.video_url?.startsWith('storage:')) return asset
+            const path = asset.video_url.slice('storage:'.length)
+            const { data: signed } = await supabase.storage.from('videos').createSignedUrl(path, 3600)
+            return { ...asset, video_url: signed?.signedUrl || '#' }
+        }))
     }
 
     const getYoutubeId = (url: string) => {

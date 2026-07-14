@@ -1,12 +1,12 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { requireAdmin, requireFinanceAccess } from '@/lib/auth'
 
 // ─── ACADEMY SETTINGS ───
 
 export async function getSettings() {
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
     const { data } = await supabase
         .from('academy_settings')
         .select('key, value')
@@ -19,15 +19,30 @@ export async function getSettings() {
 }
 
 export async function updateSettings(updates: Record<string, string>) {
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
+    const publicKeys = new Set([
+        'academy_name', 'academy_cif', 'academy_phone', 'academy_email',
+        'academy_address', 'academy_whatsapp', 'tournaments_url', 'current_season'
+    ])
 
     for (const [key, value] of Object.entries(updates)) {
-        await supabase
+        if (!publicKeys.has(key)) continue
+        const cleanValue = value.trim()
+        if (cleanValue.length > 500) return { success: false, error: `El valor de ${key} es demasiado largo.` }
+        if (key === 'academy_email' && cleanValue && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanValue)) {
+            return { success: false, error: 'El email no es válido.' }
+        }
+        if (key === 'tournaments_url' && cleanValue && !/^https?:\/\//i.test(cleanValue)) {
+            return { success: false, error: 'El portal de resultados debe usar una URL HTTP o HTTPS.' }
+        }
+        const { error } = await supabase
             .from('academy_settings')
-            .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' })
+            .upsert({ key, value: cleanValue, is_public: true, updated_at: new Date().toISOString() }, { onConflict: 'key' })
+        if (error) return { success: false, error: 'No se pudieron guardar los ajustes.' }
     }
 
     revalidatePath('/admin/ajustes')
+    revalidatePath('/', 'layout')
     return { success: true }
 }
 
@@ -43,7 +58,7 @@ export type MembershipPlan = {
 }
 
 export async function getPlans(): Promise<MembershipPlan[]> {
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
     const { data } = await supabase
         .from('membership_plans')
         .select('*')
@@ -53,7 +68,7 @@ export async function getPlans(): Promise<MembershipPlan[]> {
 }
 
 export async function createPlan(data: { name: string; duration_months: number; price: number; frequency: string }) {
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
     const { error } = await supabase.from('membership_plans').insert([data])
 
     if (error) {
@@ -66,7 +81,7 @@ export async function createPlan(data: { name: string; duration_months: number; 
 }
 
 export async function updatePlan(id: string, data: Partial<{ name: string; duration_months: number; price: number; frequency: string }>) {
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
     const { error } = await supabase.from('membership_plans').update(data).eq('id', id)
 
     if (error) return { success: false, error: "Error al actualizar" }
@@ -75,7 +90,7 @@ export async function updatePlan(id: string, data: Partial<{ name: string; durat
 }
 
 export async function deletePlan(id: string) {
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
     // Check if in use
     const { count } = await supabase
         .from('academy_memberships')
@@ -95,7 +110,7 @@ export async function deletePlan(id: string) {
 // ─── CATEGORIES ───
 
 export async function getCategories() {
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
     const { data } = await supabase
         .from('categories')
         .select('id, name')
@@ -104,7 +119,7 @@ export async function getCategories() {
 }
 
 export async function createCategory(name: string) {
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
     const { error } = await supabase.from('categories').insert([{ name }])
     if (error) return { success: false, error: "Error al crear categoría" }
     revalidatePath('/admin/ajustes')
@@ -112,7 +127,7 @@ export async function createCategory(name: string) {
 }
 
 export async function deleteCategory(id: string) {
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
     // Check if in use
     const { count } = await supabase
         .from('children')
@@ -142,7 +157,7 @@ export type Expense = {
 }
 
 export async function getExpenses(month?: string) {
-    const supabase = await createClient()
+    const { supabase } = await requireFinanceAccess()
 
     let query = supabase
         .from('expenses')
@@ -159,7 +174,7 @@ export async function getExpenses(month?: string) {
 }
 
 export async function createExpense(data: { concept: string; amount: number; category: string; date: string; notes?: string }) {
-    const supabase = await createClient()
+    const { supabase } = await requireFinanceAccess()
     const { error } = await supabase.from('expenses').insert([data])
 
     if (error) {
@@ -172,7 +187,7 @@ export async function createExpense(data: { concept: string; amount: number; cat
 }
 
 export async function deleteExpense(id: string) {
-    const supabase = await createClient()
+    const { supabase } = await requireFinanceAccess()
     const { error } = await supabase.from('expenses').delete().eq('id', id)
     if (error) return { success: false, error: "Error al eliminar" }
     revalidatePath('/admin/finanzas')
@@ -189,16 +204,16 @@ export async function recordManualPayment(data: {
     method: string  // 'efectivo' | 'transferencia' | 'stripe'
     description?: string
 }) {
-    const supabase = await createClient()
+    const { supabase } = await requireFinanceAccess()
     const { error } = await supabase.from('payments').insert([{
         type: data.type,
-        ref_id: data.ref_id,
         amount: data.amount,
         status: 'paid',
         method: data.method,
         paid_at: new Date().toISOString(),
         child_id: data.child_id,
-        description: data.description || null
+        description: data.description || null,
+        ref_id: /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(data.ref_id) ? data.ref_id : null
     }])
 
     if (error) {
@@ -211,7 +226,7 @@ export async function recordManualPayment(data: {
 }
 
 export async function getMonthlyPaymentGrid(month: string) {
-    const supabase = await createClient()
+    const { supabase } = await requireFinanceAccess()
 
     // 1. Get all active memberships with their children
     const { data: memberships } = await supabase
@@ -270,4 +285,3 @@ export async function getMonthlyPaymentGrid(month: string) {
 
     return grid
 }
-

@@ -184,12 +184,18 @@ export function CalendarWidget({ initialView = 'month' }: { initialView?: 'month
         setSelectedDate(now);
     }
 
-    // Initialize Fetch
+    // Fetch events for a reasonable range around current date
+    async function fetchEvents() {
+        const rangeStart = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1)
+        const rangeEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() + 2, 0)
+        const data = await getEvents(rangeStart, rangeEnd)
+        setEvents(data || [])
+    }
+
     useEffect(() => {
-        // Fetch a broad range for demo purposes - in real app, fetch based on view range
-        getEvents(new Date(2024, 0, 1), new Date(2027, 0, 1)).then((data: any) => setEvents(data || []))
+        fetchEvents()
         getWorkers().then(setWorkers)
-    }, [])
+    }, [currentDate.getMonth(), currentDate.getFullYear()])
 
     // --- Filter Logic ---
     const filteredEvents = events.filter(e => {
@@ -453,8 +459,7 @@ export function CalendarWidget({ initialView = 'month' }: { initialView?: 'month
                 selectedDate={selectedDate}
                 eventToEdit={eventToEdit}
                 onEventCreated={() => {
-                    // In a real app we would refetch or update optimistic state
-                    window.location.reload()
+                    fetchEvents()
                 }}
             />
         </div>

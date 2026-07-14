@@ -1,7 +1,7 @@
 "use client"
 
 import { useCart } from "@/context/cart-context"
-import { X, ShoppingBag, Trash2, Plus, Minus, CreditCard, Loader2 } from "lucide-react"
+import { X, ShoppingBag, Trash2, Plus, Minus, ClipboardCheck, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -9,6 +9,7 @@ import Image from "next/image"
 import { useState } from "react"
 import { submitOrderJson } from "@/app/actions/shop"
 import { toast } from "sonner"
+import Link from "next/link"
 
 export default function CartDrawer() {
     const {
@@ -41,17 +42,15 @@ export default function CartDrawer() {
                 customer_name: formData.name,
                 customer_email: formData.email,
                 customer_phone: formData.phone,
-                total_amount: totalPrice,
                 items: cart.map(item => ({
-                    product_name: item.name,
+                    product_id: item.product_id,
                     quantity: item.quantity,
-                    price: item.price,
                     size: item.size
                 }))
             })
 
             if (result.success) {
-                toast.success("¡Pedido realizado con éxito!")
+                toast.success("Solicitud de pedido recibida")
                 clearCart()
                 setIsCartOpen(false)
                 setIsCheckout(false)
@@ -81,7 +80,7 @@ export default function CartDrawer() {
                             <div className="flex items-center gap-2">
                                 <ShoppingBag className="h-5 w-5 text-primary" />
                                 <h2 className="text-xl font-heading font-bold text-navy uppercase tracking-tight">
-                                    {isCheckout ? 'Finalizar Compra' : `Tu Carrito (${totalItems})`}
+                                    {isCheckout ? 'Solicitar Pedido' : `Tu Carrito (${totalItems})`}
                                 </h2>
                             </div>
                             <button
@@ -117,6 +116,8 @@ export default function CartDrawer() {
                                             <Input
                                                 id="name"
                                                 required
+                                                minLength={2}
+                                                maxLength={120}
                                                 placeholder="Ej. Juan Pérez"
                                                 value={formData.name}
                                                 onChange={e => setFormData({ ...formData, name: e.target.value })}
@@ -128,6 +129,7 @@ export default function CartDrawer() {
                                                 id="email"
                                                 type="email"
                                                 required
+                                                maxLength={200}
                                                 placeholder="juan@ejemplo.com"
                                                 value={formData.email}
                                                 onChange={e => setFormData({ ...formData, email: e.target.value })}
@@ -139,6 +141,8 @@ export default function CartDrawer() {
                                                 id="phone"
                                                 type="tel"
                                                 required
+                                                minLength={6}
+                                                maxLength={30}
                                                 placeholder="+34 600 000 000"
                                                 value={formData.phone}
                                                 onChange={e => setFormData({ ...formData, phone: e.target.value })}
@@ -152,10 +156,14 @@ export default function CartDrawer() {
                                             <span>{totalPrice.toFixed(2)}€</span>
                                         </div>
                                         <div className="flex justify-between font-bold text-navy text-base pt-2 border-t">
-                                            <span>Total a Pagar</span>
+                                            <span>Total estimado</span>
                                             <span>{totalPrice.toFixed(2)}€</span>
                                         </div>
                                     </div>
+                                    <label className="flex items-start gap-2 text-xs text-gray-600">
+                                        <input type="checkbox" required className="mt-0.5 h-4 w-4" />
+                                        <span>He leído la <Link href="/privacidad" className="font-medium text-blue-700 underline">política de privacidad</Link> y las <Link href="/terminos" className="font-medium text-blue-700 underline">condiciones</Link>.</span>
+                                    </label>
                                     <Button
                                         type="button"
                                         variant="outline"
@@ -172,7 +180,7 @@ export default function CartDrawer() {
                                         <div key={item.id} className="flex gap-4 items-center">
                                             <div className="relative h-24 w-24 flex-shrink-0 rounded-2xl overflow-hidden bg-gray-100 border">
                                                 <Image
-                                                    src={item.image_url || '/placeholder.png'}
+                                                    src={item.image_url || '/logo-academy.png'}
                                                     alt={item.name}
                                                     fill
                                                     className="object-cover"
@@ -222,12 +230,12 @@ export default function CartDrawer() {
                                             <span>Subtotal</span>
                                             <span>{totalPrice.toFixed(2)}€</span>
                                         </div>
-                                        <p className="text-sm text-gray-500 mb-6 font-sans">Impuestos incluidos. Envío calculado al finalizar pedido.</p>
+                                        <p className="text-sm text-gray-500 mb-6 font-sans">Enviarás una solicitud. La academia confirmará disponibilidad, entrega y forma de pago.</p>
                                         <Button
                                             onClick={() => setIsCheckout(true)}
                                             className="w-full h-14 bg-navy hover:bg-navy-light text-white font-bold uppercase tracking-wider rounded-2xl shadow-xl flex items-center justify-center gap-3"
                                         >
-                                            <CreditCard className="h-5 w-5" /> Tramitar Pedido
+                                            <ClipboardCheck className="h-5 w-5" /> Solicitar pedido
                                         </Button>
                                     </>
                                 ) : (
@@ -237,7 +245,7 @@ export default function CartDrawer() {
                                         disabled={loading}
                                         className="w-full h-14 bg-primary hover:bg-primary-dark text-white font-bold uppercase tracking-wider rounded-2xl shadow-xl flex items-center justify-center gap-3"
                                     >
-                                        {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Confirmar Pedido"}
+                                        {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Enviar solicitud"}
                                     </Button>
                                 )}
                             </div>

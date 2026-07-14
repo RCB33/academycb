@@ -149,7 +149,7 @@ export function GuardianDialog({ mode, guardian, trigger, onUpdate }: Props) {
                                     Activar acceso al Portal Familias
                                 </Label>
                                 <p className="text-xs text-muted-foreground">
-                                    Si lo activas y tiene email, se le creará cuenta con la contraseña <code className="bg-slate-200 px-1 rounded">CostaBrava2026</code>.
+                                    Si lo activas y tiene email, recibirá una invitación segura para establecer su propia contraseña.
                                 </p>
                             </div>
                             <Switch

@@ -1,7 +1,18 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { requireAcademyStaff } from '@/lib/auth'
+import { z } from 'zod'
+
+const MediaSchema = z.object({
+    title: z.string().trim().min(2).max(150),
+    description: z.string().trim().max(1000).optional(),
+    video_url: z.string().max(2000).refine((value) => value.startsWith('storage:') || /^https?:\/\//i.test(value)),
+    category_id: z.string().uuid(),
+    team_id: z.string().uuid().nullable().optional(),
+    child_id: z.string().uuid().nullable().optional(),
+    context: z.enum(['academia', 'campus', 'torneo']).optional(),
+})
 
 export type MediaAsset = {
     id: string
@@ -28,7 +39,10 @@ export async function createMediaAsset(data: {
     child_id?: string | null
     context?: string
 }) {
-    const supabase = await createClient()
+    const { supabase } = await requireAcademyStaff()
+    const parsed = MediaSchema.safeParse(data)
+    if (!parsed.success) return { success: false, error: 'Los datos del vídeo no son válidos.' }
+    data = parsed.data
 
     // Basic YouTube ID extraction for thumbnail
     let thumbnail_url = null
@@ -61,7 +75,7 @@ export async function createMediaAsset(data: {
 }
 
 export async function getMediaAssets(categoryId?: string) {
-    const supabase = await createClient()
+    const { supabase } = await requireAcademyStaff()
 
     let query = supabase
         .from('media_assets')
@@ -84,11 +98,28 @@ export async function getMediaAssets(categoryId?: string) {
         return []
     }
 
-    return data as MediaAsset[]
+    return Promise.all(((data || []) as MediaAsset[]).map(async (asset) => {
+        if (!asset.video_url?.startsWith('storage:')) return asset
+        const path = asset.video_url.slice('storage:'.length)
+        const { data: signed } = await supabase.storage.from('videos').createSignedUrl(path, 3600)
+        return { ...asset, video_url: signed?.signedUrl || '' }
+    }))
 }
 
 export async function deleteMediaAsset(id: string) {
-    const supabase = await createClient()
+    const { supabase } = await requireAcademyStaff()
+
+    const { data: asset } = await supabase
+        .from('media_assets')
+        .select('video_url')
+        .eq('id', id)
+        .single()
+
+    if (asset?.video_url?.startsWith('storage:')) {
+        const path = asset.video_url.slice('storage:'.length)
+        const { error: storageError } = await supabase.storage.from('videos').remove([path])
+        if (storageError) return { success: false, error: 'No se pudo eliminar el archivo de vídeo.' }
+    }
 
     const { error } = await supabase
         .from('media_assets')
@@ -106,7 +137,7 @@ export async function deleteMediaAsset(id: string) {
 }
 
 export async function getTeamsForCategory(categoryId: string) {
-    const supabase = await createClient()
+    const { supabase } = await requireAcademyStaff()
     const { data, error } = await supabase
         .from('teams')
         .select('id, name')
@@ -121,16 +152,16 @@ export async function getTeamsForCategory(categoryId: string) {
 }
 
 export async function getChildrenForTeam(teamId: string) {
-    const supabase = await createClient()
+    const { supabase } = await requireAcademyStaff()
     const { data, error } = await supabase
-        .from('team_players')
-        .select('child:children(id, full_name)')
+        .from('children')
+        .select('id, full_name')
         .eq('team_id', teamId)
-        .order('created_at', { ascending: false })
+        .order('full_name')
 
     if (error) {
         console.error("Error fetching children:", error)
         return []
     }
-    return (data || []).map((d: any) => d.child).filter(Boolean)
+    return data || []
 }

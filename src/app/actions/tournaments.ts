@@ -1,7 +1,10 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { requireAdmin } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
+
+const createClient = async () => (await requireAdmin()).supabase
+const isSafeExternalUrl = (value?: string | null) => !value || /^https?:\/\//i.test(value)
 
 export type Tournament = {
     id: string
@@ -66,6 +69,7 @@ export async function createTournament(data: {
     notes?: string | null
 }) {
     const supabase = await createClient()
+    if (!isSafeExternalUrl(data.external_url)) return { success: false, error: 'La URL externa no es válida' }
     const { error } = await supabase.from('tournaments_internal').insert([{
         title: data.title,
         start_date: data.start_date || null,
@@ -85,6 +89,7 @@ export async function createTournament(data: {
 
 export async function updateTournament(id: string, data: Partial<Tournament>) {
     const supabase = await createClient()
+    if (!isSafeExternalUrl(data.external_url)) return { success: false, error: 'La URL externa no es válida' }
     const { error } = await supabase.from('tournaments_internal').update(data).eq('id', id)
     if (error) { console.error("Error updating tournament:", error); return { success: false, error: "Error al actualizar" } }
     revalidatePath('/admin/torneos')

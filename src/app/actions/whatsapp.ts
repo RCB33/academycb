@@ -2,36 +2,59 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { requireAdmin } from '@/lib/auth'
 
 // ─── SETTINGS ───
 
-export async function getWhatsAppSettings() {
-    const supabase = await createClient()
+async function getWhatsAppSettings() {
+    const { supabase } = await requireAdmin()
     const { data, error } = await supabase
         .from('academy_settings')
         .select('greenapi_id_instance, greenapi_api_token_instance')
-        .single()
+        .eq('key', 'whatsapp_integration')
+        .maybeSingle()
     if (error && error.code !== 'PGRST116') { console.error('Error fetching whatsapp settings:', error); return null }
     return data
 }
 
 export async function saveWhatsAppSettings(idInstance: string, apiToken: string) {
-    const supabase = await createClient()
-    const { error: updateError } = await supabase
+    const { supabase } = await requireAdmin()
+    const cleanId = idInstance.trim()
+    const cleanToken = apiToken.trim()
+
+    const { data: current } = await supabase
         .from('academy_settings')
-        .update({ greenapi_id_instance: idInstance, greenapi_api_token_instance: apiToken })
-        .eq('id', (await supabase.from('academy_settings').select('id').single()).data?.id)
-    if (updateError) {
-        const { error: insertError } = await supabase
-            .from('academy_settings')
-            .insert([{ greenapi_id_instance: idInstance, greenapi_api_token_instance: apiToken }])
-        if (insertError) return { success: false, error: insertError.message }
+        .select('greenapi_id_instance, greenapi_api_token_instance')
+        .eq('key', 'whatsapp_integration')
+        .maybeSingle()
+
+    const finalId = cleanId || current?.greenapi_id_instance || ''
+    const finalToken = cleanToken || current?.greenapi_api_token_instance || ''
+    if (!/^\d{5,20}$/.test(finalId)) {
+        return { success: false, error: 'El ID de instancia no tiene un formato válido.' }
     }
+    if (finalToken.length < 20) {
+        return { success: false, error: 'El token de API no tiene un formato válido.' }
+    }
+
+    const { error } = await supabase
+        .from('academy_settings')
+        .upsert({
+            key: 'whatsapp_integration',
+            is_public: false,
+            greenapi_id_instance: finalId,
+            greenapi_api_token_instance: finalToken
+        }, { onConflict: 'key' })
+    if (error) return { success: false, error: error.message }
+
     revalidatePath('/admin/settings/whatsapp')
     return { success: true }
 }
 
-export async function getWhatsAppStatus(idInstance: string, apiToken: string) {
+export async function getWhatsAppStatus() {
+    const settings = await getWhatsAppSettings()
+    const idInstance = settings?.greenapi_id_instance || ''
+    const apiToken = settings?.greenapi_api_token_instance || ''
     if (!idInstance || !apiToken) return { status: 'NOT_CONFIGURED' }
     try {
         const response = await fetch(`https://api.green-api.com/waInstance${idInstance}/getStateInstance/${apiToken}`)
@@ -44,7 +67,10 @@ export async function getWhatsAppStatus(idInstance: string, apiToken: string) {
     }
 }
 
-export async function getWhatsAppQR(idInstance: string, apiToken: string) {
+export async function getWhatsAppQR() {
+    const settings = await getWhatsAppSettings()
+    const idInstance = settings?.greenapi_id_instance || ''
+    const apiToken = settings?.greenapi_api_token_instance || ''
     if (!idInstance || !apiToken) return null
     try {
         const response = await fetch(`https://api.green-api.com/waInstance${idInstance}/qr/${apiToken}`)
@@ -66,7 +92,7 @@ export type Recipient = {
 }
 
 export async function getCategoriesWithTeams() {
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
     const { data: categories } = await supabase
         .from('categories')
         .select('id, name')
@@ -90,7 +116,7 @@ export async function getCategoriesWithTeams() {
 }
 
 export async function getRecipientsByCategory(categoryId: string): Promise<Recipient[]> {
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
     const { data: children } = await supabase
         .from('children')
         .select(`
@@ -105,7 +131,7 @@ export async function getRecipientsByCategory(categoryId: string): Promise<Recip
 }
 
 export async function getRecipientsByTeam(teamId: string): Promise<Recipient[]> {
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
 
     // Children have a direct team_id column
     const { data: children } = await supabase
@@ -154,9 +180,20 @@ function extractRecipients(children: any[]): Recipient[] {
 
 // ─── SENDING (with rate limiting) ───
 
-const DELAY_BETWEEN_MESSAGES_MS = 60_000 // 1 minute between messages to avoid WhatsApp blocks
+const DELAY_BETWEEN_MESSAGES_MS = 750
+const MAX_RECIPIENTS_PER_BATCH = 25
 
 export async function sendToRecipients(phones: string[], message: string, label: string) {
+    await requireAdmin()
+
+    if (phones.length > MAX_RECIPIENTS_PER_BATCH) {
+        return { success: false, error: `Máximo ${MAX_RECIPIENTS_PER_BATCH} destinatarios por envío.` }
+    }
+
+    if (message.trim().length < 2 || message.length > 2000) {
+        return { success: false, error: 'El mensaje debe tener entre 2 y 2000 caracteres.' }
+    }
+
     const settings = await getWhatsAppSettings()
     if (!settings?.greenapi_id_instance || !settings?.greenapi_api_token_instance) {
         return { success: false, error: 'WhatsApp no está configurado. Ve a Configuración API.' }
@@ -212,6 +249,7 @@ export async function sendToRecipients(phones: string[], message: string, label:
 
 // Legacy function kept for backwards compat
 export async function sendBroadcastMessage(categoryId: string, message: string) {
+    await requireAdmin()
     const recipients = await getRecipientsByCategory(categoryId)
     const phones = recipients.map(r => r.phone)
     const supabase = await createClient()
@@ -222,7 +260,7 @@ export async function sendBroadcastMessage(categoryId: string, message: string) 
 // ─── HISTORY ───
 
 export async function getBroadcastHistory() {
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
     const { data, error } = await supabase
         .from('broadcast_logs')
         .select('*')

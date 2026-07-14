@@ -1,6 +1,13 @@
 import ShopSection from "../components/shop-section";
+import { getPublicProducts } from "@/lib/public-catalog";
 
-export default function ShopPage() {
+export const metadata = {
+    title: 'Tienda oficial',
+    description: 'Catálogo oficial de Academy Costa Brava.'
+}
+
+export default async function ShopPage() {
+    const products = await getPublicProducts()
     return (
         <main className="min-h-screen bg-white pt-20">
             {/* Small header/spacing to account for the fixed navbar */}
@@ -13,7 +20,7 @@ export default function ShopPage() {
                 </div>
             </div>
 
-            <ShopSection />
+            <ShopSection products={products} />
         </main>
     )
 }

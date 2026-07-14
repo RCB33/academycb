@@ -12,6 +12,7 @@ import { convertLead } from '@/app/actions/leads'
 
 export default function AdminLeadsPage() {
     const [leads, setLeads] = useState<any[]>([])
+    const [contacts, setContacts] = useState<any[]>([])
     const supabase = createClient()
 
     useEffect(() => {
@@ -19,11 +20,12 @@ export default function AdminLeadsPage() {
     }, [])
 
     async function fetchLeads() {
-        const { data } = await supabase
-            .from('leads')
-            .select('*')
-            .order('created_at', { ascending: false })
-        if (data) setLeads(data)
+        const [leadResult, contactResult] = await Promise.all([
+            supabase.from('leads').select('*').order('created_at', { ascending: false }),
+            supabase.from('contact_messages').select('*').order('created_at', { ascending: false })
+        ])
+        if (leadResult.data) setLeads(leadResult.data)
+        if (contactResult.data) setContacts(contactResult.data)
     }
 
     async function updateStatus(id: string, newStatus: string) {
@@ -102,6 +104,29 @@ export default function AdminLeadsPage() {
                     </Card>
                 ))}
                 {leads.length === 0 && <p className="text-muted-foreground col-span-full text-center py-10">No hay leads pendientes.</p>}
+            </div>
+
+            <div className="space-y-4 pt-6 border-t">
+                <h2 className="text-xl font-bold">Consultas generales</h2>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {contacts.map((contact) => (
+                        <Card key={contact.id} className="border-l-4 border-l-indigo-500">
+                            <CardHeader className="pb-2">
+                                <div className="flex justify-between gap-3">
+                                    <Badge variant="secondary">Consulta</Badge>
+                                    <span className="text-xs text-muted-foreground">{new Date(contact.created_at).toLocaleDateString()}</span>
+                                </div>
+                                <CardTitle className="text-lg">{contact.name}</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-3 text-sm">
+                                <a href={`mailto:${contact.email}`} className="flex items-center gap-2 hover:underline"><Mail className="h-4 w-4" />{contact.email}</a>
+                                {contact.phone && <a href={`tel:${contact.phone}`} className="flex items-center gap-2 hover:underline"><Phone className="h-4 w-4" />{contact.phone}</a>}
+                                <p className="whitespace-pre-wrap text-slate-600">{contact.message}</p>
+                            </CardContent>
+                        </Card>
+                    ))}
+                    {contacts.length === 0 && <p className="text-muted-foreground col-span-full text-center py-8">No hay consultas generales.</p>}
+                </div>
             </div>
         </div>
     )

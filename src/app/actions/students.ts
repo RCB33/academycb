@@ -1,20 +1,26 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { randomUUID } from 'node:crypto'
+import { requireAdmin } from '@/lib/auth'
 
 export async function uploadStudentAvatar(formData: FormData) {
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
     const file = formData.get('file') as File
     const childId = formData.get('childId') as string
 
     if (!file || !childId) {
-        return { success: false, error: 'File and Student ID are required' }
+        return { success: false, error: 'Faltan el archivo o el alumno.' }
+    }
+
+    const extensions: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }
+    const fileExt = extensions[file.type]
+    if (!fileExt || file.size > 8 * 1024 * 1024) {
+        return { success: false, error: 'Solo se admiten JPG, PNG o WebP de hasta 8 MB.' }
     }
 
     // 1. Upload to Storage
-    const fileExt = file.name.split('.').pop()
-    const fileName = `${childId}-${Math.random()}.${fileExt}`
+    const fileName = `${childId}-${randomUUID()}.${fileExt}`
     const filePath = `student-avatars/${fileName}`
 
     const { error: uploadError } = await supabase.storage
@@ -37,6 +43,7 @@ export async function uploadStudentAvatar(formData: FormData) {
         .eq('id', childId)
 
     if (updateError) {
+        await supabase.storage.from('profile_images').remove([filePath])
         return { success: false, error: updateError.message }
     }
 
@@ -45,7 +52,7 @@ export async function uploadStudentAvatar(formData: FormData) {
 }
 
 export async function updateStudentData(childId: string, data: any) {
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
 
     // 1. Update Child Data
     const { error: childError } = await supabase
@@ -117,7 +124,7 @@ export async function updateStudentData(childId: string, data: any) {
 }
 
 export async function createStudent(data: any) {
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
 
     if (!data.birth_date) {
         return { success: false, error: "La fecha de nacimiento es obligatoria" }
@@ -143,7 +150,7 @@ export async function createStudent(data: any) {
 }
 
 export async function linkGuardianByEmail(childId: string, email: string) {
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
 
     // 1. Search for existing Guardian by Email
     const { data: existingGuardian } = await supabase
@@ -203,7 +210,7 @@ export async function linkGuardianByEmail(childId: string, email: string) {
 }
 
 export async function unlinkGuardian(childId: string, guardianId: string) {
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
 
     const { error } = await supabase
         .from('child_guardians')
@@ -220,7 +227,7 @@ export async function unlinkGuardian(childId: string, guardianId: string) {
 }
 
 export async function deleteStudent(id: string) {
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
 
     try {
         const { error } = await supabase

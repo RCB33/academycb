@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Share2, Copy, Check, Printer, ExternalLink } from 'lucide-react'
+import { Share2, Copy, Check, Printer, ExternalLink, RotateCcw } from 'lucide-react'
 import {
     Dialog,
     DialogContent,
@@ -14,18 +14,22 @@ import {
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
 import Link from 'next/link'
+import { rotatePublicShareToken } from '@/app/actions/share'
 
 interface ShareProfileProps {
     token: string
+    childId: string
     childName: string
 }
 
-export function ShareProfile({ token, childName }: ShareProfileProps) {
+export function ShareProfile({ token, childId, childName }: ShareProfileProps) {
     const [copied, setCopied] = useState(false)
+    const [activeToken, setActiveToken] = useState(token)
+    const [rotating, setRotating] = useState(false)
 
     // Use window.location.origin if available, otherwise generic
     const origin = typeof window !== 'undefined' ? window.location.origin : ''
-    const publicUrl = `${origin}/player/public/${token}`
+    const publicUrl = `${origin}/player/public/${activeToken}`
 
     const handleCopy = () => {
         navigator.clipboard.writeText(publicUrl)
@@ -35,6 +39,17 @@ export function ShareProfile({ token, childName }: ShareProfileProps) {
     }
 
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`Mira la ficha de ${childName} en Academy Costa Brava: ${publicUrl}`)}`
+
+    const handleRotate = async () => {
+        if (!confirm('El enlace anterior dejará de funcionar. ¿Quieres renovarlo?')) return
+        setRotating(true)
+        const result = await rotatePublicShareToken(childId)
+        setRotating(false)
+        if (!result.success) return toast.error(result.error)
+        setActiveToken(result.token)
+        setCopied(false)
+        toast.success('Enlace renovado')
+    }
 
     return (
         <Dialog>
@@ -77,12 +92,17 @@ export function ShareProfile({ token, childName }: ShareProfileProps) {
                         </a>
                     </Button>
                     <Button variant="outline" className="w-full gap-2" asChild>
-                        <Link href={`/player/public/${token}`} target="_blank">
+                        <Link href={`/player/public/${activeToken}`} target="_blank">
                             <ExternalLink className="h-4 w-4" />
                             Ver Ficha
                         </Link>
                     </Button>
                 </div>
+
+                <Button variant="ghost" size="sm" disabled={rotating} onClick={handleRotate} className="mx-auto mt-2 gap-2 text-amber-700">
+                    <RotateCcw className={`h-4 w-4 ${rotating ? 'animate-spin' : ''}`} />
+                    Invalidar enlace anterior
+                </Button>
 
                 <div className="text-center mt-4">
                     <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">

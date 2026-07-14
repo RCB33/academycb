@@ -1,17 +1,16 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { requireUser } from '@/lib/auth'
 
 export async function updateProfile(formData: FormData) {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const { supabase, user } = await requireUser()
 
-    if (!user) {
-        throw new Error('Not authenticated')
+    const full_name = String(formData.get('full_name') || '').trim()
+    const phone = String(formData.get('phone') || '').trim()
+    if (full_name.length < 2 || full_name.length > 120 || phone.length > 30) {
+        throw new Error('Datos de perfil no válidos')
     }
-
-    const full_name = formData.get('full_name') as string
 
     const { error } = await supabase
         .from('profiles')
@@ -23,6 +22,13 @@ export async function updateProfile(formData: FormData) {
     if (error) {
         throw new Error(error.message)
     }
+
+    const { error: guardianError } = await supabase
+        .from('guardians')
+        .update({ phone })
+        .eq('user_id', user.id)
+
+    if (guardianError) throw new Error(guardianError.message)
 
     revalidatePath('/portal/profile')
 }

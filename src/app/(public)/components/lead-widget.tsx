@@ -7,10 +7,11 @@ import { Input } from "@/components/ui/input"
 import { MessageSquare, Send, User, Calendar, Trophy, Phone, CheckCircle2 } from "lucide-react"
 import { submitLead } from '@/app/actions/leads'
 import { toast } from 'sonner'
+import Link from 'next/link'
 
 type Step = 'intro' | 'child_name' | 'birth_year' | 'category' | 'guardian_name' | 'phone' | 'submitting' | 'success'
 
-export default function LeadWidget() {
+export default function LeadWidget({ whatsappNumber = '' }: { whatsappNumber?: string }) {
     const [step, setStep] = useState<Step>('intro')
     const [data, setData] = useState({
         child_name: '',
@@ -18,7 +19,9 @@ export default function LeadWidget() {
         category_text: '',
         guardian_name: '',
         phone: '',
+        website: '',
     })
+    const [consent, setConsent] = useState(false)
 
     const handleNext = (nextStep: Step) => {
         setStep(nextStep)
@@ -30,6 +33,7 @@ export default function LeadWidget() {
         setStep('submitting')
         const formData = new FormData()
         Object.entries(data).forEach(([key, value]) => formData.append(key, value))
+        if (consent) formData.append('consent', 'on')
 
         try {
             const result = await submitLead({}, formData)
@@ -182,9 +186,25 @@ export default function LeadWidget() {
                                 autoFocus
                                 className={inputClasses}
                             />
-                            <p className="text-xs text-gray-400 mt-2">Solo lo usaremos para informarte sobre la academia.</p>
+                            <input
+                                aria-hidden="true"
+                                tabIndex={-1}
+                                autoComplete="off"
+                                className="hidden"
+                                value={data.website}
+                                onChange={(e) => setData({ ...data, website: e.target.value })}
+                            />
+                            <label className="flex items-start gap-2 text-xs text-gray-300">
+                                <input
+                                    type="checkbox"
+                                    checked={consent}
+                                    onChange={(e) => setConsent(e.target.checked)}
+                                    className="mt-0.5 h-4 w-4"
+                                />
+                                <span>Acepto que se usen estos datos para responder a mi solicitud, según la <Link href="/privacidad" className="text-gold underline">política de privacidad</Link>.</span>
+                            </label>
                             <Button
-                                disabled={!data.phone || data.phone.length < 9}
+                                disabled={!data.phone || data.phone.length < 9 || !consent}
                                 onClick={handleSubmit}
                                 className="w-full font-bold text-navy bg-gold hover:bg-gold-light disabled:opacity-50"
                             >
@@ -208,14 +228,14 @@ export default function LeadWidget() {
                             <h4 className="text-2xl font-bold">¡Recibido!</h4>
                             <p className="text-gray-200">Hemos guardado tus datos. Nos pondremos en contacto contigo lo antes posible.</p>
 
-                            <div className="pt-4 border-t border-white/10">
+                            {whatsappNumber && <div className="pt-4 border-t border-white/10">
                                 <p className="text-sm text-gray-300 mb-4">¿Prefieres escribirnos tú ahora?</p>
                                 <Button variant="secondary" className="w-full bg-green-600 hover:bg-green-700 text-white font-bold" asChild>
-                                    <a href="https://wa.me/34600000000?text=Hola,%20acabo%20de%20rellenar%20el%20formulario%20de%20la%20web" target="_blank" rel="noopener noreferrer">
+                                    <a href={`https://wa.me/${whatsappNumber.replace(/\D/g, '')}?text=Hola,%20acabo%20de%20rellenar%20el%20formulario%20de%20la%20web`} target="_blank" rel="noopener noreferrer">
                                         <MessageSquare className="mr-2 h-4 w-4" /> Iniciar WhatsApp
                                     </a>
                                 </Button>
-                            </div>
+                            </div>}
                         </motion.div>
                     )}
 

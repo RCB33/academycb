@@ -27,7 +27,7 @@ export function ProductCard({ product }: { product: Product }) {
             price: product.price,
             size: selectedSize || 'Única',
             quantity: 1,
-            image_url: product.image_url || '/placeholder.png'
+            image_url: product.image_url || '/logo-academy.png'
         })
     }
 
@@ -35,7 +35,7 @@ export function ProductCard({ product }: { product: Product }) {
         <Card className="overflow-hidden flex flex-col group hover:shadow-xl transition-all border-slate-200/60">
             <div className="aspect-square bg-slate-100 relative overflow-hidden">
                 <img
-                    src={product.image_url || '/placeholder.png'}
+                    src={product.image_url || '/logo-academy.png'}
                     alt={product.name}
                     className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
                 />
@@ -83,7 +83,7 @@ export function ProductCard({ product }: { product: Product }) {
                     disabled={product.stock <= 0}
                     className="w-full bg-indigo-600 hover:bg-indigo-700 font-bold border-none shadow-md shadow-indigo-600/20"
                 >
-                    <ShoppingCart className="mr-2 h-4 w-4" /> Comprar
+                    <ShoppingCart className="mr-2 h-4 w-4" /> Añadir al carrito
                 </Button>
             </CardFooter>
         </Card>

@@ -4,40 +4,11 @@ import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { useCart } from "@/context/cart-context"
 import { ShoppingCart, Plus, ArrowRight } from "lucide-react"
+import Link from "next/link"
+import type { StoreProduct } from "@/lib/public-catalog"
 
-const products = [
-    {
-        id: "tshirt",
-        name: "Camiseta Oficial",
-        price: 19.99,
-        image: "/shop-tshirt.png",
-        description: "Camiseta técnica de alta calidad con los colores oficiales."
-    },
-    {
-        id: "pack-set",
-        name: "Pack Entrenamiento",
-        price: 29.99,
-        image: "/shop-pack.png",
-        description: "Conjunto de camiseta y pantalón corto para entrenamiento intensivo."
-    },
-    {
-        id: "tracksuit",
-        name: "Chándal Completo",
-        price: 49.99,
-        image: "/shop-tracksuit.png",
-        description: "Chándal oficial de paseo y entrenamiento. Comodidad y estilo."
-    },
-    {
-        id: "elite-pack",
-        name: "Pack Elite",
-        price: 99.99,
-        image: "/shop-full-pack.png",
-        description: "La equipación completa: camiseta, pantalón y chándal oficial."
-    }
-]
-
-export default function ShopSection() {
-    const { addItem } = useCart()
+export default function ShopSection({ products }: { products: StoreProduct[] }) {
+    const { addToCart } = useCart()
 
     return (
         <section id="tienda" className="py-24 bg-white relative overflow-hidden">
@@ -54,17 +25,22 @@ export default function ShopSection() {
                             Viste los colores de la academia. Productos de alta calidad diseñados para el máximo rendimiento.
                         </p>
                     </div>
-                    <Button variant="outline" className="hidden md:flex border-2 border-primary text-primary hover:bg-primary hover:text-white font-heading font-bold uppercase tracking-wider h-12 px-8">
-                        Ver Catálogo Completo <ArrowRight className="ml-2 h-5 w-5" />
+                    <Button asChild variant="outline" className="hidden md:flex border-2 border-primary text-primary hover:bg-primary hover:text-white font-heading font-bold uppercase tracking-wider h-12 px-8">
+                        <Link href="/tienda">Ver Catálogo Completo <ArrowRight className="ml-2 h-5 w-5" /></Link>
                     </Button>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                {products.length === 0 ? (
+                    <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 px-6 py-16 text-center">
+                        <h3 className="font-heading text-2xl font-bold text-navy uppercase">Catálogo en preparación</h3>
+                        <p className="mt-2 text-slate-500">Publicaremos aquí los productos disponibles cuando estén confirmados.</p>
+                    </div>
+                ) : <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
                     {products.map((product) => (
                         <div key={product.id} className="group flex flex-col bg-gray-50 rounded-3xl overflow-hidden border border-gray-100 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300">
                             <div className="relative aspect-square overflow-hidden bg-gray-200">
                                 <Image
-                                    src={product.image}
+                                    src={product.image_url || '/logo-academy.png'}
                                     alt={product.name}
                                     fill
                                     className="object-cover group-hover:scale-110 transition-transform duration-500"
@@ -72,7 +48,7 @@ export default function ShopSection() {
                                 <div className="absolute inset-0 bg-navy/20 group-hover:bg-transparent transition-colors duration-300" />
                                 <div className="absolute bottom-4 right-4 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
                                     <Button
-                                        onClick={() => addItem(product)}
+                                        onClick={() => addToCart({ product_id: product.id, name: product.name, price: product.price, size: product.sizes?.[0] || 'Única', quantity: 1, image_url: product.image_url || '/logo-academy.png' })}
                                         size="icon"
                                         className="h-12 w-12 rounded-full bg-gold hover:bg-gold/90 text-navy shadow-lg"
                                     >
@@ -91,7 +67,7 @@ export default function ShopSection() {
                                     {product.description}
                                 </p>
                                 <Button
-                                    onClick={() => addItem(product)}
+                                    onClick={() => addToCart({ product_id: product.id, name: product.name, price: product.price, size: product.sizes?.[0] || 'Única', quantity: 1, image_url: product.image_url || '/logo-academy.png' })}
                                     className="w-full bg-navy hover:bg-navy-light text-white font-heading font-bold uppercase tracking-wider rounded-xl h-11"
                                 >
                                     <ShoppingCart className="mr-2 h-4 w-4" /> Añadir al carrito
@@ -99,11 +75,11 @@ export default function ShopSection() {
                             </div>
                         </div>
                     ))}
-                </div>
+                </div>}
 
                 <div className="mt-16 md:hidden">
-                    <Button className="w-full h-14 bg-primary text-white font-heading font-bold uppercase tracking-wider rounded-2xl">
-                        Ver Catálogo Completo
+                    <Button asChild className="w-full h-14 bg-primary text-white font-heading font-bold uppercase tracking-wider rounded-2xl">
+                        <Link href="/tienda">Ver Catálogo Completo</Link>
                     </Button>
                 </div>
             </div>

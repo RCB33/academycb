@@ -1,10 +1,10 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { requireFinanceAccess } from '@/lib/auth'
 
 export async function getStudentPayments(childId: string) {
-    const supabase = await createClient()
+    const { supabase } = await requireFinanceAccess()
 
     // Fetch Memberships (Cuotas / Suscripciones)
     const { data: memberships } = await supabase
@@ -30,7 +30,7 @@ export async function getStudentPayments(childId: string) {
 }
 
 export async function createManualPayment(childId: string, data: any) {
-    const supabase = await createClient()
+    const { supabase } = await requireFinanceAccess()
 
     const { error } = await supabase
         .from('academy_memberships')
@@ -52,7 +52,7 @@ export async function createManualPayment(childId: string, data: any) {
 }
 
 export async function updatePaymentStatus(membershipId: string, status: string, childId: string) {
-    const supabase = await createClient()
+    const { supabase } = await requireFinanceAccess()
 
     const { error } = await supabase
         .from('academy_memberships')
@@ -66,7 +66,7 @@ export async function updatePaymentStatus(membershipId: string, status: string, 
 }
 
 export async function markPaymentAsPaid(paymentId: string) {
-    const supabase = await createClient()
+    const { supabase } = await requireFinanceAccess()
 
     const { error } = await supabase
         .from('payments')

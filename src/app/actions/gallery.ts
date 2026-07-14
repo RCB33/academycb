@@ -1,22 +1,26 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { requireAcademyStaff } from '@/lib/auth'
+import { randomUUID } from 'node:crypto'
 
 export async function uploadImage(formData: FormData) {
-    const supabase = await createClient()
+    const { supabase, user } = await requireAcademyStaff()
 
     const file = formData.get('file') as File
     const childId = formData.get('childId') as string
-    const category = formData.get('category') as string
-
     if (!file || !childId) {
         return { error: 'No file or child ID provided' }
     }
 
+    const extensions: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }
+    const fileExt = extensions[file.type]
+    if (!fileExt || file.size > 8 * 1024 * 1024) {
+        return { error: 'Solo se admiten JPG, PNG o WebP de hasta 8 MB.' }
+    }
+
     // 1. Upload to Storage
-    const fileExt = file.name.split('.').pop()
-    const fileName = `${childId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+    const fileName = `${childId}/${randomUUID()}.${fileExt}`
 
     const { data: uploadData, error: uploadError } = await supabase.storage
         .from('gallery')
@@ -27,23 +31,21 @@ export async function uploadImage(formData: FormData) {
         return { error: 'Failed to upload image' }
     }
 
-    // 2. Get Public URL
-    const { data: { publicUrl } } = supabase.storage
-        .from('gallery')
-        .getPublicUrl(fileName)
-
-    // 3. Insert into DB
+    // Store the private object path. Signed URLs are generated only for
+    // authenticated guardians and staff when rendering the page.
     const { error: dbError } = await supabase
-        .from('media')
+        .from('media_assets')
         .insert({
             child_id: childId,
-            url: publicUrl,
-            type: 'image',
-            category: category || 'general',
-            uploader_id: (await supabase.auth.getUser()).data.user?.id
+            title: file.name,
+            url: fileName,
+            media_type: 'image',
+            context: 'academia',
+            created_by: user.id
         })
 
     if (dbError) {
+        await supabase.storage.from('gallery').remove([fileName])
         console.error('DB Error:', dbError)
         return { error: 'Failed to save image metadata' }
     }
@@ -53,30 +55,30 @@ export async function uploadImage(formData: FormData) {
 }
 
 export async function deleteImage(id: string, childId: string) {
-    const supabase = await createClient()
+    const { supabase } = await requireAcademyStaff()
 
     // Get the file path first? No, we just delete the record and let storage be?
     // Ideally delete from storage too.
     // Fetch URL to get path.
     const { data: media } = await supabase
-        .from('media')
+        .from('media_assets')
         .select('url')
         .eq('id', id)
+        .eq('child_id', childId)
         .single()
 
     if (media) {
-        // Extract path from URL
-        // URL format: .../storage/v1/object/public/gallery/childId/filename
-        const path = media.url.split('/gallery/')[1]
+        const path = media.url?.startsWith('http') ? media.url.split('/gallery/')[1] : media.url
         if (path) {
             await supabase.storage.from('gallery').remove([path])
         }
     }
 
     const { error } = await supabase
-        .from('media')
+        .from('media_assets')
         .delete()
         .eq('id', id)
+        .eq('child_id', childId)
 
     if (error) {
         return { error: 'Failed to delete image' }

@@ -12,13 +12,10 @@ interface GlobalSignatureWrapperProps {
 export function GlobalSignatureWrapper({ guardianId, documentType, documentVersion }: GlobalSignatureWrapperProps) {
     const [isOpen, setIsOpen] = useState(true)
 
-    // In a real app, you might want to prevent closing unless signed.
-    // We'll allow closing for demo purposes, but the guard will catch them on next reload.
-
     return (
         <SignatureModal
             isOpen={isOpen}
-            onClose={() => setIsOpen(false)} // User can dismiss, but will be annoyed next reload. Or force them to sign by not providing onClose in a strict mode.
+            onClose={() => setIsOpen(false)}
             guardianId={guardianId}
             documentType={documentType}
             documentVersion={documentVersion}

@@ -1,8 +1,10 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { requireAdmin } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
+
+const createClient = async () => (await requireAdmin()).supabase
 
 const TeamSchema = z.object({
     name: z.string().min(1, "El nombre es obligatorio"),

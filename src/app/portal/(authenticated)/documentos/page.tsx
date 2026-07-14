@@ -9,12 +9,24 @@ export default async function DocumentosPage() {
 
     if (!user) redirect('/portal')
 
-    // Get signatures for this specific user
-    const { data: signatures } = await supabase
+    const { data: guardian } = await supabase
+        .from('guardians')
+        .select('id')
+        .eq('user_id', user.id)
+        .single()
+
+    const { data: signatures } = guardian ? await supabase
         .from('signatures')
         .select('*')
-        .eq('guardian_id', user.id)
+        .eq('guardian_id', guardian.id)
         .order('signed_at', { ascending: false })
+        : { data: [] }
+
+    const documents = await Promise.all((signatures || []).map(async (signature: any) => {
+        if (!signature.signature_image_path) return { ...signature, signedUrl: null }
+        const { data } = await supabase.storage.from('signatures').createSignedUrl(signature.signature_image_path, 600)
+        return { ...signature, signedUrl: data?.signedUrl || null }
+    }))
 
     return (
         <div className="space-y-6">
@@ -23,8 +35,8 @@ export default async function DocumentosPage() {
             </div>
             
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {signatures && signatures.length > 0 ? (
-                    signatures.map((doc: any) => (
+                {documents.length > 0 ? (
+                    documents.map((doc: any) => (
                         <Card key={doc.id} className="overflow-hidden border-l-4 border-l-green-500 shadow-sm hover:shadow-md transition-all bg-white relative">
                             {/* Watermark icon */}
                             <div className="absolute right-[-20px] top-[-20px] text-green-500/10 pointer-events-none">
@@ -46,12 +58,12 @@ export default async function DocumentosPage() {
                                 <div className="text-xs text-slate-500 ml-10">
                                     Versión: <span className="font-mono bg-slate-100 px-1 rounded">{doc.document_version}</span>
                                 </div>
-                                <div className="pt-3 mt-1 border-t border-slate-100">
-                                     <a href={doc.signature_image_url} target="_blank" rel="noreferrer" className="text-sm font-bold text-indigo-600 hover:text-indigo-800 hover:underline flex items-center transition-colors">
+                                {doc.signedUrl && <div className="pt-3 mt-1 border-t border-slate-100">
+                                     <a href={doc.signedUrl} target="_blank" rel="noreferrer" className="text-sm font-bold text-indigo-600 hover:text-indigo-800 hover:underline flex items-center transition-colors">
                                         <FileText className="mr-1.5 h-4 w-4" />
                                         Ver Certificado Original
                                      </a>
-                                </div>
+                                </div>}
                             </CardContent>
                         </Card>
                     ))

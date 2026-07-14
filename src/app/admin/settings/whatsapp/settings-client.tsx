@@ -11,15 +11,13 @@ import { toast } from 'sonner'
 import { Loader2, RefreshCw, Smartphone, CheckCircle2, XCircle } from 'lucide-react'
 
 interface Props {
-    initialIdInstance: string;
-    initialApiToken: string;
     initialStatus: string;
     qrMessage: string | null;
 }
 
-export function WhatsAppSettingsClient({ initialIdInstance, initialApiToken, initialStatus, qrMessage }: Props) {
-    const [idInstance, setIdInstance] = useState(initialIdInstance)
-    const [apiToken, setApiToken] = useState(initialApiToken)
+export function WhatsAppSettingsClient({ initialStatus, qrMessage }: Props) {
+    const [idInstance, setIdInstance] = useState('')
+    const [apiToken, setApiToken] = useState('')
     const [isSaving, setIsSaving] = useState(false)
 
     const handleSave = async (e: React.FormEvent) => {
@@ -53,8 +51,7 @@ export function WhatsAppSettingsClient({ initialIdInstance, initialApiToken, ini
                                 id="idInstance"
                                 value={idInstance}
                                 onChange={(e) => setIdInstance(e.target.value)}
-                                placeholder="Ej: 110182345"
-                                required
+                                placeholder="Dejar vacío para conservar el ID actual"
                             />
                         </div>
                         <div className="space-y-2">
@@ -64,8 +61,7 @@ export function WhatsAppSettingsClient({ initialIdInstance, initialApiToken, ini
                                 type="password"
                                 value={apiToken}
                                 onChange={(e) => setApiToken(e.target.value)}
-                                placeholder="****************"
-                                required
+                                placeholder="Dejar vacío para conservar el token actual"
                             />
                         </div>
                     </CardContent>

@@ -1,23 +1,15 @@
-import { getWhatsAppSettings, getWhatsAppStatus, getWhatsAppQR } from '@/app/actions/whatsapp'
+import { getWhatsAppStatus, getWhatsAppQR } from '@/app/actions/whatsapp'
 import { WhatsAppSettingsClient } from './settings-client'
 
 export const dynamic = 'force-dynamic'
 
 export default async function WhatsAppSettingsPage() {
-    const settings = await getWhatsAppSettings()
-    const idInstance = settings?.greenapi_id_instance || ''
-    const apiTokenInstance = settings?.greenapi_api_token_instance || ''
-
-    let status = 'NOT_CONFIGURED'
+    const statusRes = await getWhatsAppStatus()
+    const status = statusRes.status
     let qrMessage = null
 
-    if (idInstance && apiTokenInstance) {
-        const statusRes = await getWhatsAppStatus(idInstance, apiTokenInstance)
-        status = statusRes.status
-
-        if (status === 'notAuthorized' || status === 'ERROR') {
-            qrMessage = await getWhatsAppQR(idInstance, apiTokenInstance)
-        }
+    if (status === 'notAuthorized' || status === 'ERROR') {
+        qrMessage = await getWhatsAppQR()
     }
 
     return (
@@ -26,8 +18,6 @@ export default async function WhatsAppSettingsPage() {
             <p className="text-muted-foreground">Configura las credenciales de Green API para habilitar el envío masivo de mensajes a las familias.</p>
 
             <WhatsAppSettingsClient
-                initialIdInstance={idInstance}
-                initialApiToken={apiTokenInstance}
                 initialStatus={status}
                 qrMessage={qrMessage}
             />
