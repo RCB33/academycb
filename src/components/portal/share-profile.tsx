@@ -45,7 +45,7 @@ export function ShareProfile({ token, childId, childName }: ShareProfileProps) {
         setRotating(true)
         const result = await rotatePublicShareToken(childId)
         setRotating(false)
-        if (!result.success || !result.token) return toast.error(result.error)
+        if (!result.success) return toast.error(result.error)
         setActiveToken(result.token)
         setCopied(false)
         toast.success('Enlace renovado')

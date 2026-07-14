@@ -207,7 +207,6 @@ export async function recordManualPayment(data: {
     const { supabase } = await requireFinanceAccess()
     const { error } = await supabase.from('payments').insert([{
         type: data.type,
-        ref_id: data.ref_id,
         amount: data.amount,
         status: 'paid',
         method: data.method,
