@@ -112,6 +112,37 @@ create table if not exists public.contact_messages (
 alter table public.order_items add column if not exists product_id uuid references public.store_products(id) on delete set null;
 alter table public.order_items add column if not exists size text;
 
+-- Some early deployments never received the value-add and notifications
+-- migrations. Create those tables here as well so this completion migration is
+-- sufficient for both fresh and legacy projects.
+create table if not exists public.progress_reports (
+  id uuid primary key default gen_random_uuid(),
+  child_id uuid not null references public.children(id) on delete cascade,
+  term text not null,
+  file_url text not null,
+  created_at timestamptz not null default now(),
+  created_by uuid references auth.users(id) on delete set null
+);
+
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'notification_type' and typnamespace = 'public'::regnamespace) then
+    create type public.notification_type as enum ('info', 'alert', 'success');
+  end if;
+end
+$$;
+
+create table if not exists public.notifications (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  title text not null,
+  message text not null,
+  type public.notification_type not null default 'info',
+  is_read boolean not null default false,
+  link_url text,
+  created_at timestamptz not null default now()
+);
+
 -- Use one media table for videos and private player galleries.
 alter table public.media_assets alter column video_url drop not null;
 alter table public.media_assets add column if not exists url text;
@@ -121,6 +152,7 @@ alter table public.media_assets add column if not exists child_id uuid reference
 alter table public.media_assets add column if not exists media_type text not null default 'video';
 
 -- The signature implementation stores a private object path, not a public URL.
+alter table public.signatures add column if not exists signature_data text;
 alter table public.signatures alter column signature_data drop not null;
 alter table public.signatures add column if not exists document_version text not null default '1.0';
 alter table public.signatures add column if not exists signature_image_path text;
@@ -132,6 +164,8 @@ drop index if exists public.admin_academy_settings_single_row;
 alter table public.academy_settings add column if not exists key text;
 alter table public.academy_settings add column if not exists value text;
 alter table public.academy_settings add column if not exists is_public boolean not null default false;
+alter table public.academy_settings add column if not exists greenapi_id_instance text;
+alter table public.academy_settings add column if not exists greenapi_api_token_instance text;
 create unique index if not exists academy_settings_key_idx on public.academy_settings(key) where key is not null;
 update public.academy_settings
 set key = 'whatsapp_integration', is_public = false
