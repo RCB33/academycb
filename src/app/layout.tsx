@@ -1,25 +1,22 @@
 import type { Metadata } from 'next';
-import { Inter, Rajdhani, Figtree } from 'next/font/google';
 import './globals.css';
 import { Toaster } from 'sonner';
 import { Providers } from '@/app/providers';
-import CartDrawer from '@/app/(public)/components/cart-drawer';
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
-const rajdhani = Rajdhani({
-    subsets: ['latin'],
-    weight: ['300', '400', '500', '600', '700'],
-    variable: '--font-rajdhani'
-});
-const figtree = Figtree({
-    subsets: ['latin'],
-    weight: ['300', '400', '500', '600', '700'],
-    variable: '--font-figtree'
-});
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
 export const metadata: Metadata = {
-    title: 'Academia de Fútbol | Portal Familias',
+    metadataBase: new URL(siteUrl),
+    title: 'Academy Costa Brava',
     description: 'Gestión integral de academia de fútbol, campus y seguimiento de jugadores.',
+    applicationName: 'Academy Costa Brava',
+    openGraph: {
+        type: 'website',
+        locale: 'es_ES',
+        siteName: 'Academy Costa Brava',
+        images: [{ url: '/landing-hero-new.png', alt: 'Academy Costa Brava' }],
+    },
+    twitter: { card: 'summary_large_image' },
 };
 
 export default function RootLayout({
@@ -29,10 +26,9 @@ export default function RootLayout({
 }) {
     return (
         <html lang="es">
-            <body className={`${inter.variable} ${rajdhani.variable} ${figtree.variable} font-sans antialiased`}>
+            <body className="font-sans antialiased">
                 <Providers>
                     {children}
-                    <CartDrawer />
                     <Toaster position="top-center" richColors />
                 </Providers>
             </body>

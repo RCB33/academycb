@@ -1,11 +1,11 @@
-import { Target, ShieldCheck, Trophy, Star } from "lucide-react"
+import { Target, ShieldCheck, Users } from "lucide-react"
 
 export default function WhoWeAreSection() {
     const points = [
         {
             title: "Nuestra Misión",
             icon: Target,
-            description: "Empoderar a jóvenes atletas a través de una formación integral que combina la excelencia técnica táctica con el desarrollo personal, utilizando tecnología de vanguardia para forjar a los líderes del mañana.",
+            description: "Acompañar a jóvenes futbolistas con una formación que combina técnica, táctica, hábitos deportivos y desarrollo personal.",
             color: "text-gold"
         },
         {
@@ -16,8 +16,8 @@ export default function WhoWeAreSection() {
         },
         {
             title: "Nuestro Objetivo",
-            icon: Trophy,
-            description: "Ser el referente en formación deportiva en el Mediterráneo, creando un ecosistema donde el talento se encuentre con el trabajo duro para alcanzar el sueño profesional.",
+            icon: Users,
+            description: "Crear un entorno cercano y exigente donde cada jugador pueda aprender, disfrutar y progresar a su ritmo.",
             color: "text-white"
         }
     ]
@@ -58,17 +58,6 @@ export default function WhoWeAreSection() {
                     ))}
                 </div>
 
-                <div className="mt-20 p-8 rounded-3xl bg-gradient-to-r from-white/5 to-transparent border border-white/10 text-center max-w-4xl mx-auto">
-                    <div className="flex justify-center mb-6">
-                        {[1, 2, 3, 4, 5].map((s) => (
-                            <Star key={s} className="h-6 w-6 text-gold fill-gold mx-1" />
-                        ))}
-                    </div>
-                    <p className="text-xl md:text-2xl text-white font-light italic leading-relaxed">
-                        &quot;En Academy Costa Brava, no solo entrenamos futbolistas; cultivamos la pasión, la integridad y el espíritu competitivo necesario para triunfar en la vida y en el campo.&quot;
-                    </p>
-                    <div className="mt-6 font-heading text-gold font-bold uppercase tracking-wider">— Dirección Académica</div>
-                </div>
             </div>
         </section>
     )

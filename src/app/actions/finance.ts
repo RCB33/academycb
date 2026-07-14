@@ -1,6 +1,8 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { requireFinanceAccess } from '@/lib/auth'
+
+const createClient = async () => (await requireFinanceAccess()).supabase
 
 export type FinanceTransaction = {
     id: string

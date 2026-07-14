@@ -1,8 +1,10 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { requireAdmin } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
+
+const createClient = async () => (await requireAdmin()).supabase
 
 const EventSchema = z.object({
     title: z.string().min(1, "El título es obligatorio"),

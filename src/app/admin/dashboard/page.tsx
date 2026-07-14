@@ -20,9 +20,9 @@ export default async function AdminDashboard() {
     const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString()
     const endOfPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59).toISOString()
 
-    const { data: currentPayments } = await supabase
+    const { data: paidPayments } = await supabase
         .from('payments')
-        .select('amount')
+        .select('amount, paid_at, created_at')
         .eq('status', 'paid')
     
     const { data: prevMonthPayments } = await supabase
@@ -32,14 +32,29 @@ export default async function AdminDashboard() {
         .gte('paid_at', startOfPrevMonth)
         .lte('paid_at', endOfPrevMonth)
 
-    const totalRevenueSum = currentPayments?.reduce((acc, curr) => acc + Number(curr.amount), 0) || 0
+    const totalRevenueSum = paidPayments?.reduce((acc, curr) => acc + Number(curr.amount), 0) || 0
+    const currentMonthSum = paidPayments
+        ?.filter((payment) => new Date(payment.paid_at || payment.created_at) >= new Date(startOfMonth))
+        .reduce((acc, curr) => acc + Number(curr.amount), 0) || 0
     const prevMonthSum = prevMonthPayments?.reduce((acc, curr) => acc + Number(curr.amount), 0) || 0
     
     const totalRevenue = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(totalRevenueSum)
 
     const growthPct = prevMonthSum > 0
-        ? Math.round(((totalRevenueSum - prevMonthSum) / prevMonthSum) * 100)
+        ? Math.round(((currentMonthSum - prevMonthSum) / prevMonthSum) * 100)
         : 0
+
+    const revenueByMonth = Array.from({ length: 12 }, (_, index) => {
+        const date = new Date(now.getFullYear(), now.getMonth() - (11 - index), 1)
+        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+        return { key, name: new Intl.DateTimeFormat('es-ES', { month: 'short' }).format(date), total: 0 }
+    })
+    for (const payment of paidPayments || []) {
+        const date = new Date(payment.paid_at || payment.created_at)
+        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+        const month = revenueByMonth.find((item) => item.key === key)
+        if (month) month.total += Number(payment.amount)
+    }
 
     // New students this week
     const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
@@ -121,7 +136,7 @@ export default async function AdminDashboard() {
                         <CardDescription>Evolución de ingresos mensual</CardDescription>
                     </CardHeader>
                     <CardContent className="pl-2">
-                        <RevenueChart />
+                        <RevenueChart data={revenueByMonth.map(({ name, total }) => ({ name, total }))} />
                     </CardContent>
                 </Card>
 

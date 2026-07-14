@@ -9,7 +9,7 @@ create table public.profiles (
   created_at timestamptz default now()
 );
 alter table profiles enable row level security;
-create policy "Public profiles are viewable by everyone" on profiles for select using (true);
+create policy "Users can view own profile" on profiles for select using (auth.uid() = id);
 create policy "Users can update own profile" on profiles for update using (auth.uid() = id);
 
 -- 2. CATEGORIES (Internal)

@@ -10,7 +10,7 @@ export function ResetPasswordButton({ userId }: { userId: string }) {
     const [loading, setLoading] = useState(false)
 
     const handleReset = async () => {
-        if (!confirm('¿Estás seguro de que quieres resetear la contraseña de este usuario? Se cambiará a "CostaBrava2026" y el usuario podrá iniciar sesión con ella.')) {
+        if (!confirm('¿Enviar un enlace seguro para que este usuario establezca una nueva contraseña?')) {
             return
         }
 
@@ -18,11 +18,11 @@ export function ResetPasswordButton({ userId }: { userId: string }) {
         try {
             const result = await resetTutorPassword(userId)
             if (result.success) {
-                toast.success('Contraseña reseteada a CostaBrava2026')
+                toast.success('Enlace de recuperación enviado por email')
             } else {
                 toast.error(result.error || 'Error al resetear contraseña')
             }
-        } catch (error) {
+        } catch {
             toast.error('Ocurrió un error inesperado al resetear la contraseña')
         } finally {
             setLoading(false)

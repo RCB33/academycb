@@ -55,8 +55,8 @@ export function ProductsTable({ products }: { products: any[] }) {
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (file) {
-            if (file.size > 10 * 1024 * 1024) {
-                toast.error("La imagen es demasiado grande. Máximo 10MB.")
+            if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 10 * 1024 * 1024) {
+                toast.error("Solo se admiten JPG, PNG o WebP de hasta 10 MB.")
                 return
             }
             setSelectedFile(file)
@@ -72,12 +72,20 @@ export function ProductsTable({ products }: { products: any[] }) {
         setLoading(true)
 
         let finalImageUrl = formData.image_url
+        let uploadedPath: string | null = null
 
         // If file mode, upload first
         if (imageMode === 'file' && selectedFile) {
-            const fileExt = selectedFile.name.split('.').pop()
-            const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`
+            const extensions: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }
+            const fileExt = extensions[selectedFile.type]
+            if (!fileExt) {
+                toast.error('Formato de imagen no válido')
+                setLoading(false)
+                return
+            }
+            const fileName = `${crypto.randomUUID()}.${fileExt}`
             const filePath = `products/${fileName}`
+            uploadedPath = filePath
 
             const { error: uploadError } = await supabase
                 .storage
@@ -124,6 +132,7 @@ export function ProductsTable({ products }: { products: any[] }) {
             setSelectedFile(null)
             setPreviewUrl(null)
         } else {
+            if (uploadedPath) await supabase.storage.from('product-images').remove([uploadedPath])
             toast.error(res.error || "Error al guardar")
         }
     }

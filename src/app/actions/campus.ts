@@ -1,7 +1,9 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { requireAdmin } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
+
+const createClient = async () => (await requireAdmin()).supabase
 
 export type Campus = {
     id: string

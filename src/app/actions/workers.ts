@@ -1,8 +1,9 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
+import { randomUUID } from 'node:crypto'
+import { requireAdmin } from '@/lib/auth'
 
 const WorkerSchema = z.object({
     full_name: z.string().min(1, "El nombre es obligatorio"),
@@ -14,7 +15,7 @@ const WorkerSchema = z.object({
 })
 
 export async function getWorkers() {
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
     const { data, error } = await supabase
         .from('workers')
         .select('*')
@@ -28,7 +29,7 @@ export async function getWorkers() {
 }
 
 export async function createWorker(formData: z.infer<typeof WorkerSchema>) {
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
     const validated = WorkerSchema.safeParse(formData)
 
     if (!validated.success) {
@@ -52,7 +53,7 @@ export async function createWorker(formData: z.infer<typeof WorkerSchema>) {
 }
 
 export async function updateWorker(id: string, formData: z.infer<typeof WorkerSchema>) {
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
     const validated = WorkerSchema.safeParse(formData)
 
     if (!validated.success) {
@@ -74,7 +75,7 @@ export async function updateWorker(id: string, formData: z.infer<typeof WorkerSc
 }
 
 export async function deleteWorker(id: string) {
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
 
     // First check if assigned to events? 
     // Ideally we should set null, but for now let's just delete
@@ -93,17 +94,22 @@ export async function deleteWorker(id: string) {
 }
 
 export async function uploadWorkerAvatar(formData: FormData) {
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
     const file = formData.get('file') as File
     const workerId = formData.get('workerId') as string
 
     if (!file || !workerId) {
-        return { success: false, error: 'File and Worker ID are required' }
+        return { success: false, error: 'Faltan el archivo o el trabajador.' }
+    }
+
+    const extensions: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }
+    const fileExt = extensions[file.type]
+    if (!fileExt || file.size > 8 * 1024 * 1024) {
+        return { success: false, error: 'Solo se admiten JPG, PNG o WebP de hasta 8 MB.' }
     }
 
     // 1. Upload to Storage
-    const fileExt = file.name.split('.').pop()
-    const fileName = `${workerId}-${Math.random()}.${fileExt}`
+    const fileName = `${workerId}-${randomUUID()}.${fileExt}`
     const filePath = `worker-avatars/${fileName}`
 
     const { error: uploadError } = await supabase.storage
@@ -126,6 +132,7 @@ export async function uploadWorkerAvatar(formData: FormData) {
         .eq('id', workerId)
 
     if (updateError) {
+        await supabase.storage.from('profile_images').remove([filePath])
         return { success: false, error: updateError.message }
     }
 

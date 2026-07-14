@@ -1,10 +1,10 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { requireAdmin } from '@/lib/auth'
 
 export async function getGuardians() {
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
 
     const { data: guardians, error } = await supabase
         .from('guardians')
@@ -29,7 +29,7 @@ export async function getGuardians() {
 }
 
 export async function getGuardianById(id: string) {
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
 
     const { data: guardian, error } = await supabase
         .from('guardians')
@@ -58,7 +58,7 @@ export async function getGuardianById(id: string) {
 }
 
 export async function createGuardian(data: { full_name: string; email: string; phone: string; notes?: string; createPortalAccount?: boolean }) {
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
 
     let authUserId = null;
 
@@ -73,21 +73,20 @@ export async function createGuardian(data: { full_name: string; email: string; p
             process.env.SUPABASE_SERVICE_ROLE_KEY!
         );
 
-        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-            email: data.email.trim(),
-            password: 'CostaBrava2026',
-            email_confirm: true,
-            user_metadata: {
-                full_name: data.full_name
+        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+            data.email.trim(),
+            {
+                data: { full_name: data.full_name },
+                redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback?next=/portal/establecer-contrasena`
             }
-        });
+        );
 
         if (authError) {
-            console.error("Auth creation error:", authError);
-            if (authError.message.includes('already exists')) {
+            console.error("Auth invitation error:", authError);
+            if (authError.message.includes('already')) {
                 return { success: false, error: 'Ya existe un usuario con este correo electrónico.' }
             }
-            return { success: false, error: 'Error al crear la cuenta de acceso familiar: ' + authError.message }
+            return { success: false, error: 'Error al enviar la invitación de acceso: ' + authError.message }
         }
 
         authUserId = authData.user.id;
@@ -114,7 +113,7 @@ export async function createGuardian(data: { full_name: string; email: string; p
 }
 
 export async function updateGuardian(id: string, data: { full_name: string; email: string; phone: string; notes?: string }) {
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
 
     const { error } = await supabase
         .from('guardians')
@@ -136,7 +135,7 @@ export async function updateGuardian(id: string, data: { full_name: string; emai
 }
 
 export async function deleteGuardian(id: string) {
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
 
     const { error } = await supabase
         .from('guardians')
@@ -152,6 +151,8 @@ export async function deleteGuardian(id: string) {
 }
 
 export async function resetTutorPassword(userId: string) {
+    await requireAdmin()
+
     if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
         return { success: false, error: 'Configuración del servidor incompleta (falta clave administrativa).' }
     }
@@ -162,20 +163,26 @@ export async function resetTutorPassword(userId: string) {
         process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
-        password: 'CostaBrava2026'
-    });
+    const { data: targetUser, error: userError } = await supabaseAdmin.auth.admin.getUserById(userId)
+    if (userError || !targetUser.user?.email) {
+        return { success: false, error: 'No se ha podido localizar la cuenta del tutor.' }
+    }
+
+    const { error: authError } = await supabaseAdmin.auth.resetPasswordForEmail(
+        targetUser.user.email,
+        { redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback?next=/portal/establecer-contrasena` }
+    );
 
     if (authError) {
-        console.error("Auth update error:", authError);
-        return { success: false, error: 'Error al reiniciar la contraseña: ' + authError.message }
+        console.error("Password recovery error:", authError);
+        return { success: false, error: 'Error al enviar el correo de recuperación: ' + authError.message }
     }
 
     return { success: true }
 }
 
 export async function updateGuardianNotes(id: string, notes: string | null) {
-    const supabase = await createClient()
+    const { supabase } = await requireAdmin()
 
     const { error } = await supabase
         .from('guardians')

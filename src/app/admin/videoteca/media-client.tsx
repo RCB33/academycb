@@ -94,9 +94,19 @@ export function MediaAdminClient({ assets, categories }: { assets: MediaAsset[],
 
         try {
             if (uploadMode === 'file' && selectedFile) {
-                const fileExt = selectedFile.name.split('.').pop()
-                const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`
-                const filePath = `uploads/${fileName}`
+                const extensions: Record<string, string> = { 'video/mp4': 'mp4', 'video/webm': 'webm', 'video/quicktime': 'mov' }
+                const fileExt = extensions[selectedFile.type]
+                if (!fileExt || selectedFile.size > 250 * 1024 * 1024) {
+                    toast.error('Solo se admiten MP4, WebM o MOV de hasta 250 MB.')
+                    setIsSubmitting(false)
+                    return
+                }
+                const scope = formData.child_id
+                    ? `child/${formData.child_id}`
+                    : formData.team_id
+                        ? `team/${formData.team_id}`
+                        : `category/${formData.category_id}`
+                const filePath = `${scope}/${crypto.randomUUID()}.${fileExt}`
 
                 setUploadProgress(10)
 
@@ -114,11 +124,9 @@ export function MediaAdminClient({ assets, categories }: { assets: MediaAsset[],
 
                 setUploadProgress(80)
 
-                const { data: urlData } = supabase.storage.from('videos').getPublicUrl(filePath)
-
                 const result = await createMediaAsset({
                     ...formData,
-                    video_url: urlData.publicUrl,
+                    video_url: `storage:${filePath}`,
                     team_id: formData.team_id || null,
                     child_id: formData.child_id || null,
                 })
@@ -128,7 +136,10 @@ export function MediaAdminClient({ assets, categories }: { assets: MediaAsset[],
                 if (result.success) {
                     toast.success("Vídeo subido correctamente")
                     resetForm()
-                } else toast.error(result.error)
+                } else {
+                    await supabase.storage.from('videos').remove([filePath])
+                    toast.error(result.error)
+                }
             } else {
                 if (!formData.video_url) {
                     toast.error("Por favor, introduce la URL del vídeo.")
@@ -174,8 +185,8 @@ export function MediaAdminClient({ assets, categories }: { assets: MediaAsset[],
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (file) {
-            if (file.size > 500 * 1024 * 1024) {
-                toast.error("Máximo 500MB.")
+            if (!['video/mp4', 'video/webm', 'video/quicktime'].includes(file.type) || file.size > 250 * 1024 * 1024) {
+                toast.error("Solo se admiten MP4, WebM o MOV de hasta 250 MB.")
                 return
             }
             setSelectedFile(file)

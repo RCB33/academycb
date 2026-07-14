@@ -35,7 +35,7 @@ export function FifaCard({ stats, child, ovr, className }: FifaCardProps) {
             <div className="relative w-full max-w-[320px] aspect-[2/3] bg-slate-950 rounded-[2rem] shadow-[0_0_30px_rgba(234,179,8,0.4)] overflow-hidden border-[3px] border-yellow-500/80 flex flex-col text-white">
 
                 {/* Background Effects */}
-                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20"></div>
+                <div className="absolute inset-0 opacity-20 [background-image:radial-gradient(circle_at_center,rgba(255,255,255,0.18)_0,transparent_1px)] [background-size:8px_8px]"></div>
                 <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-black to-slate-950"></div>
                 <div className="absolute -top-20 -right-20 w-60 h-60 bg-yellow-500/10 blur-[60px] rounded-full"></div>
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] h-[85%] border border-yellow-500/20 rounded-[1.5rem] z-0"></div>

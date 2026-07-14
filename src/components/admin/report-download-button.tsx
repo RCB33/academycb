@@ -20,24 +20,23 @@ export function ReportDownloadButton({ student, metrics, attendanceStats, coachN
     const handleDownload = async () => {
         setIsGenerating(true)
         try {
-            // Prepare data for the PDF
             const reportData = {
                 studentName: student.full_name,
                 category: student.category?.name || 'Academia',
                 term: 'Evaluación Continua',
                 date: new Date().toLocaleDateString(),
                 metrics: {
-                    pace: metrics?.pace || 50,
-                    shooting: metrics?.shooting || 50,
-                    passing: metrics?.passing || 50,
-                    dribbling: metrics?.dribbling || 50,
-                    defending: metrics?.defending || 50,
-                    physical: metrics?.physical || 50,
-                    discipline: metrics?.discipline || 50
+                    pace: metrics?.pace ?? 0,
+                    shooting: metrics?.shooting ?? 0,
+                    passing: metrics?.passing ?? 0,
+                    dribbling: metrics?.dribbling ?? 0,
+                    defending: metrics?.defending ?? 0,
+                    physical: metrics?.physical ?? 0,
+                    discipline: metrics?.discipline ?? 0
                 },
                 attendance: attendanceStats,
                 coachNotes: coachNotes,
-                coachName: "Cuerpo Técnico" // Ideally fetched from logged in user if they are a coach
+                coachName: "Cuerpo Técnico"
             }
 
             // Generate blob
@@ -71,7 +70,7 @@ export function ReportDownloadButton({ student, metrics, attendanceStats, coachN
             {isGenerating ? (
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generando...</>
             ) : (
-                <><Download className="mr-2 h-4 w-4" /> Boletín Oficial (PDF)</>
+                <><Download className="mr-2 h-4 w-4" /> Informe de progreso (PDF)</>
             )}
         </Button>
     )
