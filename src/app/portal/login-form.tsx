@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from "@/components/ui/button"
@@ -14,8 +14,37 @@ export function LoginForm() {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [loading, setLoading] = useState(false)
+    const [resettingPassword, setResettingPassword] = useState(false)
     const router = useRouter()
-    const supabase = createClient()
+    const supabase = useMemo(() => createClient(), [])
+
+    useEffect(() => {
+        const isPasswordLink = (type: string | null) => type === 'invite' || type === 'recovery'
+        const redirectPasswordLink = () => {
+            const currentType = new URLSearchParams(window.location.hash.slice(1)).get('type')
+            if (!isPasswordLink(currentType)) return false
+
+            router.replace(`/portal/establecer-contrasena${window.location.hash}`)
+            return true
+        }
+
+        if (redirectPasswordLink()) return
+
+        window.addEventListener('hashchange', redirectPasswordLink)
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            const needsInitialPassword = session?.user.user_metadata?.password_set !== true
+
+            if (event === 'PASSWORD_RECOVERY' || (session && needsInitialPassword)) {
+                router.replace('/portal/establecer-contrasena')
+            }
+        })
+
+        return () => {
+            window.removeEventListener('hashchange', redirectPasswordLink)
+            subscription.unsubscribe()
+        }
+    }, [router, supabase])
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -23,7 +52,7 @@ export function LoginForm() {
 
         try {
             const { error } = await supabase.auth.signInWithPassword({
-                email,
+                email: email.trim(),
                 password,
             })
 
@@ -47,11 +76,31 @@ export function LoginForm() {
                     router.push('/portal/dashboard')
                 }
             }
-        } catch (err) {
+        } catch {
             toast.error("Ha ocurrido un error inesperado")
         } finally {
             setLoading(false)
         }
+    }
+
+    const handlePasswordReset = async () => {
+        const normalizedEmail = email.trim()
+        if (!normalizedEmail) {
+            toast.error('Escribe primero tu correo electrónico.')
+            return
+        }
+
+        setResettingPassword(true)
+        const redirectTo = `${window.location.origin}/auth/callback?next=/portal/establecer-contrasena`
+        const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, { redirectTo })
+        setResettingPassword(false)
+
+        if (error) {
+            toast.error('No se pudo enviar el enlace. Inténtalo de nuevo en unos minutos.')
+            return
+        }
+
+        toast.success('Te hemos enviado un enlace para crear o recuperar tu contraseña.')
     }
 
     return (
@@ -89,10 +138,18 @@ export function LoginForm() {
                     </Button>
                 </form>
             </CardContent>
-            <CardFooter className="justify-center border-t border-white/10 p-4">
-                <p className="text-xs text-gray-300">
-                    ¿No tienes cuenta? Contacta con administración.
-                </p>
+            <CardFooter className="flex-col gap-2 border-t border-white/10 p-4 text-center">
+                <p className="text-xs text-gray-300">¿Primera vez o has olvidado la contraseña?</p>
+                <Button
+                    type="button"
+                    variant="link"
+                    className="h-auto p-0 text-sm font-semibold text-primary"
+                    onClick={handlePasswordReset}
+                    disabled={loading || resettingPassword}
+                >
+                    {resettingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Crear o recuperar contraseña
+                </Button>
             </CardFooter>
         </Card>
     )
