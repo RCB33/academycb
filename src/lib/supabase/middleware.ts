@@ -9,6 +9,7 @@ const PUBLIC_ROUTES = [
   '/torneos',
   '/tienda',
   '/contacto',
+  '/portal/establecer-contrasena',
   '/terminos',
   '/aviso-legal',
   '/privacidad',

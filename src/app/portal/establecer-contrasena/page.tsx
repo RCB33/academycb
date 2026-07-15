@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { KeyRound, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -14,7 +14,49 @@ export default function SetPasswordPage() {
     const [password, setPassword] = useState('')
     const [confirmation, setConfirmation] = useState('')
     const [loading, setLoading] = useState(false)
+    const [checkingLink, setCheckingLink] = useState(true)
+    const [sessionReady, setSessionReady] = useState(false)
     const router = useRouter()
+    const supabase = useMemo(() => createClient(), [])
+
+    useEffect(() => {
+        let active = true
+
+        const prepareSession = async () => {
+            const code = new URLSearchParams(window.location.search).get('code')
+
+            if (code) {
+                const { error } = await supabase.auth.exchangeCodeForSession(code)
+                if (error) {
+                    if (active) setCheckingLink(false)
+                    return
+                }
+            }
+
+            const { data: { session } } = await supabase.auth.getSession()
+            if (!active) return
+
+            setSessionReady(Boolean(session))
+            setCheckingLink(false)
+
+            if (session && (window.location.hash || code)) {
+                window.history.replaceState({}, '', window.location.pathname)
+            }
+        }
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            if (!active || !session) return
+            setSessionReady(true)
+            setCheckingLink(false)
+        })
+
+        void prepareSession()
+
+        return () => {
+            active = false
+            subscription.unsubscribe()
+        }
+    }, [supabase])
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault()
@@ -22,14 +64,56 @@ export default function SetPasswordPage() {
         if (password !== confirmation) return toast.error('Las contraseñas no coinciden.')
 
         setLoading(true)
-        const supabase = createClient()
-        const { error } = await supabase.auth.updateUser({ password })
+        const { error } = await supabase.auth.updateUser({
+            password,
+            data: { password_set: true },
+        })
         setLoading(false)
 
         if (error) return toast.error('No se pudo guardar la contraseña. Solicita un enlace nuevo.')
+
+        const { data: { user } } = await supabase.auth.getUser()
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user?.id)
+            .maybeSingle()
+
         toast.success('Contraseña establecida correctamente')
-        router.replace('/portal/dashboard')
+        router.replace(profile?.role === 'admin' ? '/admin/dashboard' : '/portal/dashboard')
         router.refresh()
+    }
+
+    if (checkingLink) {
+        return (
+            <main className="flex min-h-screen items-center justify-center bg-navy p-4">
+                <Card className="w-full max-w-md border-white/10 shadow-2xl">
+                    <CardContent className="flex items-center justify-center gap-3 py-10">
+                        <Loader2 className="h-5 w-5 animate-spin text-gold" />
+                        <p>Comprobando el enlace seguro…</p>
+                    </CardContent>
+                </Card>
+            </main>
+        )
+    }
+
+    if (!sessionReady) {
+        return (
+            <main className="flex min-h-screen items-center justify-center bg-navy p-4">
+                <Card className="w-full max-w-md border-white/10 shadow-2xl">
+                    <CardHeader className="text-center">
+                        <KeyRound className="mx-auto mb-3 h-10 w-10 text-gold" />
+                        <CardTitle className="text-2xl">El enlace no es válido</CardTitle>
+                        <CardDescription>Puede que haya caducado o ya se haya utilizado. Solicita uno nuevo desde el acceso.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Button className="w-full bg-gold text-navy" onClick={() => router.replace('/portal')}>
+                            Volver y solicitar un enlace nuevo
+                        </Button>
+                    </CardContent>
+                </Card>
+            </main>
+        )
     }
 
     return (
