@@ -75,7 +75,7 @@ export default function SetPasswordPage() {
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault()
-        if (password.length < 10) return toast.error('Usa al menos 10 caracteres.')
+        if (password.length < 6) return toast.error('Usa al menos 6 caracteres.')
         if (password !== confirmation) return toast.error('Las contraseñas no coinciden.')
 
         setLoading(true)
@@ -143,11 +143,11 @@ export default function SetPasswordPage() {
                     <form onSubmit={handleSubmit} className="space-y-5">
                         <div className="space-y-2">
                             <Label htmlFor="password">Nueva contraseña</Label>
-                            <Input id="password" type="password" minLength={10} autoComplete="new-password" required value={password} onChange={(event) => setPassword(event.target.value)} />
+                            <Input id="password" type="password" minLength={6} autoComplete="new-password" required value={password} onChange={(event) => setPassword(event.target.value)} />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="confirmation">Repite la contraseña</Label>
-                            <Input id="confirmation" type="password" minLength={10} autoComplete="new-password" required value={confirmation} onChange={(event) => setConfirmation(event.target.value)} />
+                            <Input id="confirmation" type="password" minLength={6} autoComplete="new-password" required value={confirmation} onChange={(event) => setConfirmation(event.target.value)} />
                         </div>
                         <Button className="w-full bg-gold text-navy" disabled={loading}>
                             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
