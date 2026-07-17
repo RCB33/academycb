@@ -18,7 +18,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { ArrowLeft, User, Phone, Mail, MapPin, Calendar, CreditCard, ShoppingBag, Trophy, Activity, Wallet, FileText, TrendingUp, ChevronRight, MessageSquare, Upload, Loader2, Trash2, Pencil, X, Star, UserMinus } from "lucide-react"
+import { ArrowLeft, User, Phone, Mail, MapPin, Calendar, CreditCard, ShoppingBag, Trophy, Activity, Wallet, FileText, TrendingUp, ChevronRight, MessageSquare, Upload, Loader2, Trash2, Pencil, X, Star, UserMinus, GraduationCap, Tent, Link2 } from "lucide-react"
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { PlayerRadarChart } from "@/components/admin/player-radar-chart"
@@ -78,7 +78,14 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
 
         const { data } = await supabase
             .from('children')
-            .select(`*, category:categories(name), guardians:child_guardians(relationship, is_primary, guardian:guardians(*))`)
+            .select(`
+                *,
+                category:categories(name),
+                guardians:child_guardians(relationship, is_primary, guardian:guardians(*)),
+                academy_memberships(id, status, plan:membership_plans(name)),
+                campus_enrollments(id, status, campus:campuses(id, name, year)),
+                tournament_players(id, status, tournament:tournaments_internal(id, title), team:teams(id, name))
+            `)
             .eq('id', childId)
             .single()
         studentData = data
@@ -406,6 +413,36 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
                                     <p className="text-red-500 font-bold text-xs uppercase">Sin tutor asignado</p>
                                 </div>
                             )}
+                        </CardContent>
+                    </Card>
+
+                    <Card className="border-slate-200/60 shadow-sm overflow-hidden">
+                        <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-4">
+                            <CardTitle className="text-sm font-bold flex items-center gap-2">
+                                <Link2 className="h-4 w-4 text-slate-700" /> Vinculaciones
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="pt-4 space-y-4 text-sm">
+                            <BranchLinks
+                                icon={<GraduationCap className="h-4 w-4 text-indigo-600" />}
+                                label="Academia"
+                                items={(student.academy_memberships || []).filter((item: any) => item.status !== 'cancelled')}
+                                getName={(item: any) => item.plan?.name || 'Matrícula activa'}
+                            />
+                            <Separator className="opacity-50" />
+                            <BranchLinks
+                                icon={<Tent className="h-4 w-4 text-emerald-600" />}
+                                label="Campus"
+                                items={(student.campus_enrollments || []).filter((item: any) => item.status !== 'cancelled')}
+                                getName={(item: any) => item.campus ? `${item.campus.name}${item.campus.year ? ` · ${item.campus.year}` : ''}` : 'Campus'}
+                            />
+                            <Separator className="opacity-50" />
+                            <BranchLinks
+                                icon={<Trophy className="h-4 w-4 text-amber-600" />}
+                                label="Torneos"
+                                items={(student.tournament_players || []).filter((item: any) => item.status !== 'cancelled')}
+                                getName={(item: any) => `${item.tournament?.title || 'Torneo'}${item.team?.name ? ` · ${item.team.name}` : ''}`}
+                            />
                         </CardContent>
                     </Card>
 
@@ -887,6 +924,33 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
             </div>
         </div >
     )
+}
+
+function BranchLinks({ icon, label, items, getName }: { icon: React.ReactNode, label: string, items: any[], getName: (item: any) => string }) {
+    return (
+        <div className="space-y-2">
+            <div className="flex items-center justify-between">
+                <span className="font-bold flex items-center gap-2">{icon}{label}</span>
+                <Badge variant="outline" className="text-[10px]">{items.length}</Badge>
+            </div>
+            {items.length === 0 ? (
+                <p className="text-xs text-slate-400 pl-6">Sin vinculación</p>
+            ) : items.map((item: any) => (
+                <div key={item.id} className="pl-6 text-xs flex items-start justify-between gap-2">
+                    <span className="text-slate-700 font-medium">{getName(item)}</span>
+                    <span className="text-[9px] uppercase text-slate-400 font-bold">{formatLinkStatus(item.status)}</span>
+                </div>
+            ))}
+        </div>
+    )
+}
+
+function formatLinkStatus(status: string) {
+    const labels: Record<string, string> = {
+        active: 'Activo', paused: 'Pausado', pending_payment: 'Pendiente', reserved: 'Reservado',
+        confirmed: 'Confirmado', selected: 'Convocado',
+    }
+    return labels[status] || status
 }
 
 function MetricBar({ label, value, color, editable, onChange }: { label: string, value: number, color: string, editable?: boolean, onChange?: (val: number) => void }) {

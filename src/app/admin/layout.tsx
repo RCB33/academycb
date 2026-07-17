@@ -61,7 +61,7 @@ export default async function AdminLayout({
                             Gestión CRM
                         </div>
                         <div className="space-y-1">
-                            <NavItem href="/admin/crm/alumnos" icon={<Users size={18} />} label="Alumnos 360º" />
+                            <NavItem href="/admin/crm/alumnos" icon={<Users size={18} />} label="Jugadores 360º" />
                             <NavItem href="/admin/seguimiento" icon={<TrendingUp size={18} />} label="Seguimiento" />
                             <NavItem href="/admin/leads" icon={<MessageSquare size={18} />} label="Solicitudes Web" />
                             <NavItem href="/admin/crm/tutores" icon={<UserPlus size={18} />} label="Tutores" />
