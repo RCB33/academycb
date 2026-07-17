@@ -24,6 +24,7 @@ interface TeamDialogProps {
     trigger?: React.ReactNode
     open?: boolean
     onOpenChange?: (open: boolean) => void
+    onSaved?: () => void | Promise<void>
 }
 
 const TEAM_COLORS = [
@@ -82,7 +83,7 @@ function buildScheduleString(days: string[], startTime: string, endTime: string)
     return `${days.join(',')} ${startTime}-${endTime}`
 }
 
-export function TeamDialog({ mode, team, categories, workers, trigger, open, onOpenChange }: TeamDialogProps) {
+export function TeamDialog({ mode, team, categories, workers, trigger, open, onOpenChange, onSaved }: TeamDialogProps) {
     const [internalOpen, setInternalOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const [color, setColor] = useState(team?.color || '#3b82f6')
@@ -94,7 +95,14 @@ export function TeamDialog({ mode, team, categories, workers, trigger, open, onO
 
     const isControlled = open !== undefined && onOpenChange !== undefined
     const isOpen = isControlled ? open : internalOpen
-    const setIsOpen = isControlled ? onOpenChange : setInternalOpen
+    const setIsOpen = (nextOpen: boolean) => {
+        if (isControlled) {
+            onOpenChange!(nextOpen)
+        } else {
+            setInternalOpen(nextOpen)
+            onOpenChange?.(nextOpen)
+        }
+    }
 
     useEffect(() => {
         if (isOpen) {
@@ -139,6 +147,7 @@ export function TeamDialog({ mode, team, categories, workers, trigger, open, onO
             }
 
             if (res.success) {
+                await onSaved?.()
                 toast.success(mode === 'create' ? "Equipo creado correctamente" : "Equipo actualizado")
                 setIsOpen(false)
             } else {
