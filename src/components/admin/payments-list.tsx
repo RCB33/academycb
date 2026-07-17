@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { CreditCard, Euro, Clock, CheckCircle2, AlertCircle, ArrowRight } from "lucide-react"
 import Link from "next/link"
+import { getBillingSuffix, normalizeBillingFrequency } from "@/lib/membership-billing"
 
 type PaymentsData = {
     memberships: any[]
@@ -55,30 +56,33 @@ export function PaymentsList({ paymentsData, plans, childId, onRefresh }: {
                     <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
                         <CreditCard className="h-3 w-3" /> Suscripciones
                     </h4>
-                    {memberships.map((m: any) => (
-                        <div key={m.id} className="flex items-center justify-between p-4 bg-white rounded-xl border border-slate-100">
-                            <div className="flex items-center gap-3">
-                                <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${m.status === 'active' ? 'bg-green-50' : 'bg-slate-50'}`}>
-                                    <Euro className={`h-5 w-5 ${m.status === 'active' ? 'text-green-600' : 'text-slate-400'}`} />
-                                </div>
-                                <div>
-                                    <p className="font-bold text-sm text-slate-900">{m.plan?.name || 'Plan personalizado'}</p>
-                                    <div className="flex items-center gap-2 text-[10px] text-slate-400">
-                                        <span>{new Date(m.start_date).toLocaleDateString()} → {new Date(m.end_date).toLocaleDateString()}</span>
-                                        {m.payment_method && <span>• {m.payment_method === 'efectivo' ? '💵' : m.payment_method === 'transferencia' ? '🏦' : '💳'} {m.payment_method}</span>}
+                    {memberships.map((m: any) => {
+                        const frequency = normalizeBillingFrequency(m.plan?.frequency, m.plan?.duration_months, m.plan?.name)
+                        return (
+                            <div key={m.id} className="flex items-center justify-between p-4 bg-white rounded-xl border border-slate-100">
+                                <div className="flex items-center gap-3">
+                                    <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${m.status === 'active' ? 'bg-green-50' : 'bg-slate-50'}`}>
+                                        <Euro className={`h-5 w-5 ${m.status === 'active' ? 'text-green-600' : 'text-slate-400'}`} />
+                                    </div>
+                                    <div>
+                                        <p className="font-bold text-sm text-slate-900">{m.plan?.name || 'Plan personalizado'}</p>
+                                        <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                                            <span>{new Date(m.start_date).toLocaleDateString()} → {new Date(m.end_date).toLocaleDateString()}</span>
+                                            {m.payment_method && <span>• {m.payment_method === 'efectivo' ? '💵' : m.payment_method === 'transferencia' ? '🏦' : '💳'} {m.payment_method}</span>}
+                                        </div>
                                     </div>
                                 </div>
+                                <div className="flex items-center gap-3">
+                                    <span className="text-lg font-black text-yellow-600">{m.monthly_price || m.plan?.price || 0}€</span>
+                                    <span className="text-[10px] text-slate-400">/{getBillingSuffix(frequency)}</span>
+                                    <Badge className={`text-xs ${m.payment_status === 'paid'
+                                        ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'} border-none`}>
+                                        {m.payment_status === 'paid' ? '✓ Pagado' : '⏳ Pendiente'}
+                                    </Badge>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-3">
-                                <span className="text-lg font-black text-yellow-600">{m.monthly_price || m.plan?.price || 0}€</span>
-                                <span className="text-[10px] text-slate-400">/{m.plan?.frequency === 'mensual' ? 'mes' : m.plan?.frequency === 'trimestral' ? 'trim.' : 'año'}</span>
-                                <Badge className={`text-xs ${m.payment_status === 'paid'
-                                    ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'} border-none`}>
-                                    {m.payment_status === 'paid' ? '✓ Pagado' : '⏳ Pendiente'}
-                                </Badge>
-                            </div>
-                        </div>
-                    ))}
+                        )
+                    })}
                 </div>
             )}
 
