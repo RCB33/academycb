@@ -77,7 +77,7 @@ export async function createGuardian(data: { full_name: string; email: string; p
             data.email.trim(),
             {
                 data: { full_name: data.full_name },
-                redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback?next=/portal/establecer-contrasena`
+                redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/portal/establecer-contrasena`
             }
         );
 
@@ -170,7 +170,7 @@ export async function resetTutorPassword(userId: string) {
 
     const { error: authError } = await supabaseAdmin.auth.resetPasswordForEmail(
         targetUser.user.email,
-        { redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback?next=/portal/establecer-contrasena` }
+        { redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/portal/establecer-contrasena` }
     );
 
     if (authError) {
