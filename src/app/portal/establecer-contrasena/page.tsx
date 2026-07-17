@@ -24,8 +24,23 @@ export default function SetPasswordPage() {
 
         const prepareSession = async () => {
             const code = new URLSearchParams(window.location.search).get('code')
+            const hash = new URLSearchParams(window.location.hash.slice(1))
+            const accessToken = hash.get('access_token')
+            const refreshToken = hash.get('refresh_token')
 
-            if (code) {
+            if (accessToken && refreshToken) {
+                const { error } = await supabase.auth.setSession({
+                    access_token: accessToken,
+                    refresh_token: refreshToken,
+                })
+
+                if (error) {
+                    if (active) setCheckingLink(false)
+                    return
+                }
+            }
+
+            if (code && !accessToken) {
                 const { error } = await supabase.auth.exchangeCodeForSession(code)
                 if (error) {
                     if (active) setCheckingLink(false)

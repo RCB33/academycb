@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { createRecoveryClient } from '@/lib/supabase/recovery-client'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -17,6 +18,7 @@ export function LoginForm() {
     const [resettingPassword, setResettingPassword] = useState(false)
     const router = useRouter()
     const supabase = useMemo(() => createClient(), [])
+    const recoveryClient = useMemo(() => createRecoveryClient(), [])
 
     useEffect(() => {
         const isPasswordLink = (type: string | null) => type === 'invite' || type === 'recovery'
@@ -91,8 +93,8 @@ export function LoginForm() {
         }
 
         setResettingPassword(true)
-        const redirectTo = `${window.location.origin}/auth/callback?next=/portal/establecer-contrasena`
-        const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, { redirectTo })
+        const redirectTo = `${window.location.origin}/portal/establecer-contrasena`
+        const { error } = await recoveryClient.auth.resetPasswordForEmail(normalizedEmail, { redirectTo })
         setResettingPassword(false)
 
         if (error) {
