@@ -11,13 +11,15 @@ import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
-    Plus, Trophy, MapPin, Calendar, Users, Euro, Trash2, UserPlus,
-    ChevronLeft, Edit, Loader2, Phone, Mail, ExternalLink, Shield, Zap
+    Plus, Trophy, MapPin, Calendar, Users, Trash2, UserPlus,
+    ChevronLeft, Edit, Loader2, Phone, Mail, ExternalLink, Shield, Zap, UserCheck
 } from "lucide-react"
 import {
     getTournaments, createTournament, updateTournament, deleteTournament,
     getTournamentTeams, registerTeam, updateTeamStatus, removeTeam, getLocalTeams,
-    type Tournament, type TournamentTeam
+    getTournamentPlayers, getAvailableChildrenForTournament, registerTournamentPlayer,
+    updateTournamentPlayerStatus, removeTournamentPlayer,
+    type Tournament, type TournamentTeam, type TournamentPlayer
 } from "@/app/actions/tournaments"
 import { toast } from "sonner"
 
@@ -33,15 +35,24 @@ const TEAM_STATUS: Record<string, { label: string, color: string }> = {
     'cancelled': { label: 'Cancelado', color: 'bg-red-100 text-red-700' },
 }
 
+const PLAYER_STATUS: Record<string, { label: string, color: string }> = {
+    'selected': { label: 'Convocado', color: 'bg-blue-100 text-blue-700' },
+    'confirmed': { label: 'Confirmado', color: 'bg-green-100 text-green-700' },
+    'cancelled': { label: 'Baja', color: 'bg-red-100 text-red-700' },
+}
+
 export default function TorneosPage() {
     const [tournaments, setTournaments] = useState<Tournament[]>([])
     const [loading, setLoading] = useState(true)
     const [selected, setSelected] = useState<Tournament | null>(null)
     const [teams, setTeams] = useState<TournamentTeam[]>([])
     const [localTeams, setLocalTeams] = useState<any[]>([])
+    const [players, setPlayers] = useState<TournamentPlayer[]>([])
+    const [availableChildren, setAvailableChildren] = useState<any[]>([])
     const [dialogOpen, setDialogOpen] = useState(false)
     const [editing, setEditing] = useState<Tournament | null>(null)
     const [teamDialogOpen, setTeamDialogOpen] = useState(false)
+    const [playerDialogOpen, setPlayerDialogOpen] = useState(false)
     const [activeTab, setActiveTab] = useState('torneos')
 
     useEffect(() => { fetchTournaments() }, [])
@@ -55,15 +66,42 @@ export default function TorneosPage() {
     async function selectTournament(t: Tournament) {
         setSelected(t)
         setActiveTab('equipos')
-        const [tt, lt] = await Promise.all([getTournamentTeams(t.id), getLocalTeams()])
+        const [tt, lt, tp, available] = await Promise.all([
+            getTournamentTeams(t.id), getLocalTeams(), getTournamentPlayers(t.id), getAvailableChildrenForTournament(t.id)
+        ])
         setTeams(tt)
         setLocalTeams(lt)
+        setPlayers(tp)
+        setAvailableChildren(available)
     }
 
     async function refreshTeams() {
         if (!selected) return
         setTeams(await getTournamentTeams(selected.id))
         fetchTournaments()
+    }
+
+    async function refreshPlayers() {
+        if (!selected) return
+        const [tp, available] = await Promise.all([
+            getTournamentPlayers(selected.id), getAvailableChildrenForTournament(selected.id)
+        ])
+        setPlayers(tp)
+        setAvailableChildren(available)
+        fetchTournaments()
+    }
+
+    async function handlePlayerStatusChange(id: string, status: TournamentPlayer['status']) {
+        const res = await updateTournamentPlayerStatus(id, status)
+        if (res.success) { toast.success('Estado actualizado'); refreshPlayers() }
+        else toast.error(res.error)
+    }
+
+    async function handleRemovePlayer(id: string) {
+        if (!confirm('¿Retirar a este jugador del torneo?')) return
+        const res = await removeTournamentPlayer(id)
+        if (res.success) { toast.success('Jugador retirado'); refreshPlayers() }
+        else toast.error(res.error)
     }
 
     async function handleDeleteTournament(id: string) {
@@ -89,7 +127,7 @@ export default function TorneosPage() {
     const openTournaments = tournaments.filter(t => t.status === 'open')
     const totalConfirmed = tournaments.reduce((s, t) => s + (t.confirmed_count || 0), 0)
     const totalTeams = tournaments.reduce((s, t) => s + (t.team_count || 0), 0)
-    const estimatedRevenue = tournaments.reduce((s, t) => s + ((t.confirmed_count || 0) * (t.price || 0)), 0)
+    const totalPlayers = tournaments.reduce((s, t) => s + (t.player_count || 0), 0)
 
     return (
         <div className="space-y-6">
@@ -110,8 +148,8 @@ export default function TorneosPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <KpiCard icon={<Trophy className="h-4 w-4" />} label="Torneos Abiertos" value={openTournaments.length} color="yellow" />
                 <KpiCard icon={<Users className="h-4 w-4" />} label="Equipos Confirmados" value={totalConfirmed} color="green" />
-                <KpiCard icon={<Shield className="h-4 w-4" />} label="Total Inscritos" value={totalTeams} color="slate" />
-                <KpiCard icon={<Euro className="h-4 w-4" />} label="Ingresos Est." value={`${estimatedRevenue.toLocaleString('es')}€`} color="yellow" />
+                <KpiCard icon={<Shield className="h-4 w-4" />} label="Equipos Inscritos" value={totalTeams} color="slate" />
+                <KpiCard icon={<UserCheck className="h-4 w-4" />} label="Jugadores Convocados" value={totalPlayers} color="green" />
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
@@ -122,6 +160,10 @@ export default function TorneosPage() {
                     <TabsTrigger value="equipos" className="font-bold text-xs uppercase tracking-wider data-[state=active]:bg-slate-900 data-[state=active]:text-white px-6 py-2.5 rounded-lg"
                         disabled={!selected}>
                         ⚽ Equipos {selected ? `(${selected.title})` : ''}
+                    </TabsTrigger>
+                    <TabsTrigger value="jugadores" className="font-bold text-xs uppercase tracking-wider data-[state=active]:bg-slate-900 data-[state=active]:text-white px-6 py-2.5 rounded-lg"
+                        disabled={!selected}>
+                        👤 Jugadores {selected ? `(${players.filter(p => p.status !== 'cancelled').length})` : ''}
                     </TabsTrigger>
                 </TabsList>
 
@@ -247,11 +289,63 @@ export default function TorneosPage() {
                         </div>
                     )}
                 </TabsContent>
+
+                <TabsContent value="jugadores">
+                    {selected && (
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between gap-4">
+                                <div>
+                                    <h2 className="text-xl font-black text-slate-900">Convocatoria · {selected.title}</h2>
+                                    <p className="text-sm text-slate-500">Jugadores vinculados individualmente a este torneo</p>
+                                </div>
+                                <Button className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold" onClick={() => setPlayerDialogOpen(true)}>
+                                    <UserPlus className="mr-2 h-4 w-4" /> Añadir Jugador
+                                </Button>
+                            </div>
+                            {players.length === 0 ? (
+                                <Card className="border-dashed"><CardContent className="py-12 text-center">
+                                    <Users className="h-12 w-12 text-slate-200 mx-auto mb-3" />
+                                    <p className="text-sm text-slate-400">Todavía no hay jugadores convocados</p>
+                                </CardContent></Card>
+                            ) : (
+                                <div className="space-y-2">
+                                    {players.map(player => (
+                                        <Card key={player.id} className="border-none shadow-sm bg-white">
+                                            <CardContent className="p-4 flex items-center gap-4 flex-wrap">
+                                                <div className="h-10 w-10 rounded-full bg-slate-900 text-white flex items-center justify-center font-black">
+                                                    {player.child?.full_name?.charAt(0) || '?'}
+                                                </div>
+                                                <div className="flex-1 min-w-[180px]">
+                                                    <p className="font-bold text-slate-900">{player.child?.full_name || 'Jugador'}</p>
+                                                    <p className="text-xs text-slate-400">
+                                                        {player.child?.category?.name || 'Sin categoría'}
+                                                        {player.team?.name ? ` · ${player.team.name}` : ''}
+                                                    </p>
+                                                </div>
+                                                <Select value={player.status} onValueChange={(value) => handlePlayerStatusChange(player.id, value as TournamentPlayer['status'])}>
+                                                    <SelectTrigger className="w-[140px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                                                    <SelectContent>
+                                                        {Object.entries(PLAYER_STATUS).map(([key, conf]) => <SelectItem key={key} value={key}>{conf.label}</SelectItem>)}
+                                                    </SelectContent>
+                                                </Select>
+                                                <button onClick={() => handleRemovePlayer(player.id)} className="text-slate-300 hover:text-red-500 transition-colors" aria-label="Retirar jugador">
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            </CardContent>
+                                        </Card>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </TabsContent>
             </Tabs>
 
             <TournamentDialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) { setEditing(null); fetchTournaments() } }} tournament={editing} />
             {selected && <RegisterTeamDialog open={teamDialogOpen} onOpenChange={(o) => { setTeamDialogOpen(o); if (!o) refreshTeams() }}
                 tournamentId={selected.id} tournamentTitle={selected.title} localTeams={localTeams} />}
+            {selected && <RegisterPlayerDialog open={playerDialogOpen} onOpenChange={(o) => { setPlayerDialogOpen(o); if (!o) refreshPlayers() }}
+                tournamentId={selected.id} tournamentTitle={selected.title} availableChildren={availableChildren} localTeams={localTeams} />}
         </div>
     )
 }
@@ -523,6 +617,84 @@ function RegisterTeamDialog({ open, onOpenChange, tournamentId, tournamentTitle,
                             className="bg-black hover:bg-slate-800 text-white font-bold px-6">
                             {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                             Inscribir
+                        </Button>
+                    </div>
+                </form>
+            </DialogContent>
+        </Dialog>
+    )
+}
+
+function RegisterPlayerDialog({ open, onOpenChange, tournamentId, tournamentTitle, availableChildren, localTeams }: {
+    open: boolean
+    onOpenChange: (open: boolean) => void
+    tournamentId: string
+    tournamentTitle: string
+    availableChildren: any[]
+    localTeams: any[]
+}) {
+    const [loading, setLoading] = useState(false)
+    const [childId, setChildId] = useState('')
+    const [teamId, setTeamId] = useState('none')
+
+    async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+        e.preventDefault()
+        if (!childId) return toast.error('Selecciona un jugador')
+        setLoading(true)
+        const fd = new FormData(e.currentTarget)
+        const result = await registerTournamentPlayer({
+            tournament_id: tournamentId,
+            child_id: childId,
+            team_id: teamId === 'none' ? null : teamId,
+            notes: (fd.get('notes') as string) || null,
+        })
+        setLoading(false)
+        if (result.success) {
+            toast.success('Jugador añadido a la convocatoria')
+            setChildId('')
+            setTeamId('none')
+            onOpenChange(false)
+        } else toast.error(result.error)
+    }
+
+    return (
+        <Dialog open={open} onOpenChange={(value) => { onOpenChange(value); if (!value) { setChildId(''); setTeamId('none') } }}>
+            <DialogContent className="max-w-md bg-white">
+                <DialogTitle>Convocar jugador</DialogTitle>
+                <p className="text-sm text-slate-500 -mt-2">{tournamentTitle}</p>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="space-y-2">
+                        <Label>Jugador</Label>
+                        <Select value={childId} onValueChange={setChildId}>
+                            <SelectTrigger><SelectValue placeholder="Selecciona un jugador" /></SelectTrigger>
+                            <SelectContent>
+                                {availableChildren.map(child => (
+                                    <SelectItem key={child.id} value={child.id}>
+                                        {child.full_name}{child.category?.name ? ` · ${child.category.name}` : ''}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        {availableChildren.length === 0 && <p className="text-xs text-slate-400">Todos los jugadores ya están vinculados.</p>}
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Equipo propio (opcional)</Label>
+                        <Select value={teamId} onValueChange={setTeamId}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="none">Sin equipo asignado</SelectItem>
+                                {localTeams.map(team => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Notas (opcional)</Label>
+                        <Input name="notes" placeholder="Posición, transporte, observaciones..." />
+                    </div>
+                    <div className="flex justify-end gap-2 pt-2">
+                        <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
+                        <Button type="submit" disabled={loading || !childId} className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold">
+                            {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Convocar
                         </Button>
                     </div>
                 </form>

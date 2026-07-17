@@ -128,7 +128,7 @@ export function SearchCommand() {
                         </CommandItem>
                         <CommandItem onSelect={() => runCommand(() => router.push("/admin/crm/alumnos"))}>
                             <Users className="mr-2 h-4 w-4 text-slate-400" />
-                            <span>Alumnos 360º</span>
+                            <span>Jugadores 360º</span>
                         </CommandItem>
                         <CommandItem onSelect={() => runCommand(() => router.push("/admin/leads"))}>
                             <MessageSquare className="mr-2 h-4 w-4 text-slate-400" />
