@@ -227,6 +227,56 @@ export async function linkGuardianByEmail(childId: string, email: string) {
     return { success: true }
 }
 
+export async function getAvailableGuardiansForChild(childId: string) {
+    const { supabase } = await requireAdmin()
+    const [{ data: guardians, error: guardiansError }, { data: links, error: linksError }] = await Promise.all([
+        supabase
+            .from('guardians')
+            .select('id, full_name, email, phone, user_id')
+            .order('full_name'),
+        supabase
+            .from('child_guardians')
+            .select('guardian_id')
+            .eq('child_id', childId),
+    ])
+
+    if (guardiansError || linksError) {
+        console.error('Error loading available guardians:', guardiansError || linksError)
+        return []
+    }
+
+    const linkedIds = new Set((links || []).map(link => link.guardian_id))
+    return (guardians || []).filter(guardian => !linkedIds.has(guardian.id))
+}
+
+export async function linkGuardianById(childId: string, guardianId: string) {
+    const { supabase } = await requireAdmin()
+
+    const [{ data: child }, { data: guardian }] = await Promise.all([
+        supabase.from('children').select('id').eq('id', childId).maybeSingle(),
+        supabase.from('guardians').select('id').eq('id', guardianId).maybeSingle(),
+    ])
+
+    if (!child) return { success: false, error: 'No se ha encontrado el alumno.' }
+    if (!guardian) return { success: false, error: 'No se ha encontrado el tutor.' }
+
+    const { error } = await supabase.from('child_guardians').insert({
+        child_id: childId,
+        guardian_id: guardianId,
+        relationship: 'Tutor',
+        is_primary: false,
+    })
+
+    if (error) {
+        if (error.code === '23505') return { success: false, error: 'Este tutor ya está vinculado al alumno.' }
+        return { success: false, error: error.message }
+    }
+
+    revalidatePath(`/admin/crm/alumnos/${childId}`)
+    revalidatePath('/admin/crm/tutores')
+    return { success: true }
+}
+
 export async function unlinkGuardian(childId: string, guardianId: string) {
     const { supabase } = await requireAdmin()
 
