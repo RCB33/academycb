@@ -29,10 +29,14 @@ export function CreateStudentDialog({ onUpdate }: { onUpdate?: () => void }) {
         full_name: '',
         birth_date: '',
         email: '', // Optional for student, but maybe useful for guardian logic later
-        guardian_email: ''
+        guardian_email: '',
+        position: '',
+        preferred_foot: '',
+        shirt_size: '',
+        jersey_number: '',
     })
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value })
     }
 
@@ -44,7 +48,16 @@ export function CreateStudentDialog({ onUpdate }: { onUpdate?: () => void }) {
             if (result.success) {
                 toast.success("Alumno creado correctamente")
                 setOpen(false)
-                setFormData({ full_name: '', birth_date: '', email: '', guardian_email: '' })
+                setFormData({
+                    full_name: '',
+                    birth_date: '',
+                    email: '',
+                    guardian_email: '',
+                    position: '',
+                    preferred_foot: '',
+                    shirt_size: '',
+                    jersey_number: '',
+                })
                 if (onUpdate) {
                     onUpdate()
                 }
@@ -66,7 +79,7 @@ export function CreateStudentDialog({ onUpdate }: { onUpdate?: () => void }) {
                     <Plus className="mr-2 h-4 w-4" /> Nuevo Alumno
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[600px]">
                 <DialogHeader>
                     <DialogTitle>Registrar Nuevo Alumno</DialogTitle>
                     <DialogDescription>
@@ -108,6 +121,68 @@ export function CreateStudentDialog({ onUpdate }: { onUpdate?: () => void }) {
                             placeholder="tutor@ejemplo.com"
                         />
                         <p className="text-[10px] text-muted-foreground">Si el email coincide con un usuario existente, se vinculará automáticamente.</p>
+                    </div>
+
+                    <div className="space-y-3 border-t pt-4">
+                        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Ficha técnica (opcional)</h3>
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div className="grid gap-2">
+                                <Label htmlFor="position">Posición</Label>
+                                <select
+                                    id="position"
+                                    name="position"
+                                    value={formData.position}
+                                    onChange={handleChange}
+                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                >
+                                    <option value="">Sin definir</option>
+                                    <option value="Portero">Portero</option>
+                                    <option value="Defensa">Defensa</option>
+                                    <option value="Lateral">Lateral</option>
+                                    <option value="Centrocampista">Centrocampista</option>
+                                    <option value="Extremo">Extremo</option>
+                                    <option value="Delantero">Delantero</option>
+                                </select>
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="preferred_foot">Pierna hábil</Label>
+                                <select
+                                    id="preferred_foot"
+                                    name="preferred_foot"
+                                    value={formData.preferred_foot}
+                                    onChange={handleChange}
+                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                >
+                                    <option value="">Sin definir</option>
+                                    <option value="Derecha">Derecha</option>
+                                    <option value="Izquierda">Izquierda</option>
+                                    <option value="Ambas">Ambas</option>
+                                </select>
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="shirt_size">Talla de camiseta</Label>
+                                <Input
+                                    id="shirt_size"
+                                    name="shirt_size"
+                                    value={formData.shirt_size}
+                                    onChange={handleChange}
+                                    placeholder="Ej. M Junior"
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="jersey_number">Dorsal</Label>
+                                <Input
+                                    id="jersey_number"
+                                    name="jersey_number"
+                                    type="number"
+                                    min={1}
+                                    max={99}
+                                    value={formData.jersey_number}
+                                    onChange={handleChange}
+                                    placeholder="Ej. 10"
+                                />
+                            </div>
+                        </div>
                     </div>
 
                     <DialogFooter>
