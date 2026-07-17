@@ -124,7 +124,7 @@ export default function AcademyPage() {
                             <Plus className="mr-2 h-4 w-4" /> Nuevo Equipo
                         </Button>
                     }
-                    onOpenChange={(open) => { if (!open) fetchAll() }}
+                    onSaved={fetchAll}
                 />
             </div>
 
@@ -169,7 +169,7 @@ export default function AcademyPage() {
                                             <Plus className="mr-2 h-4 w-4" /> Crear Primer Equipo
                                         </Button>
                                     }
-                                    onOpenChange={(open) => { if (!open) fetchAll() }}
+                                    onSaved={fetchAll}
                                 />
                             </CardContent>
                         </Card>
@@ -193,6 +193,9 @@ export default function AcademyPage() {
                                         <UserMinus className="h-4 w-4" />
                                         Jugadores sin Equipo ({unassigned.length})
                                     </CardTitle>
+                                    <p className="text-xs text-amber-700/80">
+                                        Asigna el jugador a un equipo y completa el plan de membresía para vincularlo con Academia.
+                                    </p>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="flex flex-wrap gap-2">
