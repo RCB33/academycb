@@ -524,7 +524,7 @@ function EnrollmentForm({ plans, player, team, onBack, onComplete }: {
             teamId: team.id,
             planId: selectedPlan,
             paymentMethod,
-            monthlyPrice: price
+            periodPrice: price
         })
         setLoading(false)
         if (res.success) {

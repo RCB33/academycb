@@ -234,7 +234,7 @@ export async function getMonthlyPaymentGrid(month: string) {
         .select(`
             id, plan_id, monthly_price, payment_method, status,
             child:children(id, full_name, category:categories(name)),
-            plan:membership_plans(name, price, frequency)
+            plan:membership_plans(name, price, frequency, duration_months)
         `)
         .eq('status', 'active')
 
@@ -264,10 +264,13 @@ export async function getMonthlyPaymentGrid(month: string) {
         // Find payment for this membership and this month
         const payment = (allPayments || []).find((p: any) => {
             if (p.ref_id !== m.id) return false
+            if (p.due_date) return p.due_date.startsWith(month)
             // Match by description containing month name + year
             const desc = (p.description || '').toLowerCase()
             return desc.includes(targetMonthName) && desc.includes(yearStr)
         })
+
+        if (!payment) return null
 
         return {
             membershipId: m.id,
@@ -281,7 +284,7 @@ export async function getMonthlyPaymentGrid(month: string) {
             paidAt: payment?.paid_at || null,
             paymentId: payment?.id || null
         }
-    })
+    }).filter(Boolean)
 
     return grid
 }

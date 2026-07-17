@@ -11,7 +11,7 @@ export async function getStudentPayments(childId: string) {
         .from('academy_memberships')
         .select(`
             *,
-            plan:membership_plans(name, price, frequency)
+            plan:membership_plans(name, price, frequency, duration_months)
         `)
         .eq('child_id', childId)
         .order('start_date', { ascending: false })
