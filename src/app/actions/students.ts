@@ -4,6 +4,12 @@ import { revalidatePath } from 'next/cache'
 import { randomUUID } from 'node:crypto'
 import { requireAdmin } from '@/lib/auth'
 
+function parseJerseyNumber(value: unknown) {
+    if (value === '' || value === null || value === undefined) return null
+    const parsed = Number(value)
+    return Number.isInteger(parsed) && parsed >= 1 && parsed <= 99 ? parsed : undefined
+}
+
 export async function uploadStudentAvatar(formData: FormData) {
     const { supabase } = await requireAdmin()
     const file = formData.get('file') as File
@@ -53,6 +59,8 @@ export async function uploadStudentAvatar(formData: FormData) {
 
 export async function updateStudentData(childId: string, data: any) {
     const { supabase } = await requireAdmin()
+    const jerseyNumber = parseJerseyNumber(data.jersey_number)
+    if (jerseyNumber === undefined) return { success: false, error: 'El dorsal debe estar entre 1 y 99.' }
 
     // 1. Update Child Data
     const { error: childError } = await supabase
@@ -63,7 +71,11 @@ export async function updateStudentData(childId: string, data: any) {
             birth_year: data.birth_date ? new Date(data.birth_date).getFullYear() : undefined, // Update year if date provided
             address: data.address,
             notes: data.notes,
-            category_id: (data.category_id && data.category_id !== "null") ? data.category_id : null
+            category_id: (data.category_id && data.category_id !== "null") ? data.category_id : null,
+            position: data.position?.trim() || null,
+            preferred_foot: data.preferred_foot || null,
+            shirt_size: data.shirt_size?.trim() || null,
+            jersey_number: jerseyNumber,
         })
         .eq('id', childId)
 
@@ -131,6 +143,8 @@ export async function createStudent(data: any) {
     }
 
     const birthYear = new Date(data.birth_date).getFullYear()
+    const jerseyNumber = parseJerseyNumber(data.jersey_number)
+    if (jerseyNumber === undefined) return { success: false, error: 'El dorsal debe estar entre 1 y 99.' }
 
     // 1. Create Child Record
     const { error: childError } = await supabase
@@ -139,7 +153,11 @@ export async function createStudent(data: any) {
             full_name: data.full_name,
             birth_date: data.birth_date,
             birth_year: birthYear,
-            category_id: (data.category_id && data.category_id !== "null") ? data.category_id : null
+            category_id: (data.category_id && data.category_id !== "null") ? data.category_id : null,
+            position: data.position?.trim() || null,
+            preferred_foot: data.preferred_foot || null,
+            shirt_size: data.shirt_size?.trim() || null,
+            jersey_number: jerseyNumber,
             // If guardian logic is complex, handle it later. For now, create the student.
         })
 

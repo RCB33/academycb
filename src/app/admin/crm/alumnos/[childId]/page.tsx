@@ -418,22 +418,22 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
                         <CardContent className="pt-4 space-y-3 text-sm">
                             <div className="flex justify-between items-center group">
                                 <span className="text-slate-500 font-medium">Posición:</span>
-                                <Badge variant="secondary" className="bg-slate-100 text-slate-700 group-hover:bg-slate-200 transition-colors font-bold">Delantero</Badge>
+                                <Badge variant="secondary" className="bg-slate-100 text-slate-700 group-hover:bg-slate-200 transition-colors font-bold">{student.position || 'Sin definir'}</Badge>
                             </div>
                             <Separator className="opacity-50" />
                             <div className="flex justify-between items-center group">
                                 <span className="text-slate-500 font-medium">Pierna hábil:</span>
-                                <span className="font-bold text-slate-900">Derecha</span>
+                                <span className="font-bold text-slate-900">{student.preferred_foot || 'Sin definir'}</span>
                             </div>
                             <Separator className="opacity-50" />
                             <div className="flex justify-between items-center group">
                                 <span className="text-slate-500 font-medium">Talla Camiseta:</span>
-                                <span className="font-bold text-slate-900">M Junior</span>
+                                <span className="font-bold text-slate-900">{student.shirt_size || 'Sin definir'}</span>
                             </div>
                             <Separator className="opacity-50" />
                             <div className="flex justify-between items-center group">
                                 <span className="text-slate-500 font-medium">Dorsal:</span>
-                                <span className="font-black text-yellow-500 text-lg leading-none">10</span>
+                                <span className="font-black text-yellow-500 text-lg leading-none">{student.jersey_number ?? '—'}</span>
                             </div>
                         </CardContent>
                     </Card>

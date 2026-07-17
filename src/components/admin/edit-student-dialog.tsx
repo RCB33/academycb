@@ -30,6 +30,10 @@ export function EditStudentDialog({ student, guardian, categories, onUpdate }: {
         birth_date: student.birth_date || '',
         address: student.address || '',
         category_id: student.category_id,
+        position: student.position || '',
+        preferred_foot: student.preferred_foot || '',
+        shirt_size: student.shirt_size || '',
+        jersey_number: student.jersey_number?.toString() || '',
         guardian_id: guardian?.id,
         guardian_name: guardian?.full_name || '',
         guardian_phone: guardian?.phone || '',
@@ -69,7 +73,7 @@ export function EditStudentDialog({ student, guardian, categories, onUpdate }: {
                     <Pencil className="mr-2 h-4 w-4" /> Editar Datos
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden bg-white dark:bg-slate-950 border-0 shadow-2xl">
+            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[600px] p-0 bg-white dark:bg-slate-950 border-0 shadow-2xl">
                 <div className="bg-slate-900 px-6 py-4">
                     <DialogTitle className="text-white text-lg font-bold flex items-center gap-2">
                         <Pencil className="h-4 w-4 text-yellow-500" />
@@ -129,6 +133,70 @@ export function EditStudentDialog({ student, guardian, categories, onUpdate }: {
                                     value={formData.address}
                                     onChange={handleChange}
                                     placeholder="Calle, Número, Ciudad..."
+                                    className="bg-slate-50 border-slate-200 focus:bg-white transition-colors"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        <h3 className="font-semibold text-xs text-yellow-600 uppercase tracking-wider border-b border-yellow-100 pb-2">Ficha Técnica</h3>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="position" className="text-slate-700">Posición</Label>
+                                <select
+                                    id="position"
+                                    name="position"
+                                    value={formData.position}
+                                    onChange={handleChange}
+                                    className="flex h-10 w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                >
+                                    <option value="">Sin definir</option>
+                                    <option value="Portero">Portero</option>
+                                    <option value="Defensa">Defensa</option>
+                                    <option value="Lateral">Lateral</option>
+                                    <option value="Centrocampista">Centrocampista</option>
+                                    <option value="Extremo">Extremo</option>
+                                    <option value="Delantero">Delantero</option>
+                                </select>
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="preferred_foot" className="text-slate-700">Pierna hábil</Label>
+                                <select
+                                    id="preferred_foot"
+                                    name="preferred_foot"
+                                    value={formData.preferred_foot}
+                                    onChange={handleChange}
+                                    className="flex h-10 w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                >
+                                    <option value="">Sin definir</option>
+                                    <option value="Derecha">Derecha</option>
+                                    <option value="Izquierda">Izquierda</option>
+                                    <option value="Ambas">Ambas</option>
+                                </select>
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="shirt_size" className="text-slate-700">Talla de Camiseta</Label>
+                                <Input
+                                    id="shirt_size"
+                                    name="shirt_size"
+                                    value={formData.shirt_size}
+                                    onChange={handleChange}
+                                    placeholder="Ej. M Junior"
+                                    className="bg-slate-50 border-slate-200 focus:bg-white transition-colors"
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="jersey_number" className="text-slate-700">Dorsal</Label>
+                                <Input
+                                    id="jersey_number"
+                                    name="jersey_number"
+                                    type="number"
+                                    min={1}
+                                    max={99}
+                                    value={formData.jersey_number}
+                                    onChange={handleChange}
+                                    placeholder="Ej. 10"
                                     className="bg-slate-50 border-slate-200 focus:bg-white transition-colors"
                                 />
                             </div>
