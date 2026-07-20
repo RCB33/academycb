@@ -1,467 +1,303 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import {
-    format,
-    startOfMonth,
-    endOfMonth,
-    startOfWeek,
-    endOfWeek,
-    eachDayOfInterval,
-    isSameMonth,
-    isSameDay,
+    addDays,
     addMonths,
-    subMonths,
     addWeeks,
-    subWeeks,
+    eachDayOfInterval,
+    endOfMonth,
+    endOfWeek,
+    format,
+    isSameMonth,
     isToday,
     parseISO,
-    compareAsc
+    startOfDay,
+    startOfMonth,
+    startOfWeek,
+    subMonths,
+    subWeeks,
 } from "date-fns"
 import { es } from "date-fns/locale"
 import {
+    AlertTriangle,
+    Calendar as CalendarIcon,
+    CheckCircle2,
     ChevronLeft,
     ChevronRight,
-    Search,
-    Plus,
-    Users,
     Clock,
-    Calendar as CalendarIcon,
-    MapPin
+    Filter,
+    Loader2,
+    MapPin,
+    Plus,
+    Search,
+    UserRoundCheck,
+    Users,
 } from "lucide-react"
+import { getCalendarLookups, getEvents } from "@/app/actions/calendar"
+import type { CalendarEvent, CalendarEventType, CalendarWorker, CalendarCategory, CalendarTeam } from "@/app/actions/calendar"
+import { EventDialog } from "./event-dialog"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { EventDialog } from "./event-dialog"
-import { getWorkers, getEvents } from "@/app/actions/calendar"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
-// --- Types ---
-interface CalendarEvent {
-    id: string;
-    title: string;
-    description?: string;
-    start_date: string;
-    end_date?: string;
-    color: 'red' | 'green' | 'blue' | 'yellow';
-    worker_id?: string;
-    workers?: {
-        full_name: string;
-        color: string;
-        avatar_url?: string;
-    }
+type CalendarView = 'month' | 'week' | 'list'
+
+const TYPE_LABELS: Record<CalendarEventType, string> = {
+    general: 'General',
+    training: 'Entrenamiento',
+    match: 'Partido',
+    meeting: 'Reunión',
+    campus: 'Campus',
+    tournament: 'Torneo',
+    absence: 'Ausencia',
 }
 
-// --- Components ---
-
-function WorkerFilter({ name, count, color, active, avatarUrl }: { name: string, count: number, color: string, active?: boolean, avatarUrl?: string }) {
-    return (
-        <div className={`
-            flex items-center gap-2 px-3 py-1.5 rounded-full border cursor-pointer transition-all
-            ${active ? 'bg-yellow-500 border-yellow-500 text-black shadow-md font-bold' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'}
-        `}>
-            {!active && (
-                avatarUrl ? (
-                    <Avatar className="w-5 h-5 border border-slate-200">
-                        <AvatarImage src={avatarUrl} />
-                        <AvatarFallback className="text-[8px]">{name.substring(0, 2)}</AvatarFallback>
-                    </Avatar>
-                ) : (
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color || '#64748b' }} />
-                )
-            )}
-            <span className="text-sm font-medium">{name}</span>
-            <span className={`
-                text-[10px] px-1.5 py-0.5 rounded-full font-bold
-                ${active ? 'bg-black text-yellow-500' : 'bg-slate-100 text-slate-500'}
-            `}>
-                {count}
-            </span>
-        </div>
-    )
+const SOURCE_LABELS: Record<CalendarEvent['source_type'], string> = {
+    manual: 'Manual',
+    team: 'Academia',
+    campus: 'Campus',
+    tournament: 'Torneos',
 }
 
-function EventPill({ event, view = 'month', onClick }: { event: CalendarEvent, view?: 'month' | 'week' | 'list', onClick?: (e: React.MouseEvent) => void }) {
-    const time = new Date(event.start_date).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+const NAMED_COLORS: Record<string, string> = {
+    blue: '#3b82f6', red: '#ef4444', green: '#22c55e', yellow: '#eab308', purple: '#a855f7', black: '#1e293b',
+}
 
-    // Style mappings based on color
-    const styles = {
-        blue: "bg-blue-50 text-blue-700 border-l-blue-500",
-        red: "bg-red-50 text-red-700 border-l-red-500",
-        green: "bg-green-50 text-green-700 border-l-green-500",
-        yellow: "bg-yellow-50 text-yellow-800 border-l-yellow-500",
-    }
+function eventColor(color: string | null | undefined) {
+    if (!color) return '#3b82f6'
+    return NAMED_COLORS[color] || color
+}
 
-    const dotColors = {
-        blue: "bg-blue-500",
-        red: "bg-red-500",
-        green: "bg-green-500",
-        yellow: "bg-yellow-500",
-    }
+function eventOccursOn(event: CalendarEvent, day: Date) {
+    const dayStart = startOfDay(day).getTime()
+    const dayEnd = addDays(startOfDay(day), 1).getTime()
+    return new Date(event.start_date).getTime() < dayEnd && new Date(event.end_date).getTime() > dayStart
+}
 
-    // @ts-ignore
-    const currentStyle = styles[event.color] || styles.blue;
-    // @ts-ignore
-    const currentDot = dotColors[event.color] || dotColors.blue;
+function eventTime(event: CalendarEvent) {
+    if (event.is_all_day) return 'Todo el día'
+    return `${format(new Date(event.start_date), 'HH:mm')}–${format(new Date(event.end_date), 'HH:mm')}`
+}
 
-    if (view === 'list') {
+function workerNames(event: CalendarEvent) {
+    return event.workers.map((worker) => worker.full_name).join(', ')
+}
+
+function EventPill({ event, list = false, conflict, onClick }: { event: CalendarEvent; list?: boolean; conflict?: boolean; onClick: () => void }) {
+    const color = eventColor(event.color)
+    const cancelled = event.status === 'cancelled'
+
+    if (list) {
         return (
-            <div onClick={onClick} className={`flex items-center p-4 rounded-xl border border-slate-100 bg-white hover:shadow-md transition-all gap-4 mb-3 group cursor-pointer`}>
-                <div className={`w-1.5 self-stretch rounded-full ${currentDot}`} />
-                <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm font-bold text-slate-900">{event.title}</span>
-                        {event.workers && (
-                            <div className="flex items-center gap-1 text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
-                                <Users className="w-3 h-3" />
-                                {event.workers.full_name}
-                            </div>
-                        )}
-                    </div>
-                    <div className="flex items-center gap-4 text-xs text-slate-500">
-                        <span className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" /> {format(new Date(event.start_date), "dd MMM yyyy - HH:mm", { locale: es })}
-                        </span>
-                    </div>
-                    {event.description && <p className="text-xs text-slate-400 mt-2 line-clamp-1">{event.description}</p>}
-                </div>
-                <Button variant="ghost" size="icon" className="group-hover:bg-slate-100 rounded-full">
-                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-black" />
-                </Button>
-            </div>
+            <button type="button" onClick={(clickEvent) => { clickEvent.stopPropagation(); onClick() }} className={`group mb-3 flex w-full gap-4 rounded-xl border bg-white p-4 text-left transition hover:-translate-y-0.5 hover:shadow-md ${conflict ? 'border-red-300 ring-1 ring-red-100' : 'border-slate-100'} ${cancelled ? 'opacity-55' : ''}`}>
+                <span className="w-1.5 self-stretch rounded-full" style={{ backgroundColor: color }} />
+                <span className="min-w-0 flex-1">
+                    <span className="mb-1 flex flex-wrap items-center gap-2">
+                        <span className={`text-sm font-bold text-slate-900 ${cancelled ? 'line-through' : ''}`}>{event.title}</span>
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-500">{TYPE_LABELS[event.event_type]}</span>
+                        {event.source_type !== 'manual' && <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700">{SOURCE_LABELS[event.source_type]}</span>}
+                        {event.status === 'tentative' && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">Por confirmar</span>}
+                        {conflict && <span className="flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700"><AlertTriangle className="h-3 w-3" /> Solape</span>}
+                    </span>
+                    <span className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+                        <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {eventTime(event)}</span>
+                        {event.location && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {event.location}</span>}
+                        {event.workers.length > 0 && <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {workerNames(event)}</span>}
+                    </span>
+                    {event.description && <span className="mt-2 block truncate text-xs text-slate-400">{event.description}</span>}
+                </span>
+                <ChevronRight className="mt-2 h-4 w-4 shrink-0 text-slate-300 transition group-hover:text-slate-700" />
+            </button>
         )
     }
 
     return (
-        <div onClick={onClick} className={`
-            text-[10px] w-full p-1.5 rounded-r-md border-l-[3px] mb-1 truncate font-medium
-            flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity relative group
-            ${currentStyle}
-        `} title={event.description}>
-            <div className={`w-1.5 h-1.5 rounded-full ${currentDot}`} />
-            <span className="opacity-75">{time}</span>
-            <span className="font-bold truncate">{event.title}</span>
-            {/* Show worker avatar if assigned */}
-            {event.workers && (
-                <div className="absolute right-1 top-1 w-4 h-4 rounded-full bg-white shadow-sm flex items-center justify-center overflow-hidden border border-black/5">
-                    {event.workers.avatar_url ? (
-                        <img src={event.workers.avatar_url} alt={event.workers.full_name} className="w-full h-full object-cover" />
-                    ) : (
-                        <span className="text-[8px] font-bold text-black/50">{event.workers.full_name[0]}</span>
-                    )}
-                </div>
-            )}
-        </div>
+        <button type="button" onClick={(clickEvent) => { clickEvent.stopPropagation(); onClick() }} title={`${event.title} · ${workerNames(event) || 'Sin responsable'}`} className={`mb-1 flex w-full items-center gap-1.5 truncate rounded-r-md border-l-[3px] px-1.5 py-1 text-left text-[10px] font-medium transition hover:brightness-95 ${cancelled ? 'line-through opacity-50' : ''} ${conflict ? 'ring-1 ring-red-400' : ''}`} style={{ borderLeftColor: color, backgroundColor: `${color}18`, color }}>
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+            <span className="opacity-80">{event.is_all_day ? 'Día' : format(new Date(event.start_date), 'HH:mm')}</span>
+            <span className="truncate font-bold">{event.title}</span>
+            {event.workers.length > 0 && <span className="ml-auto shrink-0 rounded-full bg-white/80 px-1 font-bold">{event.workers.length}</span>}
+        </button>
     )
 }
 
-export function CalendarWidget({ initialView = 'month' }: { initialView?: 'month' | 'week' | 'list' }) {
+function WorkerFilter({ worker, count, active, onClick }: { worker: CalendarWorker; count: number; active: boolean; onClick: () => void }) {
+    return (
+        <button type="button" onClick={onClick} className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition ${active ? 'border-yellow-500 bg-yellow-400 font-bold text-black shadow-sm' : 'border-slate-200 bg-white text-slate-700 hover:border-slate-400'}`}>
+            <Avatar className="h-5 w-5">
+                <AvatarImage src={worker.avatar_url || undefined} />
+                <AvatarFallback className="text-[8px]" style={{ backgroundColor: eventColor(worker.color), color: 'white' }}>{worker.full_name.slice(0, 2)}</AvatarFallback>
+            </Avatar>
+            <span>{worker.full_name}</span>
+            <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${active ? 'bg-black text-yellow-400' : 'bg-slate-100 text-slate-500'}`}>{count}</span>
+        </button>
+    )
+}
+
+export function CalendarWidget({ initialView = 'month' }: { initialView?: CalendarView }) {
     const [currentDate, setCurrentDate] = useState(new Date())
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [eventToEdit, setEventToEdit] = useState<CalendarEvent | null>(null)
     const [events, setEvents] = useState<CalendarEvent[]>([])
-    const [view, setView] = useState<'month' | 'week' | 'list'>(initialView)
-    const [selectedWorker, setSelectedWorker] = useState<string | null>(null)
-    const [workers, setWorkers] = useState<any[]>([])
+    const [workers, setWorkers] = useState<CalendarWorker[]>([])
+    const [categories, setCategories] = useState<CalendarCategory[]>([])
+    const [teams, setTeams] = useState<CalendarTeam[]>([])
+    const [view, setView] = useState<CalendarView>(initialView)
+    const [selectedWorker, setSelectedWorker] = useState<string>('all')
+    const [selectedType, setSelectedType] = useState<string>('all')
     const [searchTerm, setSearchTerm] = useState('')
+    const [loading, setLoading] = useState(true)
 
-    // Navigation Logic
-    const nextPeriod = () => {
-        if (view === 'month') setCurrentDate(addMonths(currentDate, 1))
-        else if (view === 'week') setCurrentDate(addWeeks(currentDate, 1))
-        else setCurrentDate(addMonths(currentDate, 1)) // List view jumps by month too
-    }
-
-    const prevPeriod = () => {
-        if (view === 'month') setCurrentDate(subMonths(currentDate, 1))
-        else if (view === 'week') setCurrentDate(subWeeks(currentDate, 1))
-        else setCurrentDate(subMonths(currentDate, 1))
-    }
-
-    const goToToday = () => {
-        const now = new Date();
-        setCurrentDate(now);
-        setSelectedDate(now);
-    }
-
-    // Fetch events for a reasonable range around current date
-    async function fetchEvents() {
-        const rangeStart = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1)
-        const rangeEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() + 2, 0)
-        const data = await getEvents(rangeStart, rangeEnd)
-        setEvents(data || [])
-    }
-
-    useEffect(() => {
-        fetchEvents()
-        getWorkers().then(setWorkers)
-    }, [currentDate.getMonth(), currentDate.getFullYear()])
-
-    // --- Filter Logic ---
-    const filteredEvents = events.filter(e => {
-        // 1. Worker Filter
-        if (selectedWorker && e.worker_id !== selectedWorker) return false;
-        // 2. Search Filter
-        if (searchTerm) {
-            const term = searchTerm.toLowerCase();
-            return e.title.toLowerCase().includes(term) ||
-                e.description?.toLowerCase().includes(term) ||
-                e.workers?.full_name.toLowerCase().includes(term);
-        }
-        return true;
-    })
-
-    // --- Grid Generation ---
-    const weekDays = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
-
-    // Month View Dates
     const monthStart = startOfMonth(currentDate)
     const monthEnd = endOfMonth(monthStart)
-    const monthStartDate = startOfWeek(monthStart, { weekStartsOn: 1 })
-    const monthEndDate = endOfWeek(monthEnd, { weekStartsOn: 1 })
-    const calendarDays = eachDayOfInterval({ start: monthStartDate, end: monthEndDate })
-
-    // Week View Dates
+    const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 })
+    const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 })
     const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 })
     const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 })
-    const weekDaysInterval = eachDayOfInterval({ start: weekStart, end: weekEnd })
+
+    const fetchEvents = useCallback(async () => {
+        setLoading(true)
+        const periodWeekStart = startOfWeek(currentDate, { weekStartsOn: 1 })
+        const periodWeekEnd = endOfWeek(currentDate, { weekStartsOn: 1 })
+        const periodMonthStart = startOfWeek(startOfMonth(currentDate), { weekStartsOn: 1 })
+        const periodMonthEnd = endOfWeek(endOfMonth(currentDate), { weekStartsOn: 1 })
+        const start = view === 'week' ? periodWeekStart : periodMonthStart
+        const end = addDays(view === 'week' ? periodWeekEnd : periodMonthEnd, 1)
+        const data = await getEvents(start.toISOString(), end.toISOString())
+        setEvents(data)
+        setLoading(false)
+    }, [view, currentDate])
+
+    useEffect(() => {
+        void fetchEvents()
+    }, [fetchEvents])
+
+    useEffect(() => {
+        void getCalendarLookups().then((lookups) => {
+            setWorkers(lookups.workers)
+            setCategories(lookups.categories)
+            setTeams(lookups.teams)
+        })
+    }, [])
+
+    const conflictEventIds = useMemo(() => {
+        const conflicts = new Set<string>()
+        const activeEvents = events.filter((event) => event.status !== 'cancelled' && event.worker_ids.length > 0)
+        for (let first = 0; first < activeEvents.length; first += 1) {
+            for (let second = first + 1; second < activeEvents.length; second += 1) {
+                const a = activeEvents[first]
+                const b = activeEvents[second]
+                const sharesWorker = a.worker_ids.some((workerId) => b.worker_ids.includes(workerId))
+                const overlaps = new Date(a.start_date) < new Date(b.end_date) && new Date(a.end_date) > new Date(b.start_date)
+                if (sharesWorker && overlaps) {
+                    conflicts.add(a.id)
+                    conflicts.add(b.id)
+                }
+            }
+        }
+        return conflicts
+    }, [events])
+
+    const filteredEvents = useMemo(() => {
+        const term = searchTerm.trim().toLocaleLowerCase('es')
+        return events.filter((event) => {
+            if (selectedWorker !== 'all' && !event.worker_ids.includes(selectedWorker)) return false
+            if (selectedType !== 'all' && event.event_type !== selectedType && event.source_type !== selectedType) return false
+            if (!term) return true
+            return [event.title, event.description, event.location, event.category?.name, event.team?.name, workerNames(event)]
+                .some((value) => value?.toLocaleLowerCase('es').includes(term))
+        })
+    }, [events, searchTerm, selectedType, selectedWorker])
+
+    const visibleEvents = filteredEvents.filter((event) => view === 'week'
+        ? eventOccursOn(event, weekStart) || (new Date(event.start_date) <= weekEnd && new Date(event.end_date) > weekStart)
+        : new Date(event.start_date) < addDays(monthEnd, 1) && new Date(event.end_date) > monthStart)
+    const unassignedCount = visibleEvents.filter((event) => event.worker_ids.length === 0 && event.status !== 'cancelled').length
+    const assignedWorkersCount = new Set(visibleEvents.flatMap((event) => event.worker_ids)).size
+    const visibleConflictCount = visibleEvents.filter((event) => conflictEventIds.has(event.id)).length
+
+    function openCreate(date = currentDate) {
+        setSelectedDate(date)
+        setEventToEdit(null)
+        setIsDialogOpen(true)
+    }
+
+    function openEdit(event: CalendarEvent) {
+        setSelectedDate(new Date(event.start_date))
+        setEventToEdit(event)
+        setIsDialogOpen(true)
+    }
+
+    function nextPeriod() {
+        setCurrentDate((date) => view === 'week' ? addWeeks(date, 1) : addMonths(date, 1))
+    }
+
+    function previousPeriod() {
+        setCurrentDate((date) => view === 'week' ? subWeeks(date, 1) : subMonths(date, 1))
+    }
+
+    const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd })
+    const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd })
 
     return (
-        <div className="flex flex-col gap-6 bg-slate-50/50 p-6 rounded-xl min-h-[800px]">
-
-            {/* --- Header & Toolbar --- */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+        <div className="flex min-h-[780px] flex-col gap-5 rounded-xl bg-slate-50/60 p-3 md:p-6">
+            <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
                 <div>
-                    <h1 className="text-3xl font-extrabold text-navy tracking-tight">Calendario</h1>
-                    <p className="text-muted-foreground text-sm mt-1">Gestiona los entrenamientos y eventos</p>
+                    <h1 className="text-3xl font-extrabold tracking-tight text-navy">Calendario General</h1>
+                    <p className="mt-1 text-sm text-muted-foreground">Operativa conectada de Academia, Campus, Torneos y equipo de trabajo.</p>
                 </div>
+                <Button className="h-10 gap-2 bg-yellow-500 font-bold text-black hover:bg-yellow-600" onClick={() => openCreate()}><Plus className="h-4 w-4" /> Crear evento</Button>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-xl border bg-white p-4"><p className="text-xs font-bold uppercase text-slate-400">Eventos del periodo</p><p className="mt-1 text-2xl font-black text-slate-900">{visibleEvents.length}</p></div>
+                <div className="rounded-xl border bg-white p-4"><p className="flex items-center gap-1 text-xs font-bold uppercase text-slate-400"><UserRoundCheck className="h-3.5 w-3.5" /> Personal activo</p><p className="mt-1 text-2xl font-black text-slate-900">{assignedWorkersCount}</p></div>
+                <div className={`rounded-xl border p-4 ${unassignedCount ? 'border-amber-200 bg-amber-50' : 'bg-white'}`}><p className="text-xs font-bold uppercase text-slate-400">Sin responsable</p><p className={`mt-1 text-2xl font-black ${unassignedCount ? 'text-amber-700' : 'text-green-600'}`}>{unassignedCount}</p></div>
+                <div className={`rounded-xl border p-4 ${visibleConflictCount ? 'border-red-200 bg-red-50' : 'bg-white'}`}><p className="flex items-center gap-1 text-xs font-bold uppercase text-slate-400"><AlertTriangle className="h-3.5 w-3.5" /> Solapes</p><p className={`mt-1 text-2xl font-black ${visibleConflictCount ? 'text-red-600' : 'text-green-600'}`}>{visibleConflictCount}</p></div>
+            </div>
+
+            <div className="flex flex-col gap-3 rounded-xl border bg-white p-3 shadow-sm xl:flex-row xl:items-center xl:justify-between">
                 <div className="flex items-center gap-2">
-                    <Button className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold h-9 gap-2 shadow-md transition-all hover:scale-105" onClick={() => { setEventToEdit(null); setIsDialogOpen(true) }}>
-                        <Plus className="h-4 w-4" /> Crear Evento
-                    </Button>
+                    <div className="flex rounded-lg border bg-slate-50 p-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={previousPeriod}><ChevronLeft className="h-4 w-4" /></Button>
+                        <Button variant="ghost" className="h-8 px-3 text-sm font-bold" onClick={() => { const today = new Date(); setCurrentDate(today); setSelectedDate(today) }}>Hoy</Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={nextPeriod}><ChevronRight className="h-4 w-4" /></Button>
+                    </div>
+                    <span className="text-lg font-bold capitalize text-navy">{view === 'week' ? `${format(weekStart, 'd MMM', { locale: es })} – ${format(weekEnd, 'd MMM', { locale: es })}` : format(currentDate, 'MMMM yyyy', { locale: es })}</span>
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                    <div className="flex rounded-lg border bg-slate-50 p-1">{(['month', 'week', 'list'] as CalendarView[]).map((option) => <button key={option} type="button" onClick={() => setView(option)} className={`rounded px-3 py-1 text-xs font-semibold ${view === option ? 'bg-white text-navy shadow-sm' : 'text-slate-500'}`}>{option === 'month' ? 'Mes' : option === 'week' ? 'Semana' : 'Lista'}</button>)}</div>
+                    <Select value={selectedType} onValueChange={setSelectedType}><SelectTrigger className="h-9 w-full bg-slate-50 sm:w-40"><Filter className="mr-1 h-3.5 w-3.5" /><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Toda la operativa</SelectItem>{Object.entries(TYPE_LABELS).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select>
+                    <div className="relative"><Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" /><Input className="h-9 bg-slate-50 pl-9" placeholder="Buscar evento, equipo…" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} /></div>
                 </div>
             </div>
 
-            <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-sm flex flex-col xl:flex-row justify-between gap-4 items-center">
-                <div className="flex items-center gap-2 w-full xl:w-auto">
-                    <div className="flex items-center rounded-lg border border-slate-200 bg-slate-50 p-1">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={prevPeriod}><ChevronLeft className="h-4 w-4" /></Button>
-                        <Button variant="ghost" className="h-7 px-3 text-sm font-bold" onClick={goToToday}>Hoy</Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={nextPeriod}><ChevronRight className="h-4 w-4" /></Button>
-                    </div>
-                    <span className="text-xl font-bold capitalize ml-2 text-navy">
-                        {view === 'week'
-                            ? `Semana ${format(weekStart, "d MMM", { locale: es })} - ${format(weekEnd, "d MMM", { locale: es })}`
-                            : format(currentDate, "MMMM yyyy", { locale: es })}
-                    </span>
-                </div>
-
-                <div className="flex items-center gap-3 w-full xl:w-auto">
-                    <div className="flex rounded-lg border border-slate-200 bg-slate-50 p-1">
-                        {['month', 'week', 'list'].map((v) => (
-                            <button
-                                key={v}
-                                onClick={() => setView(v as any)}
-                                className={`px-3 py-1 text-xs font-semibold rounded transition-all capitalize ${view === v ? 'bg-white shadow-sm text-navy' : 'text-muted-foreground hover:bg-white/50'}`}
-                            >
-                                {v === 'month' ? 'Mes' : v === 'week' ? 'Semana' : 'Lista'}
-                            </button>
-                        ))}
-                    </div>
-                    <div className="relative w-full max-w-xs">
-                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Buscar cliente..."
-                            className="pl-9 h-9 bg-slate-50 border-slate-200 focus:bg-white transition-all"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                    </div>
-                </div>
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-white px-4 py-3 shadow-sm">
+                <span className="mr-1 flex items-center gap-1 text-xs font-bold uppercase text-slate-400"><Users className="h-3.5 w-3.5" /> Trabajadores</span>
+                <button type="button" onClick={() => setSelectedWorker('all')} className={`rounded-full border px-3 py-1.5 text-sm ${selectedWorker === 'all' ? 'border-yellow-500 bg-yellow-400 font-bold text-black' : 'border-slate-200'}`}>Todos · {events.length}</button>
+                {workers.map((worker) => <WorkerFilter key={worker.id} worker={worker} count={events.filter((event) => event.worker_ids.includes(worker.id)).length} active={selectedWorker === worker.id} onClick={() => setSelectedWorker(worker.id)} />)}
             </div>
 
-            {/* --- Workers Filter --- */}
-            <div className="bg-white px-4 py-3 rounded-xl border border-slate-200 shadow-sm flex flex-wrap gap-3 items-center">
-                <span className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2 mr-2">
-                    <Users className="h-3.5 w-3.5" /> Trabajadores
-                </span>
-                <div onClick={() => setSelectedWorker(null)}>
-                    <WorkerFilter name="Todos" count={filteredEvents.length} color="" active={selectedWorker === null} />
-                </div>
-                {workers.map((worker) => (
-                    <div key={worker.id} onClick={() => setSelectedWorker(worker.id)}>
-                        <WorkerFilter
-                            name={worker.full_name}
-                            count={events.filter(e => e.worker_id === worker.id).length}
-                            color={worker.color}
-                            active={selectedWorker === worker.id}
-                            avatarUrl={worker.avatar_url}
-                        />
-                    </div>
-                ))}
-            </div>
-
-            {/* --- Calendar Grid / Main Content --- */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex-1 flex flex-col min-h-[600px]">
-
-                {/* View: Month */}
-                {view === 'month' && (
+            <div className="flex min-h-[560px] flex-1 flex-col overflow-hidden rounded-xl border bg-white shadow-sm">
+                {loading ? <div className="flex flex-1 items-center justify-center gap-2 text-slate-400"><Loader2 className="h-5 w-5 animate-spin" /> Cargando operativa…</div> : (
                     <>
-                        <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50/50">
-                            {weekDays.map(day => (
-                                <div key={day} className="py-3 text-center text-xs font-bold uppercase text-slate-500 tracking-wider">
-                                    {day}
-                                </div>
-                            ))}
-                        </div>
-                        <div className="grid grid-cols-7 flex-1 auto-rows-[minmax(120px,1fr)]">
-                            {calendarDays.map((day, idx) => {
-                                const dayEvents = filteredEvents.filter(e => isSameDay(new Date(e.start_date), day));
-                                const isCurrentMonth = isSameMonth(day, currentDate)
-                                const isTodayDate = isToday(day)
-
-                                return (
-                                    <div
-                                        key={idx}
-                                        onClick={() => { setSelectedDate(day); setIsDialogOpen(true) }}
-                                        className={`
-                                            border-r border-b border-slate-100 p-2 relative group transition-colors cursor-pointer
-                                            ${!isCurrentMonth ? 'bg-slate-50/30' : 'bg-white'}
-                                            ${isTodayDate ? 'bg-blue-50/10' : ''}
-                                            hover:bg-slate-50
-                                        `}
-                                    >
-                                        <div className="flex justify-between items-start mb-2 pointer-events-none">
-                                            <span className={`
-                                                text-sm font-semibold w-7 h-7 flex items-center justify-center rounded-full transition-all
-                                                ${isTodayDate ? 'bg-yellow-500 text-black shadow-md scale-110 font-black' : 'text-slate-700'}
-                                                ${!isCurrentMonth ? 'text-slate-400' : ''}
-                                                group-hover:scale-110 group-hover:bg-slate-200 group-hover:text-slate-900
-                                                ${isTodayDate ? 'group-hover:bg-yellow-500 group-hover:text-black' : ''}
-                                            `}>
-                                                {format(day, "d")}
-                                            </span>
-                                        </div>
-                                        <div className="flex flex-col gap-1 pointer-events-auto">
-                                            {dayEvents.slice(0, 4).map((ev) => <EventPill key={ev.id} event={ev} onClick={(e) => { e.stopPropagation(); setEventToEdit(ev); setIsDialogOpen(true); }} />)}
-                                            {dayEvents.length > 4 && (
-                                                <span className="text-[10px] text-muted-foreground font-medium pl-2">+{dayEvents.length - 4} más</span>
-                                            )}
-                                        </div>
-                                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <Plus className="h-4 w-4 text-slate-400" />
-                                        </div>
-                                    </div>
-                                )
-                            })}
-                        </div>
+                        {view === 'month' && <><div className="grid grid-cols-7 border-b bg-slate-50/70">{['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'].map((day) => <div key={day} className="py-3 text-center text-xs font-bold uppercase text-slate-500">{day}</div>)}</div><div className="grid flex-1 grid-cols-7 auto-rows-[minmax(105px,1fr)]">{calendarDays.map((day) => { const dayEvents = filteredEvents.filter((event) => eventOccursOn(event, day)); return <div key={day.toISOString()} onClick={() => openCreate(day)} className={`group min-w-0 cursor-pointer border-b border-r p-1.5 transition hover:bg-slate-50 md:p-2 ${!isSameMonth(day,currentDate) ? 'bg-slate-50/50 text-slate-400' : ''}`}><div className="mb-1 flex justify-between"><span className={`flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold ${isToday(day) ? 'bg-yellow-500 font-black text-black' : ''}`}>{format(day,'d')}</span><Plus className="h-3.5 w-3.5 text-slate-300 opacity-0 group-hover:opacity-100" /></div>{dayEvents.slice(0,4).map((event) => <EventPill key={event.id} event={event} conflict={conflictEventIds.has(event.id)} onClick={() => openEdit(event)} />)}{dayEvents.length > 4 && <span className="pl-1 text-[10px] font-medium text-slate-400">+{dayEvents.length - 4} más</span>}</div>})}</div></>}
+                        {view === 'week' && <><div className="grid grid-cols-7 border-b bg-slate-50/70">{weekDays.map((day) => <div key={day.toISOString()} className="py-3 text-center"><p className="text-xs font-bold uppercase text-slate-400">{format(day,'EEE',{locale:es})}</p><p className={`mx-auto mt-1 flex h-9 w-9 items-center justify-center rounded-full text-lg font-black ${isToday(day) ? 'bg-yellow-500 text-black' : ''}`}>{format(day,'d')}</p></div>)}</div><div className="grid flex-1 grid-cols-7">{weekDays.map((day) => <div key={day.toISOString()} onClick={() => openCreate(day)} className="min-w-0 cursor-pointer border-r p-2 hover:bg-slate-50">{filteredEvents.filter((event) => eventOccursOn(event,day)).map((event) => <EventPill key={event.id} event={event} conflict={conflictEventIds.has(event.id)} onClick={() => openEdit(event)} />)}</div>)}</div></>}
+                        {view === 'list' && <div className="max-h-[680px] overflow-y-auto p-4 md:p-6">{visibleEvents.length === 0 ? <div className="flex flex-col items-center py-20 text-slate-400"><CalendarIcon className="mb-3 h-14 w-14 opacity-40" /><p>No hay eventos en este periodo.</p></div> : Object.entries(visibleEvents.reduce<Record<string, CalendarEvent[]>>((groups,event) => { const key = format(new Date(event.start_date),'yyyy-MM-dd'); (groups[key] ||= []).push(event); return groups },{})).sort(([a],[b]) => a.localeCompare(b)).map(([date,dayEvents]) => <div key={date} className="mb-7"><div className="sticky top-0 z-10 mb-3 flex items-center gap-3 border-b bg-white/95 py-2 backdrop-blur"><span className="rounded-md bg-slate-950 px-3 py-1 text-sm font-bold text-white">{format(parseISO(date),'d MMM',{locale:es}).toUpperCase()}</span><span className="text-xs font-bold uppercase text-slate-400">{format(parseISO(date),'EEEE',{locale:es})}</span></div>{dayEvents.map((event) => <EventPill key={event.id} event={event} list conflict={conflictEventIds.has(event.id)} onClick={() => openEdit(event)} />)}</div>)}</div>}
                     </>
                 )}
-
-                {/* View: Week */}
-                {view === 'week' && (
-                    <div className="flex flex-col h-full min-h-[600px]">
-                        <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50/50">
-                            {weekDaysInterval.map((day) => {
-                                const isTodayDate = isToday(day)
-                                return (
-                                    <div key={day.toString()} className={`py-3 text-center border-r border-slate-100 last:border-0 ${isTodayDate ? 'bg-yellow-50' : ''}`}>
-                                        <div className="text-xs font-bold uppercase text-slate-500 tracking-wider mb-1">
-                                            {format(day, 'EEE', { locale: es })}
-                                        </div>
-                                        <div className={`
-                                            text-xl font-black w-10 h-10 mx-auto flex items-center justify-center rounded-full
-                                            ${isTodayDate ? 'bg-yellow-500 text-black shadow-md' : 'text-slate-700'}
-                                        `}>
-                                            {format(day, 'd')}
-                                        </div>
-                                    </div>
-                                )
-                            })}
-                        </div>
-                        <div className="grid grid-cols-7 flex-1">
-                            {weekDaysInterval.map((day, idx) => {
-                                const dayEvents = filteredEvents.filter(e => isSameDay(new Date(e.start_date), day));
-                                const isTodayDate = isToday(day)
-
-                                return (
-                                    <div
-                                        key={day.toString()}
-                                        onClick={() => { setSelectedDate(day); setEventToEdit(null); setIsDialogOpen(true) }}
-                                        className={`
-                                            border-r border-slate-100 p-2 min-h-full cursor-pointer transition-colors group relative
-                                            ${isTodayDate ? 'bg-blue-50/5' : ''}
-                                            hover:bg-slate-50
-                                        `}
-                                    >
-                                        <div className="flex flex-col gap-2">
-                                            {dayEvents.map((ev) => <EventPill key={ev.id} event={ev} onClick={(e) => { e.stopPropagation(); setEventToEdit(ev); setIsDialogOpen(true); }} />)}
-                                        </div>
-                                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none">
-                                            <Plus className="w-8 h-8 text-black/10" />
-                                        </div>
-                                    </div>
-                                )
-                            })}
-                        </div>
-                    </div>
-                )}
-
-                {/* View: List */}
-                {view === 'list' && (
-                    <div className="p-6 overflow-y-auto max-h-[700px]">
-                        {filteredEvents.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-                                <CalendarIcon className="w-16 h-16 mb-4 opacity-50" />
-                                <p className="text-lg font-medium">No hay eventos para esta búsqueda</p>
-                            </div>
-                        ) : (
-                            // Group events by day
-                            (() => {
-                                const grouped = filteredEvents.reduce((acc, event) => {
-                                    const dateKey = format(new Date(event.start_date), 'yyyy-MM-dd')
-                                    if (!acc[dateKey]) acc[dateKey] = []
-                                    acc[dateKey].push(event)
-                                    return acc
-                                }, {} as Record<string, CalendarEvent[]>)
-
-                                const sortedKeys = Object.keys(grouped).sort()
-
-                                return sortedKeys.map(dateKey => (
-                                    <div key={dateKey} className="mb-8 last:mb-0">
-                                        <div className="flex items-center gap-3 mb-4 sticky top-0 bg-white/95 backdrop-blur z-10 py-2 border-b border-slate-100">
-                                            <div className="bg-black text-white px-3 py-1 rounded-md font-bold text-sm shadow-sm">
-                                                {format(parseISO(dateKey), 'd MMM', { locale: es }).toUpperCase()}
-                                            </div>
-                                            <div className="h-px flex-1 bg-slate-100" />
-                                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                                                {format(parseISO(dateKey), 'EEEE', { locale: es })}
-                                            </span>
-                                        </div>
-                                        <div className="pl-4 border-l-2 border-slate-100 space-y-2">
-                                            {grouped[dateKey].map((ev: any) => (
-                                                <div key={ev.id}>
-                                                    <EventPill event={ev} view="list" onClick={(e) => { e.stopPropagation(); setSelectedDate(new Date(ev.start_date)); setEventToEdit(ev); setIsDialogOpen(true); }} />
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ))
-                            })()
-                        )}
-                    </div>
-                )}
             </div>
 
-            <EventDialog
-                isOpen={isDialogOpen}
-                setIsOpen={setIsDialogOpen}
-                selectedDate={selectedDate}
-                eventToEdit={eventToEdit}
-                onEventCreated={() => {
-                    fetchEvents()
-                }}
-            />
+            <div className="flex flex-wrap gap-4 rounded-xl border bg-white px-4 py-3 text-xs text-slate-500">
+                <span className="flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5 text-green-600" /> Los horarios de equipos se generan automáticamente.</span>
+                <span className="flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5 text-green-600" /> Campus y torneos publicados aparecen sin duplicar.</span>
+                <span className="flex items-center gap-1"><AlertTriangle className="h-3.5 w-3.5 text-amber-600" /> Los solapes y eventos sin responsable quedan señalados.</span>
+            </div>
+
+            <EventDialog isOpen={isDialogOpen} setIsOpen={setIsDialogOpen} selectedDate={selectedDate} eventToEdit={eventToEdit} workers={workers} categories={categories} teams={teams} onEventCreated={() => void fetchEvents()} />
         </div>
     )
 }

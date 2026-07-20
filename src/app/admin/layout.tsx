@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { LayoutDashboard, Users, UserPlus, Activity, CreditCard, Settings, FileText, LogOut, Trophy, ShoppingBag, Briefcase, MessageSquare, CalendarDays, Video, MessageCircle, TrendingUp } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { SearchCommand } from "@/components/admin/search-command"
@@ -23,9 +22,11 @@ export default async function AdminLayout({
         .eq('id', user.id)
         .single()
 
-    if (profile?.role !== 'admin') {
+    if (profile?.role !== 'admin' && profile?.role !== 'staff') {
         redirect('/portal')
     }
+
+    const isAdmin = profile.role === 'admin'
 
     const signOut = async () => {
         'use server'
@@ -41,22 +42,24 @@ export default async function AdminLayout({
                 <div className="p-6 border-b border-navy-light flex items-center justify-between bg-navy-dark/50 shrink-0">
                     <div>
                         <h2 className="text-xl font-bold tracking-wider text-white">ACADEMY</h2>
-                        <p className="text-[10px] text-slate-400 uppercase tracking-widest font-medium">Panel Admin</p>
+                        <p className="text-[10px] text-slate-400 uppercase tracking-widest font-medium">
+                            {isAdmin ? 'Panel Admin' : 'Coordinación'}
+                        </p>
                     </div>
                 </div>
                 <nav className="flex-1 p-4 space-y-6 overflow-y-auto overflow-x-hidden scrollbar-hide">
                     {/* Dashboard */}
-                    <div>
+                    {isAdmin && <div>
                         <div className="px-3 mb-2 text-[10px] font-bold text-gold uppercase tracking-widest opacity-80">
                             General
                         </div>
                         <div className="space-y-1">
                             <NavItem href="/admin/dashboard" icon={<LayoutDashboard size={18} />} label="Dashboard" />
                         </div>
-                    </div>
+                    </div>}
 
                     {/* CRM */}
-                    <div>
+                    {isAdmin && <div>
                         <div className="px-3 mb-2 text-[10px] font-bold text-gold uppercase tracking-widest opacity-80">
                             Gestión CRM
                         </div>
@@ -67,7 +70,7 @@ export default async function AdminLayout({
                             <NavItem href="/admin/crm/tutores" icon={<UserPlus size={18} />} label="Tutores" />
                             <NavItem href="/admin/crm/trabajadores" icon={<Briefcase size={18} />} label="Trabajadores" />
                         </div>
-                    </div>
+                    </div>}
 
                     {/* BUSINESS LINES */}
                     <div>
@@ -76,16 +79,18 @@ export default async function AdminLayout({
                         </div>
                         <div className="space-y-1">
                             <NavItem href="/admin/calendario" icon={<CalendarDays size={18} />} label="Calendario General" />
-                            <NavItem href="/admin/videoteca" icon={<Video size={18} />} label="Videoteca" />
-                            <NavItem href="/admin/academia" icon={<Activity size={18} />} label="Academia" />
-                            <NavItem href="/admin/campus" icon={<FileText size={18} />} label="Campus" />
-                            <NavItem href="/admin/torneos" icon={<Trophy size={18} />} label="Torneos" />
-                            <NavItem href="/admin/tienda" icon={<ShoppingBag size={18} />} label="Tienda" />
+                            {isAdmin && <>
+                                <NavItem href="/admin/videoteca" icon={<Video size={18} />} label="Videoteca" />
+                                <NavItem href="/admin/academia" icon={<Activity size={18} />} label="Academia" />
+                                <NavItem href="/admin/campus" icon={<FileText size={18} />} label="Campus" />
+                                <NavItem href="/admin/torneos" icon={<Trophy size={18} />} label="Torneos" />
+                                <NavItem href="/admin/tienda" icon={<ShoppingBag size={18} />} label="Tienda" />
+                            </>}
                         </div>
                     </div>
 
                     {/* COMMUNICATION */}
-                    <div>
+                    {isAdmin && <div>
                         <div className="px-3 mb-2 text-[10px] font-bold text-gold uppercase tracking-widest opacity-80">
                             Comunicación
                         </div>
@@ -93,10 +98,10 @@ export default async function AdminLayout({
                             <NavItem href="/admin/comunicados" icon={<MessageCircle size={18} />} label="Comunicados" />
                             <NavItem href="/admin/settings/whatsapp" icon={<Settings size={18} />} label="Configuración API" />
                         </div>
-                    </div>
+                    </div>}
 
                     {/* FINANCE */}
-                    <div>
+                    {isAdmin && <div>
                         <div className="px-3 mb-2 text-[10px] font-bold text-gold uppercase tracking-widest opacity-80">
                             Sistema
                         </div>
@@ -104,7 +109,7 @@ export default async function AdminLayout({
                             <NavItem href="/admin/finanzas" icon={<CreditCard size={18} />} label="Finanzas" />
                             <NavItem href="/admin/ajustes" icon={<Settings size={18} />} label="Ajustes" />
                         </div>
-                    </div>
+                    </div>}
                 </nav>
                 <div className="p-4 border-t border-navy-light bg-navy-dark/30 shrink-0 mt-auto">
                     <form action={signOut}>
@@ -126,7 +131,7 @@ export default async function AdminLayout({
                         <NotificationBell />
                         <div className="flex flex-col items-end hidden sm:flex">
                             <span className="text-sm font-semibold text-slate-900 leading-none">{user.email?.split('@')[0]}</span>
-                            <span className="text-[10px] text-slate-500 font-medium">Administrator</span>
+                            <span className="text-[10px] text-slate-500 font-medium">{isAdmin ? 'Administrador' : 'Coordinación'}</span>
                         </div>
                         <div className="h-9 w-9 rounded-full bg-indigo-600 flex items-center justify-center text-xs font-bold text-white shadow-sm ring-2 ring-indigo-100 shrink-0">
                             {user.email?.charAt(0).toUpperCase()}

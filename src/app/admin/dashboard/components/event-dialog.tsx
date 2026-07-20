@@ -1,174 +1,229 @@
 "use client"
 
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from "@/components/ui/dialog"
+import { useEffect, useMemo, useState } from "react"
+import { format } from "date-fns"
+import { CalendarClock, Clock, Link2, Loader2, Users } from "lucide-react"
+import { toast } from "sonner"
+import { createEvent, deleteEvent, updateEvent } from "@/app/actions/calendar"
+import type {
+    CalendarCategory,
+    CalendarEvent,
+    CalendarEventStatus,
+    CalendarEventType,
+    CalendarTeam,
+    CalendarWorker,
+} from "@/app/actions/calendar"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
-import { useState, useEffect } from "react"
-import { createEvent, getWorkers, updateEvent, deleteEvent } from "@/app/actions/calendar"
-import { createClient } from "@/lib/supabase/client"
-import { toast } from "sonner"
-import { format } from "date-fns"
-import { es } from "date-fns/locale"
-import { Loader2, Clock } from "lucide-react"
+import { Textarea } from "@/components/ui/textarea"
 
 interface EventDialogProps {
     isOpen: boolean
     setIsOpen: (open: boolean) => void
     selectedDate: Date | undefined
-    eventToEdit?: any
+    eventToEdit?: CalendarEvent | null
+    workers: CalendarWorker[]
+    categories: CalendarCategory[]
+    teams: CalendarTeam[]
     onEventCreated: () => void
 }
 
-export function EventDialog({ isOpen, setIsOpen, selectedDate, eventToEdit, onEventCreated }: EventDialogProps) {
+const EVENT_TYPES: Array<{ value: CalendarEventType; label: string }> = [
+    { value: 'general', label: 'General' },
+    { value: 'training', label: 'Entrenamiento' },
+    { value: 'match', label: 'Partido' },
+    { value: 'meeting', label: 'Reunión' },
+    { value: 'campus', label: 'Campus' },
+    { value: 'tournament', label: 'Torneo' },
+    { value: 'absence', label: 'Ausencia / vacaciones' },
+]
+
+const STATUS_OPTIONS: Array<{ value: CalendarEventStatus; label: string }> = [
+    { value: 'confirmed', label: 'Confirmado' },
+    { value: 'tentative', label: 'Pendiente de confirmar' },
+    { value: 'cancelled', label: 'Cancelado' },
+]
+
+const EVENT_COLORS = [
+    { value: '#3b82f6', label: 'General' },
+    { value: '#22c55e', label: 'Entrenamiento' },
+    { value: '#ef4444', label: 'Importante' },
+    { value: '#eab308', label: 'Partido' },
+    { value: '#a855f7', label: 'Reunión' },
+    { value: '#14b8a6', label: 'Campus' },
+    { value: '#f97316', label: 'Torneo' },
+]
+
+function dateInputValue(date: Date) {
+    return format(date, 'yyyy-MM-dd')
+}
+
+function buildDate(date: string, time: string) {
+    return new Date(`${date}T${time}:00`)
+}
+
+export function EventDialog({
+    isOpen,
+    setIsOpen,
+    selectedDate,
+    eventToEdit,
+    workers,
+    categories,
+    teams,
+    onEventCreated,
+}: EventDialogProps) {
     const [title, setTitle] = useState("")
     const [description, setDescription] = useState("")
     const [loading, setLoading] = useState(false)
-    const [color, setColor] = useState("blue")
-    const [workers, setWorkers] = useState<any[]>([])
-    const [selectedWorker, setSelectedWorker] = useState<string>("none")
-
-    // Additional fields from original calendar
-    const [categories, setCategories] = useState<any[]>([])
+    const [color, setColor] = useState("#3b82f6")
+    const [selectedWorkers, setSelectedWorkers] = useState<string[]>([])
     const [selectedCategory, setSelectedCategory] = useState<string>("none")
+    const [selectedTeam, setSelectedTeam] = useState<string>("none")
     const [location, setLocation] = useState("")
-
-    // Time Logic
-    const [isAllDay, setIsAllDay] = useState(true)
+    const [eventType, setEventType] = useState<CalendarEventType>('general')
+    const [status, setStatus] = useState<CalendarEventStatus>('confirmed')
+    const [visibleToFamilies, setVisibleToFamilies] = useState(false)
+    const [isAllDay, setIsAllDay] = useState(false)
+    const [startDate, setStartDate] = useState(dateInputValue(new Date()))
+    const [endDate, setEndDate] = useState(dateInputValue(new Date()))
     const [startTime, setStartTime] = useState("10:00")
     const [endTime, setEndTime] = useState("11:30")
 
+    const sourceManaged = Boolean(eventToEdit && eventToEdit.source_type !== 'manual')
+    const selectedTeamData = useMemo(
+        () => teams.find((team) => team.id === selectedTeam),
+        [selectedTeam, teams]
+    )
+
     useEffect(() => {
-        if (isOpen) {
-            getWorkers().then(setWorkers)
-            const supabase = createClient()
-            supabase.from('categories').select('id, name').order('name').then(({ data }) => {
-                if (data) setCategories(data)
-            })
+        if (!isOpen) return
 
-            if (eventToEdit) {
-                setTitle(eventToEdit.title)
-                setDescription(eventToEdit.description || "")
-                setColor(eventToEdit.color)
-                setSelectedWorker(eventToEdit.worker_id || "none")
-                setSelectedCategory(eventToEdit.category_id || "none")
-                setLocation(eventToEdit.location || "")
-                setIsAllDay(eventToEdit.is_all_day)
-                
-                if (!eventToEdit.is_all_day) {
-                    const start = new Date(eventToEdit.start_date)
-                    const end = eventToEdit.end_date ? new Date(eventToEdit.end_date) : start
-                    setStartTime(`${start.getHours().toString().padStart(2, '0')}:${start.getMinutes().toString().padStart(2, '0')}`)
-                    setEndTime(`${end.getHours().toString().padStart(2, '0')}:${end.getMinutes().toString().padStart(2, '0')}`)
-                }
-            } else {
-                // Reset form on new open
-                setTitle("")
-                setDescription("")
-                setSelectedWorker("none")
-                setSelectedCategory("none")
-                setLocation("")
-                setColor("blue")
-                setIsAllDay(true)
-                setStartTime("10:00")
-                setEndTime("11:30")
-            }
+        if (eventToEdit) {
+            const start = new Date(eventToEdit.start_date)
+            const end = new Date(eventToEdit.end_date)
+            const inclusiveEnd = eventToEdit.is_all_day ? new Date(end.getTime() - 1) : end
+            setTitle(eventToEdit.title)
+            setDescription(eventToEdit.description || "")
+            setColor(eventToEdit.color || '#3b82f6')
+            setSelectedWorkers(eventToEdit.worker_ids)
+            setSelectedCategory(eventToEdit.category_id || "none")
+            setSelectedTeam(eventToEdit.team_id || "none")
+            setLocation(eventToEdit.location || "")
+            setEventType(eventToEdit.event_type)
+            setStatus(eventToEdit.status)
+            setVisibleToFamilies(eventToEdit.visibility === 'families')
+            setIsAllDay(eventToEdit.is_all_day)
+            setStartDate(dateInputValue(start))
+            setEndDate(dateInputValue(inclusiveEnd))
+            setStartTime(format(start, 'HH:mm'))
+            setEndTime(format(end, 'HH:mm'))
+            return
         }
-    }, [isOpen, eventToEdit])
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-        if (!selectedDate) return
+        const initialDate = selectedDate || new Date()
+        const dateValue = dateInputValue(initialDate)
+        setTitle("")
+        setDescription("")
+        setColor("#3b82f6")
+        setSelectedWorkers([])
+        setSelectedCategory("none")
+        setSelectedTeam("none")
+        setLocation("")
+        setEventType('general')
+        setStatus('confirmed')
+        setVisibleToFamilies(false)
+        setIsAllDay(false)
+        setStartDate(dateValue)
+        setEndDate(dateValue)
+        setStartTime("10:00")
+        setEndTime("11:30")
+    }, [isOpen, eventToEdit, selectedDate])
 
+    function toggleWorker(workerId: string) {
+        setSelectedWorkers((current) => current.includes(workerId)
+            ? current.filter((id) => id !== workerId)
+            : [...current, workerId])
+    }
+
+    function handleTeamChange(teamId: string) {
+        setSelectedTeam(teamId)
+        const team = teams.find((item) => item.id === teamId)
+        if (team?.category_id) setSelectedCategory(team.category_id)
+        if (team?.coach_id) {
+            setSelectedWorkers((current) => current.includes(team.coach_id!) ? current : [...current, team.coach_id!])
+        }
+    }
+
+    async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+        event.preventDefault()
         setLoading(true)
+
         try {
-            let startIso = selectedDate.toISOString()
-            let endIso = selectedDate.toISOString()
+            const start = isAllDay ? buildDate(startDate, '00:00') : buildDate(startDate, startTime)
+            const end = isAllDay
+                ? new Date(buildDate(endDate, '00:00').getTime() + 24 * 60 * 60 * 1000)
+                : buildDate(endDate, endTime)
 
-            if (!isAllDay) {
-                // Combine date with time
-                const s = new Date(selectedDate)
-                const [sh, sm] = startTime.split(':').map(Number)
-                s.setHours(sh, sm)
-                startIso = s.toISOString()
-
-                const e = new Date(selectedDate)
-                const [eh, em] = endTime.split(':').map(Number)
-                e.setHours(eh, em)
-                endIso = e.toISOString()
+            if (end <= start) {
+                toast.error('La fecha de fin debe ser posterior al inicio')
+                return
             }
 
             const formData = {
                 title,
                 description,
-                start_date: startIso,
-                end_date: endIso,
+                start_date: start.toISOString(),
+                end_date: end.toISOString(),
                 color,
                 is_all_day: isAllDay,
-                worker_id: selectedWorker === "none" ? null : selectedWorker,
+                worker_ids: selectedWorkers,
                 category_id: selectedCategory === "none" ? null : selectedCategory,
-                location: location || null
+                team_id: selectedTeam === "none" ? null : selectedTeam,
+                location: location || null,
+                event_type: eventType,
+                status,
+                visibility: visibleToFamilies ? 'families' as const : 'internal' as const,
             }
 
-            const res = eventToEdit 
+            const result = eventToEdit
                 ? await updateEvent(eventToEdit.id, formData)
                 : await createEvent(formData)
 
-            if (res.success) {
-                toast.success(eventToEdit ? "Evento actualizado correctamente" : "Evento creado correctamente")
-                // Reset form
-                setTitle("")
-                setDescription("")
-                setSelectedWorker("none")
-                setSelectedCategory("none")
-                setLocation("")
-                setColor("blue")
-                setIsAllDay(true)
-
-                setIsOpen(false)
-                onEventCreated() // Refresh list
-            } else {
-                toast.error(res.error)
+            if (!result.success) {
+                toast.error(result.error)
+                return
             }
+
+            toast.success(eventToEdit ? "Evento actualizado" : "Evento creado")
+            if (result.warnings?.length) {
+                toast.warning(`Atención: ${result.warnings.join(' · ')}`, { duration: 7000 })
+            }
+            setIsOpen(false)
+            onEventCreated()
         } catch (error) {
-            toast.error("Error inesperado")
+            console.error(error)
+            toast.error("Error inesperado al guardar")
         } finally {
             setLoading(false)
         }
     }
 
-    const handleDelete = async () => {
-        if (!eventToEdit) return
-        if (!confirm("¿Estás seguro de que quieres eliminar este evento?")) return
-
+    async function handleDelete() {
+        if (!eventToEdit || !confirm("¿Eliminar definitivamente este evento?")) return
         setLoading(true)
         try {
-            const res = await deleteEvent(eventToEdit.id)
-            if (res.success) {
-                toast.success("Evento eliminado")
-                setIsOpen(false)
-                onEventCreated()
-            } else {
-                toast.error(res.error)
+            const result = await deleteEvent(eventToEdit.id)
+            if (!result.success) {
+                toast.error(result.error)
+                return
             }
-        } catch(e) {
-            toast.error("Error al eliminar")
+            toast.success("Evento eliminado")
+            setIsOpen(false)
+            onEventCreated()
         } finally {
             setLoading(false)
         }
@@ -176,180 +231,133 @@ export function EventDialog({ isOpen, setIsOpen, selectedDate, eventToEdit, onEv
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogContent className="p-0 border-0 overflow-visible bg-slate-50 max-w-md sm:rounded-2xl shadow-2xl">
-                <div className="bg-yellow-500 p-6 flex flex-col gap-1 rounded-t-2xl">
-                    <DialogTitle className="text-2xl font-black text-black tracking-tight">
+            <DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto border-0 bg-slate-50 p-0 shadow-2xl sm:rounded-2xl">
+                <div className="rounded-t-2xl bg-yellow-500 p-6">
+                    <DialogTitle className="text-2xl font-black tracking-tight text-black">
                         {eventToEdit ? "EDITAR EVENTO" : "NUEVO EVENTO"}
                     </DialogTitle>
-                    <DialogDescription className="text-black/80 font-medium">
-                        {selectedDate ? format(selectedDate, "EEEE, d 'de' MMMM", { locale: es }) : "Selecciona una fecha"}
+                    <DialogDescription className="font-medium text-black/70">
+                        Coordina personas, equipos, horarios y visibilidad desde una sola ficha.
                     </DialogDescription>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-6 space-y-5">
-                    <div className="space-y-2">
-                        <Label className="text-slate-700 font-bold uppercase text-xs tracking-wider">
-                            Título
-                        </Label>
-                        <Input
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            placeholder="Entrenamiento, reunión, partido..."
-                            className="bg-white border-slate-200 focus:border-yellow-500 focus:ring-yellow-500 h-11 shadow-sm"
-                            required
-                        />
+                <form onSubmit={handleSubmit} className="space-y-5 p-6">
+                    {sourceManaged && (
+                        <div className="flex gap-3 rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+                            <Link2 className="mt-0.5 h-4 w-4 shrink-0" />
+                            <p>Sincronizado con {eventToEdit?.source_type}. Puedes asignar personal o cambiar su estado; los datos operativos se actualizarán desde el módulo de origen.</p>
+                        </div>
+                    )}
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                        <div className="space-y-2 md:col-span-2">
+                            <Label htmlFor="event-title">Título</Label>
+                            <Input id="event-title" value={title} onChange={(event) => setTitle(event.target.value)} required maxLength={160} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Tipo</Label>
+                            <Select value={eventType} onValueChange={(value) => setEventType(value as CalendarEventType)}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>{EVENT_TYPES.map((type) => <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>)}</SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Estado</Label>
+                            <Select value={status} onValueChange={(value) => setStatus(value as CalendarEventStatus)}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>{STATUS_OPTIONS.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
+                            </Select>
+                        </div>
                     </div>
 
-                    {/* Time Selection Section */}
-                    <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm space-y-4">
+                    <div className="rounded-xl border bg-white p-4 space-y-4">
                         <div className="flex items-center justify-between">
-                            <Label className="flex items-center gap-2 text-slate-700 font-bold text-sm">
-                                <Clock className="w-4 h-4 text-slate-400" />
-                                Todo el día
-                            </Label>
-                            <Switch
-                                checked={isAllDay}
-                                onCheckedChange={setIsAllDay}
-                            />
+                            <Label className="flex items-center gap-2"><CalendarClock className="h-4 w-4" /> Todo el día</Label>
+                            <Switch checked={isAllDay} onCheckedChange={setIsAllDay} />
                         </div>
-
-                        {!isAllDay && (
-                            <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
-                                <div className="space-y-1.5">
-                                    <Label className="text-xs text-slate-500 font-bold uppercase">Inicio</Label>
-                                    <Input
-                                        type="time"
-                                        value={startTime}
-                                        onChange={(e) => setStartTime(e.target.value)}
-                                        className="h-9 bg-slate-50 border-slate-200"
-                                    />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <Label className="text-xs text-slate-500 font-bold uppercase">Fin</Label>
-                                    <Input
-                                        type="time"
-                                        value={endTime}
-                                        onChange={(e) => setEndTime(e.target.value)}
-                                        className="h-9 bg-slate-50 border-slate-200"
-                                    />
-                                </div>
+                        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                            <div className="space-y-1.5">
+                                <Label className="text-xs">Fecha inicio</Label>
+                                <Input type="date" value={startDate} onChange={(event) => { setStartDate(event.target.value); if (endDate < event.target.value) setEndDate(event.target.value) }} required />
                             </div>
-                        )}
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label className="text-slate-700 font-bold uppercase text-xs tracking-wider">
-                            Asignar a (Opcional)
-                        </Label>
-                        <Select value={selectedWorker} onValueChange={setSelectedWorker}>
-                            <SelectTrigger className="bg-white border-slate-200 focus:ring-yellow-500 h-11 shadow-sm">
-                                <SelectValue placeholder="Seleccionar trabajador..." />
-                            </SelectTrigger>
-                            <SelectContent className="bg-white border-slate-200 shadow-xl z-[9999]">
-                                <SelectItem value="none" className="font-medium text-slate-500">-- General (Sin asignar) --</SelectItem>
-                                {workers.map((w) => (
-                                    <SelectItem key={w.id} value={w.id}>
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: w.color || 'gray' }} />
-                                            {w.full_name}
-                                        </div>
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label className="text-slate-700 font-bold uppercase text-xs tracking-wider">
-                            Asignar a Categoría / Equipo (Opcional)
-                        </Label>
-                        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                            <SelectTrigger className="bg-white border-slate-200 focus:ring-yellow-500 h-11 shadow-sm">
-                                <SelectValue placeholder="Seleccionar equipo..." />
-                            </SelectTrigger>
-                            <SelectContent className="bg-white border-slate-200 shadow-xl z-[9999]">
-                                <SelectItem value="none" className="font-medium text-slate-500">-- Sin equipo --</SelectItem>
-                                {categories.map((c) => (
-                                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label className="text-slate-700 font-bold uppercase text-xs tracking-wider">
-                            Ubicación (Opcional)
-                        </Label>
-                        <Input
-                            value={location}
-                            onChange={(e) => setLocation(e.target.value)}
-                            placeholder="Ej. Campo 1, Gimnasio..."
-                            className="bg-white border-slate-200 focus:border-yellow-500 focus:ring-yellow-500 h-11 shadow-sm"
-                        />
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label className="text-slate-700 font-bold uppercase text-xs tracking-wider">
-                            Nota / Descripción
-                        </Label>
-                        <Textarea
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            placeholder="Detalles adicionales..."
-                            className="bg-white border-slate-200 focus:border-yellow-500 focus:ring-yellow-500 min-h-[80px] shadow-sm resize-none"
-                        />
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label className="text-slate-700 font-bold uppercase text-xs tracking-wider">
-                            Etiqueta
-                        </Label>
-                        <div className="flex gap-3">
-                            {[
-                                { id: 'blue', color: '#3b82f6', label: 'General' },
-                                { id: 'green', color: '#22c55e', label: 'Entreno' },
-                                { id: 'red', color: '#ef4444', label: 'Importante' },
-                                { id: 'yellow', color: '#eab308', label: 'Partido' }
-                            ].map((c) => (
-                                <button
-                                    key={c.id}
-                                    type="button"
-                                    onClick={() => setColor(c.id)}
-                                    className={`group relative w-10 h-10 rounded-full border-2 transition-all duration-200 flex items-center justify-center ${color === c.id
-                                        ? 'border-black scale-110 shadow-md'
-                                        : 'border-transparent opacity-60 hover:opacity-100 hover:scale-105'
-                                        }`}
-                                    style={{ backgroundColor: c.color }}
-                                    title={c.label}
-                                >
-                                    {color === c.id && (
-                                        <div className="w-2 h-2 bg-white rounded-full shadow-sm" />
-                                    )}
-                                </button>
-                            ))}
+                            {!isAllDay && <div className="space-y-1.5"><Label className="text-xs">Hora inicio</Label><Input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} required /></div>}
+                            <div className="space-y-1.5">
+                                <Label className="text-xs">Fecha fin</Label>
+                                <Input type="date" min={startDate} value={endDate} onChange={(event) => setEndDate(event.target.value)} required />
+                            </div>
+                            {!isAllDay && <div className="space-y-1.5"><Label className="text-xs">Hora fin</Label><Input type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} required /></div>}
                         </div>
                     </div>
 
-                    <div className="flex justify-between pt-4 gap-4">
-                        {eventToEdit ? (
-                            <Button
-                                type="button"
-                                variant="destructive"
-                                disabled={loading}
-                                onClick={handleDelete}
-                                className="h-11 px-6 rounded-xl shadow-sm"
-                            >
-                                Eliminar
-                            </Button>
-                        ) : (
-                            <div /> // Placeholder for spacing using flex-between
-                        )}
-                        <Button
-                            type="submit"
-                            disabled={loading}
-                            className="bg-black hover:bg-slate-800 text-white font-bold h-11 px-8 rounded-xl transition-all shadow-lg hover:shadow-xl disabled:opacity-70"
-                        >
-                            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : eventToEdit ? "Actualizar Evento" : "Guardar Evento"}
+                    <div className="space-y-2">
+                        <Label className="flex items-center gap-2"><Users className="h-4 w-4" /> Trabajadores asignados</Label>
+                        <div className="flex max-h-32 flex-wrap gap-2 overflow-y-auto rounded-xl border bg-white p-3">
+                            {workers.length === 0 && <span className="text-sm text-slate-400">No hay trabajadores creados.</span>}
+                            {workers.map((worker) => {
+                                const active = selectedWorkers.includes(worker.id)
+                                return (
+                                    <button key={worker.id} type="button" onClick={() => toggleWorker(worker.id)} className={`rounded-full border px-3 py-1.5 text-sm transition ${active ? 'border-yellow-500 bg-yellow-100 font-bold text-slate-900' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-400'}`}>
+                                        {worker.full_name}{worker.position ? ` · ${worker.position}` : ''}
+                                    </button>
+                                )
+                            })}
+                        </div>
+                        <p className="text-xs text-slate-500">Puedes seleccionar varios. El sistema avisará si alguno tiene otro evento a la misma hora.</p>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                        <div className="space-y-2">
+                            <Label>Equipo</Label>
+                            <Select value={selectedTeam} onValueChange={handleTeamChange}>
+                                <SelectTrigger><SelectValue placeholder="Sin equipo" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">Sin equipo</SelectItem>
+                                    {teams.map((team) => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            {selectedTeamData?.category && <p className="text-xs text-slate-500">Categoría: {selectedTeamData.category.name}</p>}
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Categoría</Label>
+                            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                                <SelectTrigger><SelectValue placeholder="Sin categoría" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">Sin categoría</SelectItem>
+                                    {categories.map((category) => <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2 md:col-span-2">
+                            <Label>Ubicación</Label>
+                            <Input value={location} onChange={(event) => setLocation(event.target.value)} maxLength={200} placeholder="Campo, oficina, dirección…" />
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label>Notas operativas</Label>
+                        <Textarea value={description} onChange={(event) => setDescription(event.target.value)} maxLength={1000} className="min-h-20" placeholder="Material, contacto, instrucciones…" />
+                    </div>
+
+                    <div className="flex items-center justify-between rounded-xl border bg-white p-4">
+                        <div>
+                            <Label>Visible para familias</Label>
+                            <p className="text-xs text-slate-500">Las reuniones internas y ausencias deben permanecer privadas.</p>
+                        </div>
+                        <Switch checked={visibleToFamilies} onCheckedChange={setVisibleToFamilies} />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label>Color</Label>
+                        <div className="flex flex-wrap gap-2">
+                            {EVENT_COLORS.map((option) => <button key={option.value} type="button" title={option.label} aria-label={option.label} onClick={() => setColor(option.value)} className={`h-9 w-9 rounded-full border-2 transition ${color === option.value ? 'scale-110 border-slate-950 shadow-md' : 'border-white opacity-70 hover:opacity-100'}`} style={{ backgroundColor: option.value }} />)}
+                        </div>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3 border-t pt-4">
+                        {eventToEdit && !sourceManaged ? <Button type="button" variant="destructive" disabled={loading} onClick={handleDelete}>Eliminar</Button> : <div />}
+                        <Button type="submit" disabled={loading} className="bg-slate-950 px-7 font-bold text-white hover:bg-slate-800">
+                            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Clock className="mr-2 h-4 w-4" />}
+                            {eventToEdit ? 'Guardar cambios' : 'Crear evento'}
                         </Button>
                     </div>
                 </form>

@@ -15,7 +15,7 @@ import {
     parseISO
 } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, MapPin, Clock } from 'lucide-react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -24,6 +24,7 @@ export interface CalendarEvent {
     title: string
     start_date: string // ISO
     end_date: string   // ISO
+    is_all_day?: boolean
     color?: string
     location?: string
     category_name?: string
@@ -88,7 +89,11 @@ export function MonthlyCalendar({ events, onDateClick, onEventClick }: MonthlyCa
                 const cloneDay = day
 
                 // Find events for this day
-                const dayEvents = events.filter(e => isSameDay(parseISO(e.start_date), cloneDay))
+                const dayStart = cloneDay.getTime()
+                const dayEnd = addDays(cloneDay, 1).getTime()
+                const dayEvents = events.filter((event) =>
+                    parseISO(event.start_date).getTime() < dayEnd && parseISO(event.end_date).getTime() > dayStart
+                )
 
                 days.push(
                     <div
@@ -115,7 +120,7 @@ export function MonthlyCalendar({ events, onDateClick, onEventClick }: MonthlyCa
                                     key={evt.id}
                                     onClick={(e) => {
                                         e.stopPropagation()
-                                        onEventClick && onEventClick(evt)
+                                        onEventClick?.(evt)
                                     }}
                                     className="text-white text-[10px] md:text-xs rounded-md px-1.5 py-1 truncate cursor-pointer hover:brightness-90 transition-all border-l-2 border-white/20"
                                     style={{ backgroundColor: evt.color || '#1e3a8a' }}
@@ -123,7 +128,7 @@ export function MonthlyCalendar({ events, onDateClick, onEventClick }: MonthlyCa
                                 >
                                     <div className="font-semibold truncate">{evt.title}</div>
                                     <div className="flex justify-between mt-0.5 opacity-90 truncate">
-                                        <span className="truncate">{format(parseISO(evt.start_date), 'HH:mm')}</span>
+                                        <span className="truncate">{evt.is_all_day ? 'Todo el día' : format(parseISO(evt.start_date), 'HH:mm')}</span>
                                         {evt.category_name && <span className="font-mono bg-black/20 px-1 rounded truncate ml-1">{evt.category_name}</span>}
                                     </div>
                                 </div>

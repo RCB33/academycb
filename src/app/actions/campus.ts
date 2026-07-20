@@ -60,12 +60,12 @@ export async function getCampuses() {
         return []
     }
 
-    return (data || []).map((c: any) => ({
-        ...c,
-        enrollment_count: c.campus_enrollments?.length || 0,
-        confirmed_count: c.campus_enrollments?.filter((e: any) => e.status === 'confirmed').length || 0,
-        campus_enrollments: undefined
-    })) as Campus[]
+    return ((data || []) as unknown as Array<Campus & { campus_enrollments?: Array<{ id: string; status: string }> }>)
+        .map(({ campus_enrollments = [], ...campus }) => ({
+            ...campus,
+            enrollment_count: campus_enrollments.length,
+            confirmed_count: campus_enrollments.filter((enrollment) => enrollment.status === 'confirmed').length,
+        }))
 }
 
 export async function createCampus(data: {
@@ -105,6 +105,8 @@ export async function createCampus(data: {
     }
 
     revalidatePath('/admin/campus')
+    revalidatePath('/admin/calendario')
+    revalidatePath('/portal/calendario')
     return { success: true }
 }
 
@@ -134,6 +136,8 @@ export async function updateCampus(id: string, data: Partial<{
     }
 
     revalidatePath('/admin/campus')
+    revalidatePath('/admin/calendario')
+    revalidatePath('/portal/calendario')
     return { success: true }
 }
 
@@ -161,6 +165,8 @@ export async function deleteCampus(id: string) {
     }
 
     revalidatePath('/admin/campus')
+    revalidatePath('/admin/calendario')
+    revalidatePath('/portal/calendario')
     return { success: true }
 }
 
