@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, Clock, CalendarDays, ExternalLink } from "lucide-react"
+import { Users, Clock, CalendarDays } from "lucide-react"
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 
@@ -11,11 +11,20 @@ export default async function CoachDashboard() {
     if (!user) return null
 
     // 1. Find the worker associated with this login
-    const { data: worker } = await supabase
+    let { data: worker } = await supabase
         .from('workers')
         .select('*')
-        .eq('email', user.email)
-        .single()
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+    if (!worker && user.email) {
+        const { data: workerByEmail } = await supabase
+            .from('workers')
+            .select('*')
+            .ilike('email', user.email)
+            .maybeSingle()
+        worker = workerByEmail
+    }
 
     // 2. Fetch today's events for this worker
     const today = new Date()
@@ -24,21 +33,39 @@ export default async function CoachDashboard() {
     const tomorrow = new Date(today)
     tomorrow.setDate(tomorrow.getDate() + 1)
 
-    let events: any[] = []
+    type CoachEvent = {
+        id: string
+        title: string
+        start_date: string
+        end_date: string
+        color: string | null
+        worker_id: string | null
+        categories: { name: string } | null
+        teams: { name: string } | null
+    }
+    let events: CoachEvent[] = []
 
     if (worker) {
+        const { data: assignments } = await supabase
+            .from('calendar_event_workers')
+            .select('event_id')
+            .eq('worker_id', worker.id)
+        const assignedIds = new Set((assignments || []).map((assignment) => assignment.event_id))
+
         const { data } = await supabase
             .from('calendar_events')
             .select(`
                 *,
-                categories ( name )
+                categories ( name ),
+                teams ( name )
             `)
-            .eq('worker_id', worker.id)
-            .gte('start_date', today.toISOString())
             .lt('start_date', tomorrow.toISOString())
+            .gt('end_date', today.toISOString())
+            .neq('status', 'cancelled')
             .order('start_date', { ascending: true })
 
-        events = data || []
+        events = ((data || []) as unknown as CoachEvent[])
+            .filter((event) => event.worker_id === worker.id || assignedIds.has(event.id))
     }
 
     return (
@@ -91,9 +118,9 @@ export default async function CoachDashboard() {
                                                 {new Date(event.end_date).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
                                             </p>
                                         </div>
-                                        {event.categories && (
+                                        {(event.teams || event.categories) && (
                                             <div className="bg-navy/5 text-navy px-2.5 py-1 rounded-full text-xs font-semibold">
-                                                {event.categories.name}
+                                                {event.teams?.name || event.categories?.name}
                                             </div>
                                         )}
                                     </div>

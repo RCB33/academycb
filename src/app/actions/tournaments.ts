@@ -18,7 +18,7 @@ export type Tournament = {
     type: 'propio' | 'externo'
     external_url: string | null
     notes: string | null
-    checklist: any
+    checklist: unknown
     created_at: string
     team_count?: number
     confirmed_count?: number
@@ -61,14 +61,16 @@ export async function getTournaments() {
 
     if (error) { console.error("Error fetching tournaments:", error); return [] }
 
-    return (data || []).map((t: any) => ({
-        ...t,
-        team_count: t.tournament_teams?.filter((tt: any) => tt.status !== 'cancelled').length || 0,
-        confirmed_count: t.tournament_teams?.filter((tt: any) => tt.status === 'confirmed').length || 0,
-        player_count: t.tournament_players?.filter((tp: any) => tp.status !== 'cancelled').length || 0,
-        tournament_teams: undefined,
-        tournament_players: undefined
-    })) as Tournament[]
+    type TournamentSummaryRow = Tournament & {
+        tournament_teams?: Array<{ id: string; status: string }>
+        tournament_players?: Array<{ id: string; status: string }>
+    }
+    return ((data || []) as unknown as TournamentSummaryRow[]).map(({ tournament_teams = [], tournament_players = [], ...tournament }) => ({
+        ...tournament,
+        team_count: tournament_teams.filter((team) => team.status !== 'cancelled').length,
+        confirmed_count: tournament_teams.filter((team) => team.status === 'confirmed').length,
+        player_count: tournament_players.filter((player) => player.status !== 'cancelled').length,
+    }))
 }
 
 export async function createTournament(data: {
@@ -99,6 +101,8 @@ export async function createTournament(data: {
     }])
     if (error) { console.error("Error creating tournament:", error); return { success: false, error: "Error al crear el torneo" } }
     revalidatePath('/admin/torneos')
+    revalidatePath('/admin/calendario')
+    revalidatePath('/portal/calendario')
     return { success: true }
 }
 
@@ -108,6 +112,8 @@ export async function updateTournament(id: string, data: Partial<Tournament>) {
     const { error } = await supabase.from('tournaments_internal').update(data).eq('id', id)
     if (error) { console.error("Error updating tournament:", error); return { success: false, error: "Error al actualizar" } }
     revalidatePath('/admin/torneos')
+    revalidatePath('/admin/calendario')
+    revalidatePath('/portal/calendario')
     return { success: true }
 }
 
@@ -122,6 +128,8 @@ export async function deleteTournament(id: string) {
     const { error } = await supabase.from('tournaments_internal').delete().eq('id', id)
     if (error) { console.error("Error deleting tournament:", error); return { success: false, error: "Error al eliminar" } }
     revalidatePath('/admin/torneos')
+    revalidatePath('/admin/calendario')
+    revalidatePath('/portal/calendario')
     return { success: true }
 }
 
@@ -145,8 +153,8 @@ export async function getAvailableChildrenForTournament(tournamentId: string) {
         supabase.from('children').select('id, full_name, birth_year, category:categories(name)').order('full_name'),
         supabase.from('tournament_players').select('child_id').eq('tournament_id', tournamentId),
     ])
-    const used = new Set((existing || []).map((item: any) => item.child_id))
-    return (children || []).filter((child: any) => !used.has(child.id))
+    const used = new Set((existing || []).map((item) => item.child_id))
+    return (children || []).filter((child) => !used.has(child.id))
 }
 
 export async function registerTournamentPlayer(data: {

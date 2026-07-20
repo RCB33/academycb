@@ -91,7 +91,7 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // --- Admin routes: require 'admin' role ---
+  // --- Admin routes: administrators have full access; staff can coordinate the calendar ---
   if (pathname.startsWith('/admin')) {
     const { data: profile } = await supabase
       .from('profiles')
@@ -99,7 +99,9 @@ export async function updateSession(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    if (profile?.role !== 'admin') {
+    const isAdmin = profile?.role === 'admin'
+    const isCalendarStaff = profile?.role === 'staff' && pathname.startsWith('/admin/calendario')
+    if (!isAdmin && !isCalendarStaff) {
       const url = request.nextUrl.clone()
       url.pathname = '/portal/dashboard'
       return NextResponse.redirect(url)

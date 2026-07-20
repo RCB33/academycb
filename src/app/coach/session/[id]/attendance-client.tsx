@@ -13,7 +13,7 @@ interface Child {
     attendance: 'present' | 'absent' | 'excused' | null
 }
 
-export function AttendanceClient({ childrenData, sessionDate }: { childrenData: Child[], sessionDate: string }) {
+export function AttendanceClient({ childrenData, sessionDate, eventId }: { childrenData: Child[], sessionDate: string, eventId: string }) {
     const [kids, setKids] = useState<Child[]>(childrenData)
     const [loadingMap, setLoadingMap] = useState<Record<string, boolean>>({})
 
@@ -25,9 +25,9 @@ export function AttendanceClient({ childrenData, sessionDate }: { childrenData: 
         setKids(prev => prev.map(k => k.id === childId ? { ...k, attendance: status } : k))
 
         try {
-            await markAttendance(childId, status, sessionDate)
+            await markAttendance(eventId, childId, status, sessionDate)
             toast.success("Asistencia guardada")
-        } catch (error) {
+        } catch {
             // Revert on error
             setKids(previousKids)
             toast.error("No se pudo guardar la asistencia. Intenta de nuevo.")

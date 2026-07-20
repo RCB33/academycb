@@ -85,6 +85,9 @@ export async function createTeam(formData: z.infer<typeof TeamSchema>) {
     }
 
     revalidatePath('/admin/academia')
+    revalidatePath('/admin/calendario')
+    revalidatePath('/coach')
+    revalidatePath('/portal/calendario')
     return { success: true, id: newTeam.id }
 }
 
@@ -107,6 +110,9 @@ export async function updateTeam(id: string, formData: z.infer<typeof TeamSchema
     }
 
     revalidatePath('/admin/academia')
+    revalidatePath('/admin/calendario')
+    revalidatePath('/coach')
+    revalidatePath('/portal/calendario')
     return { success: true }
 }
 
@@ -130,6 +136,9 @@ export async function deleteTeam(id: string) {
     }
 
     revalidatePath('/admin/academia')
+    revalidatePath('/admin/calendario')
+    revalidatePath('/coach')
+    revalidatePath('/portal/calendario')
     return { success: true }
 }
 

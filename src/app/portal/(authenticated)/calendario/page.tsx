@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { MonthlyCalendar, CalendarEvent } from '@/components/ui/monthly-calendar'
-import { CalendarDays } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,36 +27,32 @@ export default async function FamilyCalendarPage() {
 
     const childIds = childrenLinks?.map(link => link.child_id) || []
 
-    let categoryIds: string[] = []
-
-    if (childIds.length > 0) {
-        // Fetch children to get their assigned categories
-        const { data: children } = await supabase
-            .from('children')
-            .select('category_id')
-            .in('id', childIds)
-
-        categoryIds = children?.map(c => c.category_id).filter(Boolean) || []
-    }
-
-    // 3. Fetch events for those categories
+    // 3. RLS returns only family-visible events related to the guardian's
+    // children (team, campus, tournament or general family event).
     let events: CalendarEvent[] = []
-
-    if (categoryIds.length > 0) {
+    if (childIds.length > 0) {
+        const rangeStart = new Date()
+        rangeStart.setMonth(rangeStart.getMonth() - 6)
+        const rangeEnd = new Date()
+        rangeEnd.setMonth(rangeEnd.getMonth() + 18)
         const { data: rawEvents } = await supabase
             .from('calendar_events')
-            .select('*, categories(name)')
-            .in('category_id', categoryIds)
+            .select('*, categories(name), teams(name)')
+            .eq('visibility', 'families')
+            .neq('status', 'cancelled')
+            .lt('start_date', rangeEnd.toISOString())
+            .gt('end_date', rangeStart.toISOString())
             .order('start_date', { ascending: true })
 
-        events = (rawEvents || []).map((e: any) => ({
-            id: e.id,
-            title: e.title,
-            start_date: e.start_date,
-            end_date: e.end_date,
-            color: e.color,
-            location: e.location,
-            category_name: e.categories?.name,
+        events = (rawEvents || []).map((event) => ({
+            id: event.id,
+            title: event.title,
+            start_date: event.start_date,
+            end_date: event.end_date,
+            is_all_day: event.is_all_day,
+            color: event.color,
+            location: event.location,
+            category_name: event.teams?.name || event.categories?.name,
         }))
     }
 
@@ -70,9 +65,13 @@ export default async function FamilyCalendarPage() {
                 </p>
             </div>
 
-            {categoryIds.length === 0 ? (
+            {childIds.length === 0 ? (
                 <div className="bg-white p-8 text-center rounded-xl border border-dashed text-slate-500">
-                    No tienes hijos asignados a ninguna categoría actualmente, por lo que el calendario está vacío.
+                    No tienes alumnos vinculados actualmente, por lo que el calendario está vacío.
+                </div>
+            ) : events.length === 0 ? (
+                <div className="bg-white p-8 text-center rounded-xl border border-dashed text-slate-500">
+                    No hay actividades publicadas para tu familia en este periodo.
                 </div>
             ) : (
                 <div className="bg-white p-4 md:p-6 rounded-xl border shadow-sm">

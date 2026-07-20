@@ -1,9 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeft, Calendar as CalendarIcon, MapPin, Search } from 'lucide-react'
+import { ChevronLeft, Calendar as CalendarIcon } from 'lucide-react'
 import { AttendanceClient } from './attendance-client'
-import { Input } from '@/components/ui/input' // Optional, for future use
 
 export default async function SessionDetailsPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
@@ -13,16 +12,10 @@ export default async function SessionDetailsPage({ params }: { params: Promise<{
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) redirect('/portal')
 
-    const { data: worker } = await supabase
-        .from('workers')
-        .select('id')
-        .eq('email', user.email)
-        .single()
-
     // 2. Fetch Event
     const { data: event, error: eventError } = await supabase
         .from('calendar_events')
-        .select('*, categories(name)')
+        .select('*, categories(name), teams(name)')
         .eq('id', id)
         .single()
 
@@ -30,17 +23,14 @@ export default async function SessionDetailsPage({ params }: { params: Promise<{
         return <div className="p-8 text-center text-red-500 pb-8">Sesión no encontrada.</div>
     }
 
-    // Optional Check: Ensure this worker is the coach or they are admin
-    // if (event.worker_id !== worker?.id) { ... }
-
-    if (!event.category_id) {
+    if (!event.category_id && !event.team_id) {
         return (
             <div className="p-4 max-w-lg mx-auto mt-10">
                 <Link href="/coach" className="text-navy flex items-center gap-1 font-medium mb-6">
                     <ChevronLeft className="h-4 w-4" /> Volver
                 </Link>
                 <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded-lg">
-                    Esta sesión no tiene una categoría (equipo) asignada, por lo que no se puede pasar lista.
+                    Esta sesión no tiene un equipo o categoría asignada, por lo que no se puede pasar lista.
                     Por favor, contacta con coordinación.
                 </div>
             </div>
@@ -50,17 +40,20 @@ export default async function SessionDetailsPage({ params }: { params: Promise<{
     const sessionDateStr = new Date(event.start_date).toISOString().split('T')[0]
 
     // 3. Fetch Children in this Category
-    const { data: children } = await supabase
+    let childrenQuery = supabase
         .from('children')
         .select('id, full_name')
-        .eq('category_id', event.category_id)
         .order('full_name', { ascending: true })
+    childrenQuery = event.team_id
+        ? childrenQuery.eq('team_id', event.team_id)
+        : childrenQuery.eq('category_id', event.category_id)
+    const { data: children } = await childrenQuery
 
     // 4. Fetch existing attendance for this date
     const { data: sessions } = await supabase
         .from('training_sessions')
         .select('child_id, attendance')
-        .eq('session_date', sessionDateStr)
+        .eq('event_id', event.id)
 
     // Merge data
     const kidsData = (children || []).map(child => {
@@ -68,7 +61,7 @@ export default async function SessionDetailsPage({ params }: { params: Promise<{
         return {
             id: child.id,
             full_name: child.full_name,
-            attendance: sessionRecord ? sessionRecord.attendance : null as any
+            attendance: sessionRecord?.attendance as 'present' | 'absent' | 'excused' | null || null
         }
     })
 
@@ -81,7 +74,7 @@ export default async function SessionDetailsPage({ params }: { params: Promise<{
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 mb-6">
                 <div className="flex gap-2 items-center mb-2">
                     <span className="bg-navy/10 text-navy font-bold px-2.5 py-1 rounded-md text-xs uppercase tracking-wider">
-                        {event.categories?.name}
+                        {event.teams?.name || event.categories?.name}
                     </span>
                 </div>
                 <h1 className="text-xl md:text-2xl font-bold tracking-tight text-slate-900 leading-tight">
@@ -114,7 +107,7 @@ export default async function SessionDetailsPage({ params }: { params: Promise<{
                     No hay jugadores registrados en esta categoría.
                 </div>
             ) : (
-                <AttendanceClient childrenData={kidsData} sessionDate={sessionDateStr} />
+                <AttendanceClient childrenData={kidsData} sessionDate={sessionDateStr} eventId={event.id} />
             )}
         </div>
     )
