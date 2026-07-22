@@ -21,7 +21,7 @@ const EnrollmentSchema = z.object({
     childId: z.string().uuid(),
     teamId: z.string().uuid(),
     planId: z.string().uuid(),
-    paymentMethod: z.enum(['efectivo', 'transferencia', 'stripe']),
+    paymentMethod: z.enum(['efectivo', 'transferencia', 'tarjeta']),
     periodPrice: z.number().finite().nonnegative(),
 })
 
@@ -178,7 +178,7 @@ export async function enrollPlayerWithPlan(data: {
     childId: string
     teamId: string
     planId: string
-    paymentMethod: string // 'efectivo' | 'transferencia' | 'stripe'
+    paymentMethod: string // 'efectivo' | 'transferencia' | 'tarjeta'
     periodPrice: number
 }) {
     const supabase = await createClient()
@@ -190,15 +190,29 @@ export async function enrollPlayerWithPlan(data: {
 
     const enrollment = validated.data
 
+    const methodSetting = enrollment.paymentMethod === 'efectivo'
+        ? 'payment_cash_enabled'
+        : enrollment.paymentMethod === 'transferencia'
+            ? 'payment_transfer_enabled'
+            : 'payment_card_enabled'
+    const { data: paymentSettings } = await supabase
+        .from('academy_settings')
+        .select('key, value')
+        .in('key', [methodSetting, 'billing_due_day'])
+    const paymentValues = Object.fromEntries((paymentSettings || []).map((row) => [row.key, row.value || '']))
+    if (paymentValues[methodSetting] === 'false' || (enrollment.paymentMethod === 'tarjeta' && paymentValues[methodSetting] !== 'true')) {
+        return { success: false, error: 'El método de pago seleccionado está desactivado en Ajustes' }
+    }
+
     // Read the plan before mutating the player so an invalid plan cannot leave
     // a half-completed team assignment.
     const { data: plan, error: planError } = await supabase
         .from('membership_plans')
-        .select('name, duration_months, frequency')
+        .select('name, duration_months, frequency, is_active')
         .eq('id', enrollment.planId)
         .single()
 
-    if (planError || !plan) {
+    if (planError || !plan || !plan.is_active) {
         console.error('Error fetching membership plan:', planError)
         return { success: false, error: "El plan seleccionado ya no existe" }
     }
@@ -227,6 +241,7 @@ export async function enrollPlayerWithPlan(data: {
     const durationMonths = plan?.duration_months || 12
     const frequency = normalizeBillingFrequency(plan?.frequency, durationMonths, plan?.name)
     const billingIntervalMonths = getBillingIntervalMonths(frequency)
+    const billingDueDay = Math.min(28, Math.max(1, Number(paymentValues.billing_due_day || 5)))
 
     // 3. Create membership
     const startDate = new Date()
@@ -262,6 +277,7 @@ export async function enrollPlayerWithPlan(data: {
         for (let i = 0; i < paymentCount; i++) {
             const paymentDate = new Date(startDate)
             paymentDate.setMonth(paymentDate.getMonth() + (i * billingIntervalMonths))
+            if (i > 0 || startDate.getDate() <= billingDueDay) paymentDate.setDate(billingDueDay)
             payments.push({
                 type: 'academy',
                 ref_id: membership.id,

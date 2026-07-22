@@ -185,12 +185,19 @@ function getPaymentDate(payment: PaymentRecord) {
     return payment.due_date || payment.created_at
 }
 
-function getPaymentStatus(payment: Pick<PaymentRecord, 'status' | 'due_date'>): FinanceTransactionStatus {
+function overdueCutoff(graceDays = 0) {
+    const cutoff = new Date()
+    cutoff.setHours(0, 0, 0, 0)
+    cutoff.setDate(cutoff.getDate() - Math.max(0, graceDays))
+    return cutoff.toISOString().slice(0, 10)
+}
+
+function getPaymentStatus(payment: Pick<PaymentRecord, 'status' | 'due_date'>, graceDays = 0): FinanceTransactionStatus {
     if (payment.status === 'paid') return 'paid'
     if (payment.status === 'refunded') return 'refunded'
     if (payment.status === 'cancelled') return 'cancelled'
     if (payment.status === 'failed') return 'failed'
-    if (payment.status === 'pending' && payment.due_date && payment.due_date < new Date().toISOString().slice(0, 10)) return 'overdue'
+    if (payment.status === 'pending' && payment.due_date && payment.due_date < overdueCutoff(graceDays)) return 'overdue'
     return 'pending'
 }
 
@@ -211,7 +218,7 @@ export async function getFinanceOverview(monthInput: string): Promise<{
     const { supabase } = await requireFinanceAccess()
     const range = getMonthRange(monthInput)
 
-    const [paymentsResult, membershipsResult, campusResult, tournamentResult, ordersResult, expensesResult, studentsResult] = await Promise.all([
+    const [paymentsResult, membershipsResult, campusResult, tournamentResult, ordersResult, expensesResult, studentsResult, graceResult] = await Promise.all([
         supabase.from('payments').select('id, type, ref_id, child_id, amount, status, method, paid_at, due_date, description, created_at, child:children(full_name)'),
         supabase.from('academy_memberships').select('id, child_id, status').eq('status', 'active'),
         supabase.from('campus_enrollments').select('id, status, created_at, child:children(full_name), campus:campuses(name, price)'),
@@ -219,6 +226,7 @@ export async function getFinanceOverview(monthInput: string): Promise<{
         supabase.from('orders').select('id, customer_name, total_amount, status, payment_method, created_at'),
         supabase.from('expenses').select('id, concept, amount, category, date, notes, created_at').is('deleted_at', null).gte('date', range.startDate).lt('date', range.nextDate).order('date', { ascending: false }),
         supabase.from('children').select('id, full_name').order('full_name'),
+        supabase.from('academy_settings').select('value').eq('key', 'billing_grace_days').maybeSingle(),
     ])
 
     logQueryError('payments', paymentsResult.error)
@@ -230,6 +238,7 @@ export async function getFinanceOverview(monthInput: string): Promise<{
     logQueryError('students', studentsResult.error)
 
     const payments = paymentsResult.data || []
+    const graceDays = Number(graceResult.data?.value || 0)
     const expenses = (expensesResult.data || []) as Expense[]
     const sourceTotals: SourceTotals = { Cuotas: 0, Campus: 0, Torneos: 0, Tienda: 0, Otros: 0 }
     const transactions: FinanceTransaction[] = []
@@ -245,7 +254,7 @@ export async function getFinanceOverview(monthInput: string): Promise<{
 
         const amount = numberValue(payment.amount)
         const financialDate = getPaymentDate(payment)
-        const normalizedStatus = getPaymentStatus(payment)
+        const normalizedStatus = getPaymentStatus(payment, graceDays)
         const inPeriod = isInRange(financialDate, range.startMs, range.nextMs)
 
         if (payment.status === 'paid' && isInRange(payment.paid_at || financialDate, range.startMs, range.nextMs)) {
@@ -390,10 +399,13 @@ export async function getMonthlyPaymentGrid(monthInput: string): Promise<Monthly
     const { supabase } = await requireFinanceAccess()
     const range = getMonthRange(monthInput)
 
-    const { data: memberships, error: membershipError } = await supabase
+    const [{ data: memberships, error: membershipError }, { data: graceSetting }] = await Promise.all([
+        supabase
         .from('academy_memberships')
         .select('id, child_id, payment_method, status, child:children(id, full_name, category:categories(name)), plan:membership_plans(name)')
-        .eq('status', 'active')
+        .eq('status', 'active'),
+        supabase.from('academy_settings').select('value').eq('key', 'billing_grace_days').maybeSingle(),
+    ])
 
     if (membershipError || !memberships?.length) {
         logQueryError('monthly memberships', membershipError)
@@ -429,7 +441,7 @@ export async function getMonthlyPaymentGrid(monthInput: string): Promise<Monthly
                 planName: plan?.name || '',
                 amount: numberValue(payment.amount),
                 paymentMethod: payment.method || membership?.payment_method || null,
-                status: getPaymentStatus(payment),
+                status: getPaymentStatus(payment, Number(graceSetting?.value || 0)),
                 paidAt: payment.paid_at || null,
                 paymentId: payment.id,
                 dueDate: payment.due_date || null,
@@ -439,18 +451,21 @@ export async function getMonthlyPaymentGrid(monthInput: string): Promise<Monthly
 }
 
 async function syncAcademyMembership(supabase: SupabaseClient, membershipId: string) {
-    const { data: receipts } = await supabase
+    const [{ data: receipts }, { data: graceSetting }] = await Promise.all([
+        supabase
         .from('payments')
         .select('status, due_date')
         .eq('type', 'academy')
-        .eq('ref_id', membershipId)
+        .eq('ref_id', membershipId),
+        supabase.from('academy_settings').select('value').eq('key', 'billing_grace_days').maybeSingle(),
+    ])
 
     if (!receipts?.length) return
 
-    const today = new Date().toISOString().slice(0, 10)
+    const cutoff = overdueCutoff(Number(graceSetting?.value || 0))
     const paymentStatus = receipts.every((receipt) => receipt.status === 'paid')
         ? 'paid'
-        : receipts.some((receipt) => receipt.status === 'pending' && receipt.due_date && receipt.due_date < today)
+        : receipts.some((receipt) => receipt.status === 'pending' && receipt.due_date && receipt.due_date < cutoff)
             ? 'overdue'
             : 'pending'
 
@@ -500,6 +515,19 @@ export async function recordManualPayment(input: {
     if (!parsed.success) return { success: false, error: 'Revisa la fecha, el importe y la descripción' }
 
     const { supabase } = await requireFinanceAccess()
+    const methodSetting = ['cash', 'efectivo'].includes(parsed.data.method)
+        ? 'payment_cash_enabled'
+        : ['transfer', 'transferencia'].includes(parsed.data.method)
+            ? 'payment_transfer_enabled'
+            : 'payment_card_enabled'
+    const { data: paymentSetting } = await supabase
+        .from('academy_settings')
+        .select('value')
+        .eq('key', methodSetting)
+        .maybeSingle()
+    if (paymentSetting?.value === 'false' || (methodSetting === 'payment_card_enabled' && paymentSetting?.value !== 'true')) {
+        return { success: false, error: 'Este método de pago está desactivado en Ajustes' }
+    }
     const paidAt = `${parsed.data.date}T12:00:00.000Z`
     const { error } = await supabase.from('payments').insert({
         type: parsed.data.type,

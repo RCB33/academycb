@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 
 export default async function AdminVideotecaPage() {
     const supabase = await createClient()
-    const { data: categories } = await supabase.from('categories').select('*').order('name')
+    const { data: categories } = await supabase.from('categories').select('*').eq('is_active', true).order('sort_order').order('name')
 
     // Fetch all assets for Admin
     const assets = await getMediaAssets()

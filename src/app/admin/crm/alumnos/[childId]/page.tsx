@@ -127,14 +127,14 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
             setStudentAchievements(childAch || [])
 
             // 4. Fetch Categories
-            const { data: cats } = await supabase.from('categories').select('*').order('name')
+            const { data: cats } = await supabase.from('categories').select('*').eq('is_active', true).order('sort_order').order('name')
             setCategories(cats || [])
 
             // 5. Fetch Payments & Plans
             const studentPaymentsData = await getStudentPayments(childId)
             setPaymentsData(studentPaymentsData)
 
-            const { data: allPlans } = await supabase.from('membership_plans').select('*')
+            const { data: allPlans } = await supabase.from('membership_plans').select('*').eq('is_active', true).order('sort_order').order('name')
             setPlans(allPlans || [])
 
             // 6. Fetch Signatures

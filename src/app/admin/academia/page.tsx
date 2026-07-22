@@ -16,7 +16,7 @@ import { Plus, Shield, Users, Calendar, UserMinus, UserPlus, ExternalLink, Euro,
 import { TeamCard } from "./components/team-card"
 import { TeamDialog } from "./components/team-dialog"
 import { getTeams, getUnassignedPlayers, assignPlayerToTeam, enrollPlayerWithPlan } from "@/app/actions/teams"
-import { getPlans, type MembershipPlan } from "@/app/actions/settings"
+import { getPaymentConfiguration, getPlans, type MembershipPlan, type PaymentMethodOption } from "@/app/actions/settings"
 import { toast } from "sonner"
 
 export default function AcademyPage() {
@@ -33,6 +33,7 @@ export default function AcademyPage() {
     const [assignStep, setAssignStep] = useState<'team' | 'plan'>('team')
     const [selectedTeamForAssign, setSelectedTeamForAssign] = useState<any | null>(null)
     const [membershipPlans, setMembershipPlans] = useState<MembershipPlan[]>([])
+    const [paymentMethods, setPaymentMethods] = useState<PaymentMethodOption[]>([])
     const router = useRouter()
     const supabase = createClient()
 
@@ -42,18 +43,20 @@ export default function AcademyPage() {
 
     async function fetchAll() {
         setLoading(true)
-        const [teamsData, { data: cats }, { data: wrks }, unassignedData, plansData] = await Promise.all([
+        const [teamsData, { data: cats }, { data: wrks }, unassignedData, plansData, paymentConfig] = await Promise.all([
             getTeams(),
-            supabase.from('categories').select('*').order('name'),
+            supabase.from('categories').select('*').eq('is_active', true).order('sort_order').order('name'),
             supabase.from('workers').select('*').order('full_name'),
             getUnassignedPlayers(),
-            getPlans()
+            getPlans(),
+            getPaymentConfiguration(),
         ])
         setTeams(teamsData)
         setCategories(cats || [])
         setWorkers(wrks || [])
         setUnassigned(unassignedData)
         setMembershipPlans(plansData)
+        setPaymentMethods(paymentConfig.methods.filter((method) => method.enabled))
         setLoading(false)
     }
 
@@ -409,6 +412,7 @@ export default function AcademyPage() {
                     ) : (
                         <EnrollmentForm
                             plans={membershipPlans}
+                            paymentMethods={paymentMethods}
                             player={playerToAssign}
                             team={selectedTeamForAssign}
                             onBack={() => setAssignStep('team')}
@@ -502,11 +506,11 @@ function parseSchedule(schedule: string | null): Record<string, string> {
 
 // ─── ENROLLMENT FORM (Plan + Payment step) ───
 
-function EnrollmentForm({ plans, player, team, onBack, onComplete }: {
-    plans: MembershipPlan[], player: any, team: any, onBack: () => void, onComplete: () => void
+function EnrollmentForm({ plans, paymentMethods, player, team, onBack, onComplete }: {
+    plans: MembershipPlan[], paymentMethods: PaymentMethodOption[], player: any, team: any, onBack: () => void, onComplete: () => void
 }) {
     const [selectedPlan, setSelectedPlan] = useState<string>('')
-    const [paymentMethod, setPaymentMethod] = useState('efectivo')
+    const [paymentMethod, setPaymentMethod] = useState(paymentMethods[0]?.value || 'transferencia')
     const [customPrice, setCustomPrice] = useState('')
     const [loading, setLoading] = useState(false)
 
@@ -589,11 +593,7 @@ function EnrollmentForm({ plans, player, team, onBack, onComplete }: {
             <div className="space-y-2">
                 <Label className="text-slate-700 font-bold uppercase text-[10px] tracking-wider">Método de Pago</Label>
                 <div className="grid grid-cols-3 gap-2">
-                    {[
-                        { value: 'efectivo', label: '💵 Efectivo' },
-                        { value: 'transferencia', label: '🏦 Transfer.' },
-                        { value: 'stripe', label: '💳 Tarjeta' }
-                    ].map(m => (
+                    {paymentMethods.map(m => (
                         <button
                             key={m.value}
                             type="button"

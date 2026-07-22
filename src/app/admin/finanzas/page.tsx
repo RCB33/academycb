@@ -30,6 +30,7 @@ import {
     type MonthlyPaymentRow,
 } from "@/app/actions/finance"
 import { toast } from "sonner"
+import { getPaymentConfiguration, type PaymentMethodOption } from '@/app/actions/settings'
 
 const TYPE_CFG: Record<string, { label: string, icon: React.ReactNode, color: string }> = {
     'cuota': { label: 'Cuota', icon: <GraduationCap className="h-3.5 w-3.5" />, color: 'bg-blue-100 text-blue-700' },
@@ -64,6 +65,7 @@ export default function FinancePage() {
     const [savingManual, setSavingManual] = useState(false)
     const [markingId, setMarkingId] = useState<string | null>(null)
     const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
+    const [paymentMethods, setPaymentMethods] = useState<PaymentMethodOption[]>([])
     
     // Cobros filters
     const [cobrosSearch, setCobrosSearch] = useState('')
@@ -76,11 +78,15 @@ export default function FinancePage() {
     const fetchAll = useCallback(async () => {
         setLoading(true)
         try {
-            const overview = await getFinanceOverview(selectedMonth)
+            const [overview, paymentConfig] = await Promise.all([
+                getFinanceOverview(selectedMonth),
+                getPaymentConfiguration(),
+            ])
             setKpis(overview.kpis)
             setTransactions(overview.transactions)
             setExpenses(overview.expenses)
             setStudents(overview.students)
+            setPaymentMethods(paymentConfig.methods.filter((method) => method.enabled))
         } catch (error) {
             console.error(error)
             toast.error('No se pudieron cargar los datos financieros')
@@ -719,9 +725,7 @@ export default function FinancePage() {
                         <div className="space-y-2">
                             <Label className="text-slate-700 font-bold uppercase text-[10px] tracking-wider">Método de Pago</Label>
                             <select name="method" className="flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm">
-                                <option value="efectivo">💵 Efectivo</option>
-                                <option value="transferencia">🏦 Transferencia</option>
-                                <option value="tarjeta">💳 Tarjeta</option>
+                                {paymentMethods.map((method) => <option key={method.value} value={method.value}>{method.label}</option>)}
                             </select>
                         </div>
                         <p className="text-[10px] text-slate-400">Para cobrar una cuota existente usa el botón “Cobrar”; este formulario registra ingresos extraordinarios sin duplicar recibos.</p>

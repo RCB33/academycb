@@ -96,6 +96,8 @@ export async function getCategoriesWithTeams() {
     const { data: categories } = await supabase
         .from('categories')
         .select('id, name')
+        .eq('is_active', true)
+        .order('sort_order')
         .order('name')
 
     const { data: teams } = await supabase
