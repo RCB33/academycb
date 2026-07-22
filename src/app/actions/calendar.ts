@@ -131,7 +131,7 @@ export async function getCalendarLookups(): Promise<{
     const { supabase } = await requireCalendarAccess()
     const [workersResult, categoriesResult, teamsResult] = await Promise.all([
         supabase.from('workers').select('id, full_name, position, color, avatar_url').order('full_name'),
-        supabase.from('categories').select('id, name').order('name'),
+        supabase.from('categories').select('id, name').eq('is_active', true).order('sort_order').order('name'),
         supabase.from('teams').select('id, name, category_id, coach_id, category:categories(id, name)').eq('status', 'active').order('name'),
     ])
 

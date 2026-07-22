@@ -1,5 +1,4 @@
 import Link from "next/link"
-import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Menu } from "lucide-react"
 import HeaderCart from "./components/header-cart"
@@ -30,6 +29,12 @@ export default async function PublicLayout({
 }) {
     const settings = await getPublicSettings()
     const academyName = settings.academy_name || 'Academy Costa Brava'
+    const academyLogo = settings.academy_logo_url || '/logo.jpg'
+    const socialLinks = [
+        ['Instagram', settings.academy_instagram],
+        ['Facebook', settings.academy_facebook],
+        ['YouTube', settings.academy_youtube],
+    ].filter((entry): entry is [string, string] => Boolean(entry[1]))
     const year = new Date().getFullYear()
 
     return (
@@ -38,12 +43,14 @@ export default async function PublicLayout({
                     <div className="container flex h-16 items-center justify-between">
                         <Link href="/" className="flex items-center space-x-3 font-bold text-xl tracking-tight">
                             <div className="relative h-12 w-12">
-                                <Image
-                                    src="/logo.jpg"
-                                    alt="Academy Costa Brava Logo"
+                                {/* The logo is configurable by the business and may use its own CDN. */}
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                    src={academyLogo}
+                                    alt={`${academyName} Logo`}
                                     width={48}
                                     height={48}
-                                    className="object-contain" // removed border/rounded clipping
+                                    className="h-12 w-12 object-contain"
                                 />
                             </div>
                             <span className="hidden xs:inline font-heading text-white uppercase">{academyName}</span>
@@ -83,6 +90,7 @@ export default async function PublicLayout({
                         <div>
                             <p className="font-heading text-xl font-bold uppercase text-white">{academyName}</p>
                             {settings.academy_address && <p className="mt-2 text-sm">{settings.academy_address}</p>}
+                            {socialLinks.length > 0 && <div className="mt-3 flex flex-wrap gap-4 text-sm">{socialLinks.map(([label, href]) => <a key={label} href={href} target="_blank" rel="noreferrer" className="hover:text-gold">{label}</a>)}</div>}
                             <p className="mt-4 text-xs text-gray-500">© {year} {academyName}. Todos los derechos reservados.</p>
                         </div>
                         <nav aria-label="Información legal" className="flex flex-wrap gap-x-5 gap-y-3 text-sm">

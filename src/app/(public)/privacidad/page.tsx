@@ -9,7 +9,7 @@ export const metadata = {
 export default async function PrivacidadPage() {
     const settings = await getPublicSettings()
     const name = settings.academy_legal_name || settings.academy_name || 'Academy Costa Brava'
-    const email = settings.academy_email || ''
+    const email = settings.privacy_contact_email || settings.academy_email || ''
 
     return (
         <LegalPage title="Política de privacidad">
