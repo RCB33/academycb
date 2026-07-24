@@ -1,1 +1,19 @@
-m«ëˆ§½©buªàºg§¶ÊÜşX›şË©i¶¬{öš)í±KæÚ±î¸Ø[é¢Šwâ•ê(º×â•æÛ­æ¤n·š‘éÜ¡×¢ëiºÛ©Š{h–)Ş²‡åzx-†{¦×^r‡^uç(uè§¦ëa…éiv+)•¬­†+&zËè¢›­Šznµø¥y×Ÿjém~ŠìµØ§¢‹­¦ëhºÚnµø¥y×Ÿjém~ŠìµÚ.
+import 'server-only'
+
+import { createClient } from '@supabase/supabase-js'
+
+export function createAdminClient() {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+    if (!url || !serviceRoleKey) {
+        throw new Error('ConfiguraciÃ³n del servidor incompleta para gestionar accesos.')
+    }
+
+    return createClient(url, serviceRoleKey, {
+        auth: {
+            autoRefreshToken: false,
+            persistSession: false,
+        },
+    })
+}

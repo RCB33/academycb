@@ -1,2 +1,71 @@
-m«ëˆ§½©buªàºg§¶ÊÜýªiý§fŠÜ®oí­¦Ú§h­ë?r‰©¢w§¶ÏÝzW­{
-+‘êâµé­³,j›jÇºà7an{¦Š)ßŠW¨¢ë_ŠW›n·š‘ºÞjG§r‡^v‹­¦ën¦)í¢X§zÊ•éà¶î˜7]yÊy×œ¡×¢ž›­†¥¥Ø¬¦V²¶¬™ë,j¢Šzn¶)éº×â•ç^}«¥µú+²×bžŠ.¶›­¢ëiº×â•ç^}«¥µú+²×hº
+"use client"
+
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
+import { Trash2 } from "lucide-react"
+import { deleteWorker } from "@/app/actions/workers"
+import { toast } from "sonner"
+import { useRouter } from "next/navigation"
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { useState } from "react"
+
+export function DeleteWorkerItem({ worker }: { worker: { id: string, full_name: string } }) {
+    const router = useRouter()
+    const [open, setOpen] = useState(false)
+    const [loading, setLoading] = useState(false)
+
+    const handleDelete = async () => {
+        setLoading(true)
+        const res = await deleteWorker(worker.id)
+        setLoading(false)
+        if (res.success) {
+            toast.success("Trabajador eliminado")
+            setOpen(false)
+            router.refresh()
+        } else {
+            toast.error(res.error)
+        }
+    }
+
+    return (
+        <>
+            <DropdownMenuItem
+                className="text-red-600 focus:text-red-600 cursor-pointer"
+                onSelect={(event) => {
+                    event.preventDefault()
+                    setOpen(true)
+                }}
+            >
+                <Trash2 className="mr-2 h-4 w-4" />
+                <span>Eliminar</span>
+            </DropdownMenuItem>
+            <AlertDialog open={open} onOpenChange={setOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Â¿Eliminar a {worker.full_name}?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            TambiÃ©n se eliminarÃ¡ su cuenta de acceso. Si tiene equipos o eventos asociados, el sistema bloquearÃ¡ el borrado para conservar el historial.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={loading}>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction disabled={loading} onClick={(event) => {
+                            event.preventDefault()
+                            void handleDelete()
+                        }} className="bg-red-600 hover:bg-red-700">
+                            {loading ? 'Eliminandoâ€¦' : 'Eliminar definitivamente'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </>
+    )
+}
