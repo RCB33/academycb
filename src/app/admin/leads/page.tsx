@@ -8,15 +8,21 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { toast } from 'sonner'
 import { format } from 'date-fns'
-import { convertLead } from '@/app/actions/leads'
+import { convertLead, updateLeadStatus } from '@/app/actions/leads'
 
 export default function AdminLeadsPage() {
     const [leads, setLeads] = useState<any[]>([])
     const [contacts, setContacts] = useState<any[]>([])
+    const [canConvert, setCanConvert] = useState(false)
     const supabase = createClient()
 
     useEffect(() => {
         fetchLeads()
+        supabase.auth.getUser().then(async ({ data: { user } }) => {
+            if (!user) return
+            const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
+            setCanConvert(profile?.role === 'admin')
+        })
     }, [])
 
     async function fetchLeads() {
@@ -29,12 +35,8 @@ export default function AdminLeadsPage() {
     }
 
     async function updateStatus(id: string, newStatus: string) {
-        const { error } = await supabase
-            .from('leads')
-            .update({ status: newStatus })
-            .eq('id', id)
-
-        if (error) toast.error("Error al actualizar")
+        const result = await updateLeadStatus(id, newStatus)
+        if (!result.success) toast.error(result.error || "Error al actualizar")
         else {
             toast.success("Estado actualizado")
             fetchLeads()
@@ -97,7 +99,7 @@ export default function AdminLeadsPage() {
                             {/* Quick Actions */}
                             <div className="flex gap-2 mt-4 pt-4 border-t">
                                 <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => updateStatus(lead.id, 'contacted')}>Contactado</Button>
-                                <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => handleConvert(lead.id)}>Inscrito</Button>
+                                {canConvert && <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => handleConvert(lead.id)}>Inscrito</Button>}
                                 <Button size="sm" variant="ghost" className="text-xs text-red-500" onClick={() => updateStatus(lead.id, 'lost')}>Descartar</Button>
                             </div>
                         </CardContent>

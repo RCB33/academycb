@@ -4,6 +4,7 @@ import { createClient as createServerClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { SearchCommand } from "@/components/admin/search-command"
 import { NotificationBell } from "@/components/ui/notification-bell"
+import { getRoleHome, getRoleLabel, isAppRole } from '@/lib/roles'
 
 export default async function AdminLayout({
     children,
@@ -22,11 +23,15 @@ export default async function AdminLayout({
         .eq('id', user.id)
         .single()
 
-    if (profile?.role !== 'admin' && profile?.role !== 'staff') {
-        redirect('/portal')
+    const role = isAppRole(profile?.role) ? profile.role : null
+    if (!role || !['admin', 'staff', 'finance', 'marketing'].includes(role)) {
+        redirect(getRoleHome(role))
     }
 
-    const isAdmin = profile.role === 'admin'
+    const isAdmin = role === 'admin'
+    const isStaff = role === 'staff'
+    const isFinance = role === 'finance'
+    const isMarketing = role === 'marketing'
 
     const signOut = async () => {
         'use server'
@@ -43,7 +48,7 @@ export default async function AdminLayout({
                     <div>
                         <h2 className="text-xl font-bold tracking-wider text-white">ACADEMY</h2>
                         <p className="text-[10px] text-slate-400 uppercase tracking-widest font-medium">
-                            {isAdmin ? 'Panel Admin' : 'Coordinación'}
+                            {getRoleLabel(role)}
                         </p>
                     </div>
                 </div>
@@ -59,21 +64,21 @@ export default async function AdminLayout({
                     </div>}
 
                     {/* CRM */}
-                    {isAdmin && <div>
+                    {(isAdmin || isMarketing) && <div>
                         <div className="px-3 mb-2 text-[10px] font-bold text-gold uppercase tracking-widest opacity-80">
-                            Gestión CRM
+                            {isMarketing ? 'Marketing' : 'Gestión CRM'}
                         </div>
                         <div className="space-y-1">
-                            <NavItem href="/admin/crm/alumnos" icon={<Users size={18} />} label="Jugadores 360º" />
-                            <NavItem href="/admin/seguimiento" icon={<TrendingUp size={18} />} label="Seguimiento" />
+                            {isAdmin && <NavItem href="/admin/crm/alumnos" icon={<Users size={18} />} label="Jugadores 360º" />}
+                            {isAdmin && <NavItem href="/admin/seguimiento" icon={<TrendingUp size={18} />} label="Seguimiento" />}
                             <NavItem href="/admin/leads" icon={<MessageSquare size={18} />} label="Solicitudes Web" />
-                            <NavItem href="/admin/crm/tutores" icon={<UserPlus size={18} />} label="Tutores" />
-                            <NavItem href="/admin/crm/trabajadores" icon={<Briefcase size={18} />} label="Trabajadores" />
+                            {isAdmin && <NavItem href="/admin/crm/tutores" icon={<UserPlus size={18} />} label="Tutores" />}
+                            {isAdmin && <NavItem href="/admin/crm/trabajadores" icon={<Briefcase size={18} />} label="Trabajadores" />}
                         </div>
                     </div>}
 
                     {/* BUSINESS LINES */}
-                    <div>
+                    {(isAdmin || isStaff) && <div>
                         <div className="px-3 mb-2 text-[10px] font-bold text-gold uppercase tracking-widest opacity-80">
                             Operativa
                         </div>
@@ -87,7 +92,7 @@ export default async function AdminLayout({
                                 <NavItem href="/admin/tienda" icon={<ShoppingBag size={18} />} label="Tienda" />
                             </>}
                         </div>
-                    </div>
+                    </div>}
 
                     {/* COMMUNICATION */}
                     {isAdmin && <div>
@@ -101,13 +106,13 @@ export default async function AdminLayout({
                     </div>}
 
                     {/* FINANCE */}
-                    {isAdmin && <div>
+                    {(isAdmin || isFinance) && <div>
                         <div className="px-3 mb-2 text-[10px] font-bold text-gold uppercase tracking-widest opacity-80">
-                            Sistema
+                            {isFinance ? 'Finanzas' : 'Sistema'}
                         </div>
                         <div className="space-y-1">
                             <NavItem href="/admin/finanzas" icon={<CreditCard size={18} />} label="Finanzas" />
-                            <NavItem href="/admin/ajustes" icon={<Settings size={18} />} label="Ajustes" />
+                            {isAdmin && <NavItem href="/admin/ajustes" icon={<Settings size={18} />} label="Ajustes" />}
                         </div>
                     </div>}
                 </nav>
@@ -125,13 +130,13 @@ export default async function AdminLayout({
                 {/* Top Header */}
                 <header className="h-16 border-b bg-white/80 backdrop-blur-md flex items-center justify-between px-8 shrink-0 relative z-10 transition-all shadow-sm">
                     <div className="flex items-center gap-6">
-                        <SearchCommand />
+                        {isAdmin && <SearchCommand />}
                     </div>
                     <div className="flex items-center gap-4">
                         <NotificationBell />
                         <div className="flex flex-col items-end hidden sm:flex">
                             <span className="text-sm font-semibold text-slate-900 leading-none">{user.email?.split('@')[0]}</span>
-                            <span className="text-[10px] text-slate-500 font-medium">{isAdmin ? 'Administrador' : 'Coordinación'}</span>
+                            <span className="text-[10px] text-slate-500 font-medium">{getRoleLabel(role)}</span>
                         </div>
                         <div className="h-9 w-9 rounded-full bg-indigo-600 flex items-center justify-center text-xs font-bold text-white shadow-sm ring-2 ring-indigo-100 shrink-0">
                             {user.email?.charAt(0).toUpperCase()}

@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
-import { requireAdmin } from '@/lib/auth'
+import { requireAdmin, requireMarketingAccess } from '@/lib/auth'
 
 const leadSchema = z.object({
     guardian_name: z.string().min(2, "Nombre requerido"),
@@ -154,5 +154,26 @@ export async function convertLead(id: string) {
     revalidatePath('/admin/crm/alumnos')
     revalidatePath('/admin/crm/tutores')
 
+    return { success: true }
+}
+
+const internalLeadStatusSchema = z.enum(['new', 'contacted', 'interested', 'lost'])
+
+export async function updateLeadStatus(id: string, status: string) {
+    const { supabase } = await requireMarketingAccess()
+    const parsedId = z.string().uuid().safeParse(id)
+    const parsedStatus = internalLeadStatusSchema.safeParse(status)
+
+    if (!parsedId.success || !parsedStatus.success) {
+        return { success: false, error: 'Estado o solicitud no válidos.' }
+    }
+
+    const { error } = await supabase.rpc('update_lead_status_for_marketing', {
+        lead_uuid: parsedId.data,
+        next_status: parsedStatus.data,
+    })
+
+    if (error) return { success: false, error: error.message }
+    revalidatePath('/admin/leads')
     return { success: true }
 }

@@ -2,10 +2,12 @@
 
 import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Briefcase, Mail, Phone } from "lucide-react"
+import { Briefcase, Mail, Phone, ShieldCheck, ShieldOff } from "lucide-react"
 import { WorkerActions } from "./worker-actions"
 import { WorkerDialog } from "./worker-dialog"
 import { useState } from "react"
+import { Badge } from "@/components/ui/badge"
+import { getRoleLabel } from "@/lib/roles"
 
 export function WorkerCard({ worker }: { worker: any }) {
     const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -56,6 +58,14 @@ export function WorkerCard({ worker }: { worker: any }) {
                         </div>
 
                         <div className="space-y-3 mt-4 pt-4 border-t border-slate-100">
+                            <div className="flex items-center justify-between gap-2">
+                                <Badge className={worker.access_enabled ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100' : 'bg-slate-100 text-slate-500 hover:bg-slate-100'}>
+                                    {worker.access_enabled
+                                        ? <><ShieldCheck className="mr-1 h-3 w-3" /> Acceso activo</>
+                                        : <><ShieldOff className="mr-1 h-3 w-3" /> Sin acceso</>}
+                                </Badge>
+                                {worker.user_id && <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{getRoleLabel(worker.access_role)}</span>}
+                            </div>
                             {worker.email && (
                                 <div className="flex items-center gap-3 text-slate-600 text-sm">
                                     <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">

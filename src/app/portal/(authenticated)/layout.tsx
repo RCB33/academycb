@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { NotificationBell } from "@/components/ui/notification-bell"
 import { GlobalSignatureGuard } from "@/components/portal/global-signature-guard"
 import { SidebarNav } from "@/components/portal/sidebar-nav"
+import { getRoleHome, isAppRole } from '@/lib/roles'
 
 export default async function AuthenticatedLayout({
     children,
@@ -22,8 +23,16 @@ export default async function AuthenticatedLayout({
         redirect('/portal')
     }
 
-    // Optional: Check if role is 'guardian' or 'admin'
-    // const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle()
+
+    const role = isAppRole(profile?.role) ? profile.role : null
+    if (role && role !== 'guardian') {
+        redirect(getRoleHome(role))
+    }
 
     const signOut = async () => {
         'use server'

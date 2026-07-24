@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { getRoleHome, isAppRole } from '@/lib/roles'
 
 export default function SetPasswordPage() {
     const [password, setPassword] = useState('')
@@ -95,7 +96,7 @@ export default function SetPasswordPage() {
             .maybeSingle()
 
         toast.success('Contraseña establecida correctamente')
-        router.replace(profile?.role === 'admin' ? '/admin/dashboard' : '/portal/dashboard')
+        router.replace(getRoleHome(isAppRole(profile?.role) ? profile.role : null))
         router.refresh()
     }
 

@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
+import { getRoleHome, isAppRole } from '@/lib/roles'
 
 export function LoginForm() {
     const [email, setEmail] = useState('')
@@ -72,11 +73,7 @@ export function LoginForm() {
                 toast.success("Bienvenido")
                 router.refresh()
 
-                if (profile?.role === 'admin') {
-                    router.push('/admin/dashboard')
-                } else {
-                    router.push('/portal/dashboard')
-                }
+                router.push(getRoleHome(isAppRole(profile?.role) ? profile.role : null))
             }
         } catch {
             toast.error("Ha ocurrido un error inesperado")

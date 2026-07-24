@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { canAccessAdminPath, getRoleHome, isAppRole } from '@/lib/roles'
 
 // Routes that don't require any authentication
 const PUBLIC_ROUTES = [
@@ -77,8 +78,13 @@ export async function updateSession(request: NextRequest) {
   if (pathname === '/portal') {
     // If already logged in, redirect to dashboard
     if (user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle()
       const url = request.nextUrl.clone()
-      url.pathname = '/portal/dashboard'
+      url.pathname = getRoleHome(isAppRole(profile?.role) ? profile.role : null)
       return NextResponse.redirect(url)
     }
     return supabaseResponse
@@ -91,7 +97,7 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // --- Admin routes: administrators have full access; staff can coordinate the calendar ---
+  // --- Internal routes: every role receives only its explicit work area ---
   if (pathname.startsWith('/admin')) {
     const { data: profile } = await supabase
       .from('profiles')
@@ -99,11 +105,10 @@ export async function updateSession(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    const isAdmin = profile?.role === 'admin'
-    const isCalendarStaff = profile?.role === 'staff' && pathname.startsWith('/admin/calendario')
-    if (!isAdmin && !isCalendarStaff) {
+    const role = isAppRole(profile?.role) ? profile.role : null
+    if (!canAccessAdminPath(role, pathname)) {
       const url = request.nextUrl.clone()
-      url.pathname = '/portal/dashboard'
+      url.pathname = getRoleHome(role)
       return NextResponse.redirect(url)
     }
     return supabaseResponse
@@ -120,14 +125,27 @@ export async function updateSession(request: NextRequest) {
     const allowedRoles = ['coach', 'admin', 'staff']
     if (!profile?.role || !allowedRoles.includes(profile.role)) {
       const url = request.nextUrl.clone()
-      url.pathname = '/portal/dashboard'
+      url.pathname = getRoleHome(isAppRole(profile?.role) ? profile.role : null)
       return NextResponse.redirect(url)
     }
     return supabaseResponse
   }
 
-  // --- Portal authenticated routes: just need a valid session ---
-  // (already checked above that user exists)
+  // --- Family portal: internal workers must not fall into the guardian UI ---
+  if (pathname.startsWith('/portal/')) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    const role = isAppRole(profile?.role) ? profile.role : null
+    if (role && role !== 'guardian') {
+      const url = request.nextUrl.clone()
+      url.pathname = getRoleHome(role)
+      return NextResponse.redirect(url)
+    }
+  }
 
   return supabaseResponse
 }

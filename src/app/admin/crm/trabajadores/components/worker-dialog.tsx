@@ -16,6 +16,9 @@ import { createWorker, updateWorker, uploadWorkerAvatar } from "@/app/actions/wo
 import { toast } from "sonner"
 import { Loader2, Plus, Upload, Camera, User } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Switch } from "@/components/ui/switch"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { WORKER_ACCESS_ROLES, type WorkerAccessRole } from "@/lib/roles"
 
 interface WorkerDialogProps {
     mode: 'create' | 'edit'
@@ -32,6 +35,8 @@ export function WorkerDialog({ mode, worker, trigger, open, onOpenChange }: Work
     const [avatarUrl, setAvatarUrl] = useState(worker?.avatar_url || null)
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [isUploading, setIsUploading] = useState(false)
+    const [accessEnabled, setAccessEnabled] = useState(Boolean(worker?.access_enabled))
+    const [accessRole, setAccessRole] = useState<WorkerAccessRole>(worker?.access_role || 'coach')
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     const isControlled = open !== undefined && onOpenChange !== undefined
@@ -44,6 +49,8 @@ export function WorkerDialog({ mode, worker, trigger, open, onOpenChange }: Work
             setColor(worker?.color || 'blue')
             setAvatarUrl(worker?.avatar_url || null)
             setSelectedFile(null)
+            setAccessEnabled(Boolean(worker?.access_enabled))
+            setAccessRole(worker?.access_role || 'coach')
         }
     }, [isOpen, worker])
 
@@ -88,7 +95,9 @@ export function WorkerDialog({ mode, worker, trigger, open, onOpenChange }: Work
             phone: formData.get('phone') as string,
             position: formData.get('position') as string,
             color: color,
-            avatar_url: avatarUrl || undefined // Pass URL if it exists
+            avatar_url: avatarUrl || undefined, // Pass URL if it exists
+            access_enabled: accessEnabled,
+            access_role: accessRole,
         }
 
         try {
@@ -191,6 +200,42 @@ export function WorkerDialog({ mode, worker, trigger, open, onOpenChange }: Work
                     <div className="space-y-2">
                         <Label className="text-slate-700 font-bold uppercase text-xs tracking-wider">Teléfono</Label>
                         <Input name="phone" defaultValue={worker?.phone} className="bg-white" placeholder="+34 600 000 000" />
+                    </div>
+
+                    <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-4">
+                        <div className="flex items-start justify-between gap-4">
+                            <div>
+                                <Label htmlFor="worker-access" className="font-bold text-slate-900">Acceso a la plataforma</Label>
+                                <p className="mt-1 text-xs text-slate-500">
+                                    {worker?.user_id
+                                        ? 'Puedes cambiar su rol o revocar temporalmente su acceso.'
+                                        : 'Al activarlo recibirá un correo para establecer su contraseña.'}
+                                </p>
+                            </div>
+                            <Switch id="worker-access" checked={accessEnabled} onCheckedChange={setAccessEnabled} />
+                        </div>
+
+                        {accessEnabled && (
+                            <div className="space-y-2">
+                                <Label className="text-slate-700 font-bold uppercase text-xs tracking-wider">Rol y permisos</Label>
+                                <Select value={accessRole} onValueChange={(value) => setAccessRole(value as WorkerAccessRole)}>
+                                    <SelectTrigger className="bg-white">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {WORKER_ACCESS_ROLES.map((role) => (
+                                            <SelectItem key={role.value} value={role.value}>
+                                                {role.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <p className="text-xs text-slate-500">
+                                    {WORKER_ACCESS_ROLES.find((role) => role.value === accessRole)?.description}
+                                </p>
+                                <p className="text-xs font-medium text-amber-700">El email de la ficha será su usuario de acceso.</p>
+                            </div>
+                        )}
                     </div>
 
                     <div className="pt-4 flex justify-end gap-3">

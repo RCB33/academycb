@@ -3,14 +3,28 @@
 import {
     DropdownMenu,
     DropdownMenuContent,
+    DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
-import { MoreHorizontal, Pencil } from "lucide-react"
+import { KeyRound, Loader2, MoreHorizontal, Pencil } from "lucide-react"
 import { WorkerDialog } from "./worker-dialog"
 import { DeleteWorkerItem } from "./delete-worker-item"
+import { resendWorkerAccessEmail } from "@/app/actions/workers"
+import { useState } from "react"
+import { toast } from "sonner"
 
 export function WorkerActions({ worker }: { worker: any }) {
+    const [sending, setSending] = useState(false)
+
+    async function handleResendAccess() {
+        setSending(true)
+        const result = await resendWorkerAccessEmail(worker.id)
+        setSending(false)
+        if (result.success) toast.success('Correo de acceso enviado')
+        else toast.error(result.error)
+    }
+
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -27,7 +41,16 @@ export function WorkerActions({ worker }: { worker: any }) {
                         </div>
                     } />
                 </div>
-                <DeleteWorkerItem id={worker.id} />
+                {worker.user_id && worker.access_enabled && (
+                    <DropdownMenuItem onSelect={(event) => {
+                        event.preventDefault()
+                        void handleResendAccess()
+                    }}>
+                        {sending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4" />}
+                        <span>Enviar acceso</span>
+                    </DropdownMenuItem>
+                )}
+                <DeleteWorkerItem worker={worker} />
             </DropdownMenuContent>
         </DropdownMenu>
     )

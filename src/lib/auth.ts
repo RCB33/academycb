@@ -1,8 +1,9 @@
 import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
+import type { AppRole } from '@/lib/roles'
 
-export type AppRole = 'admin' | 'staff' | 'finance' | 'marketing' | 'guardian' | 'coach'
+export type { AppRole } from '@/lib/roles'
 
 export async function requireUser() {
     const supabase = await createClient()
@@ -44,4 +45,8 @@ export function requireCalendarAccess() {
 
 export function requireFinanceAccess() {
     return requireRole(['admin', 'finance'])
+}
+
+export function requireMarketingAccess() {
+    return requireRole(['admin', 'marketing'])
 }
