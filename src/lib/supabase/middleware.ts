@@ -114,7 +114,7 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse
   }
 
-  // --- Coach routes: require 'coach', 'admin', or 'staff' ---
+  // --- Coach routes: only assigned coaches and administrators ---
   if (pathname.startsWith('/coach')) {
     const { data: profile } = await supabase
       .from('profiles')
@@ -122,7 +122,7 @@ export async function updateSession(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    const allowedRoles = ['coach', 'admin', 'staff']
+    const allowedRoles = ['coach', 'admin']
     if (!profile?.role || !allowedRoles.includes(profile.role)) {
       const url = request.nextUrl.clone()
       url.pathname = getRoleHome(isAppRole(profile?.role) ? profile.role : null)

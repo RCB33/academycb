@@ -7,6 +7,15 @@ import { requireAdmin } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { WorkerAccessRole } from '@/lib/roles'
 
+type WorkerAccessAuditAction =
+    | 'invited'
+    | 'reactivated'
+    | 'updated'
+    | 'revoked'
+    | 'email_resent'
+    | 'deleted'
+    | 'auth_cleanup_failed'
+
 const WorkerSchema = z.object({
     full_name: z.string().trim().min(2, "El nombre es obligatorio").max(120),
     email: z.string().trim().email("Email inválido").max(200).optional().or(z.literal('')),
@@ -56,6 +65,30 @@ function getSiteUrl() {
     return process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
 }
 
+async function logWorkerAccessChange(input: {
+    workerId: string
+    userId?: string | null
+    actorId: string
+    actorEmail?: string | null
+    action: WorkerAccessAuditAction
+    previousRole?: string | null
+    newRole?: string | null
+    details?: Record<string, unknown>
+}) {
+    const supabaseAdmin = createAdminClient()
+    const { error } = await supabaseAdmin.from('worker_access_audit_log').insert({
+        worker_id: input.workerId,
+        user_id: input.userId || null,
+        actor_id: input.actorId,
+        actor_email: input.actorEmail || null,
+        action: input.action,
+        previous_role: input.previousRole || null,
+        new_role: input.newRole || null,
+        details: input.details || {},
+    })
+    if (error) console.error('Could not write worker access audit log:', error)
+}
+
 async function provisionWorkerAccess(input: {
     workerId: string
     fullName: string
@@ -66,55 +99,124 @@ async function provisionWorkerAccess(input: {
     const supabaseAdmin = createAdminClient()
     let userId = input.existingUserId || null
     let createdUser = false
-
-    if (userId) {
-        const { data: existingUser, error: existingUserError } = await supabaseAdmin.auth.admin.getUserById(userId)
-        if (existingUserError || !existingUser.user) {
-            throw new Error('No se pudo localizar la cuenta vinculada.')
-        }
-        const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
-            email: input.email,
-            ban_duration: 'none',
-            user_metadata: {
-                ...existingUser.user.user_metadata,
-                full_name: input.fullName,
-            },
-        })
-        if (error) throw new Error(`No se pudo reactivar la cuenta: ${error.message}`)
-    } else {
-        const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(input.email, {
-            data: {
-                full_name: input.fullName,
-                intended_role: input.role,
-                password_set: false,
-            },
-            redirectTo: `${getSiteUrl()}/portal/establecer-contrasena`,
-        })
-
-        if (error) {
-            if (error.message.toLowerCase().includes('already')) {
-                throw new Error('Ya existe una cuenta con ese correo. No se ha vinculado automáticamente por seguridad.')
-            }
-            throw new Error(`No se pudo enviar la invitación: ${error.message}`)
-        }
-
-        userId = data.user.id
-        createdUser = true
-    }
-
-    const { error: profileError } = await supabaseAdmin
-        .from('profiles')
-        .upsert({ id: userId, full_name: input.fullName, role: input.role }, { onConflict: 'id' })
-
-    const { error: workerError } = await supabaseAdmin
+    let previousAuth: {
+        email?: string
+        user_metadata: Record<string, unknown>
+        wasBanned: boolean
+    } | null = null
+    let previousProfile: { id: string; full_name: string | null; role: string } | null = null
+    const { data: previousWorker } = await supabaseAdmin
         .from('workers')
-        .update({ user_id: userId, access_enabled: true })
+        .select('user_id, access_enabled')
         .eq('id', input.workerId)
+        .single()
 
-    if (profileError || workerError) {
-        if (createdUser) await supabaseAdmin.auth.admin.deleteUser(userId)
-        throw new Error(profileError?.message || workerError?.message || 'No se pudo vincular la cuenta.')
+    try {
+        if (userId) {
+            const [{ data: existingUser, error: existingUserError }, { data: profile }] = await Promise.all([
+                supabaseAdmin.auth.admin.getUserById(userId),
+                supabaseAdmin.from('profiles').select('id, full_name, role').eq('id', userId).maybeSingle(),
+            ])
+            if (existingUserError || !existingUser.user) {
+                throw new Error('No se pudo localizar la cuenta vinculada.')
+            }
+            previousAuth = {
+                email: existingUser.user.email,
+                user_metadata: existingUser.user.user_metadata || {},
+                wasBanned: Boolean(
+                    existingUser.user.banned_until
+                    && new Date(existingUser.user.banned_until).getTime() > Date.now()
+                ),
+            }
+            previousProfile = profile
+
+            const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+                email: input.email,
+                ban_duration: 'none',
+                user_metadata: {
+                    ...existingUser.user.user_metadata,
+                    full_name: input.fullName,
+                },
+            })
+            if (error) throw new Error(`No se pudo reactivar la cuenta: ${error.message}`)
+        } else {
+            const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(input.email, {
+                data: {
+                    full_name: input.fullName,
+                    intended_role: input.role,
+                    password_set: false,
+                },
+                redirectTo: `${getSiteUrl()}/portal/establecer-contrasena`,
+            })
+
+            if (error) {
+                if (error.message.toLowerCase().includes('already')) {
+                    throw new Error('Ya existe una cuenta con ese correo. No se ha vinculado automáticamente por seguridad.')
+                }
+                throw new Error(`No se pudo enviar la invitación: ${error.message}`)
+            }
+
+            userId = data.user.id
+            createdUser = true
+        }
+
+        const { error: profileError } = await supabaseAdmin
+            .from('profiles')
+            .upsert({ id: userId, full_name: input.fullName, role: input.role }, { onConflict: 'id' })
+        if (profileError) throw new Error(profileError.message)
+
+        const { data: linkedWorker, error: workerError } = await supabaseAdmin
+            .from('workers')
+            .update({ user_id: userId, access_enabled: true })
+            .eq('id', input.workerId)
+            .select('id')
+            .single()
+        if (workerError || !linkedWorker) {
+            throw new Error(workerError?.message || 'No se pudo vincular la cuenta.')
+        }
+    } catch (error) {
+        const rollbackErrors: string[] = []
+        if (createdUser && userId) {
+            const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId)
+            if (deleteError) rollbackErrors.push(deleteError.message)
+        } else if (userId && previousAuth) {
+            const { error: workerRollbackError } = await supabaseAdmin
+                .from('workers')
+                .update({
+                    user_id: previousWorker?.user_id || null,
+                    access_enabled: Boolean(previousWorker?.access_enabled),
+                })
+                .eq('id', input.workerId)
+            if (workerRollbackError) rollbackErrors.push(workerRollbackError.message)
+
+            if (previousProfile) {
+                const { error: profileRollbackError } = await supabaseAdmin
+                    .from('profiles')
+                    .upsert(previousProfile, { onConflict: 'id' })
+                if (profileRollbackError) rollbackErrors.push(profileRollbackError.message)
+            } else {
+                const { error: profileRollbackError } = await supabaseAdmin
+                    .from('profiles')
+                    .delete()
+                    .eq('id', userId)
+                if (profileRollbackError) rollbackErrors.push(profileRollbackError.message)
+            }
+
+            const { error: authRollbackError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+                email: previousAuth.email,
+                ban_duration: previousAuth.wasBanned ? '876000h' : 'none',
+                user_metadata: previousAuth.user_metadata,
+            })
+            if (authRollbackError) rollbackErrors.push(authRollbackError.message)
+        }
+        if (rollbackErrors.length > 0) {
+            const originalMessage = error instanceof Error ? error.message : 'No se pudo actualizar el acceso.'
+            throw new Error(`${originalMessage} La restauración automática también falló; revisa la cuenta antes de continuar.`)
+        }
+        throw error
     }
+
+    return { userId, createdUser }
 }
 
 async function suspendWorkerAccess(userId: string) {
@@ -125,8 +227,16 @@ async function suspendWorkerAccess(userId: string) {
     if (error) throw new Error(`No se pudo revocar la cuenta: ${error.message}`)
 }
 
+async function reactivateWorkerAccess(userId: string) {
+    const supabaseAdmin = createAdminClient()
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        ban_duration: 'none',
+    })
+    if (error) throw new Error(`No se pudo restaurar la cuenta: ${error.message}`)
+}
+
 export async function createWorker(formData: z.infer<typeof WorkerSchema>) {
-    const { supabase } = await requireAdmin()
+    const { supabase, user } = await requireAdmin()
     const validated = WorkerSchema.safeParse(formData)
 
     if (!validated.success) {
@@ -152,11 +262,19 @@ export async function createWorker(formData: z.infer<typeof WorkerSchema>) {
 
     if (access_enabled && workerData.email) {
         try {
-            await provisionWorkerAccess({
+            const provisioned = await provisionWorkerAccess({
                 workerId: newWorker.id,
                 fullName: workerData.full_name,
                 email: workerData.email,
                 role: access_role,
+            })
+            await logWorkerAccessChange({
+                workerId: newWorker.id,
+                userId: provisioned.userId,
+                actorId: user.id,
+                actorEmail: user.email,
+                action: 'invited',
+                newRole: access_role,
             })
         } catch (accessError) {
             await supabase.from('workers').delete().eq('id', newWorker.id)
@@ -169,7 +287,7 @@ export async function createWorker(formData: z.infer<typeof WorkerSchema>) {
 }
 
 export async function updateWorker(id: string, formData: z.infer<typeof WorkerSchema>) {
-    const { supabase } = await requireAdmin()
+    const { supabase, user } = await requireAdmin()
     const validated = WorkerSchema.safeParse(formData)
 
     if (!validated.success) {
@@ -182,7 +300,7 @@ export async function updateWorker(id: string, formData: z.infer<typeof WorkerSc
 
     const { data: currentWorker, error: currentError } = await supabase
         .from('workers')
-        .select('user_id, access_enabled')
+        .select('user_id, access_enabled, full_name, email, phone, position, color, avatar_url')
         .eq('id', id)
         .single()
 
@@ -191,6 +309,18 @@ export async function updateWorker(id: string, formData: z.infer<typeof WorkerSc
     }
 
     const { access_enabled, access_role, ...workerData } = validated.data
+    const { data: currentProfile } = currentWorker.user_id
+        ? await supabase.from('profiles').select('role').eq('id', currentWorker.user_id).maybeSingle()
+        : { data: null }
+    const previousRole = currentProfile?.role || null
+    const previousWorkerData = {
+        full_name: currentWorker.full_name,
+        email: currentWorker.email,
+        phone: currentWorker.phone,
+        position: currentWorker.position,
+        color: currentWorker.color,
+        avatar_url: currentWorker.avatar_url,
+    }
     const { error } = await supabase
         .from('workers')
         .update(workerData)
@@ -201,22 +331,69 @@ export async function updateWorker(id: string, formData: z.infer<typeof WorkerSc
         return { success: false, error: "Error al actualizar trabajador" }
     }
 
+    let provisionedUserId = currentWorker.user_id
     try {
         if (access_enabled && workerData.email) {
-            await provisionWorkerAccess({
+            const provisioned = await provisionWorkerAccess({
                 workerId: id,
                 fullName: workerData.full_name,
                 email: workerData.email,
                 role: access_role,
                 existingUserId: currentWorker.user_id,
             })
+            provisionedUserId = provisioned.userId
         } else if (currentWorker.user_id && currentWorker.access_enabled) {
             await suspendWorkerAccess(currentWorker.user_id)
             const { error: disableError } = await supabase.from('workers').update({ access_enabled: false }).eq('id', id)
-            if (disableError) throw new Error(`La cuenta se ha bloqueado, pero no se pudo actualizar la ficha: ${disableError.message}`)
+            if (disableError) {
+                await reactivateWorkerAccess(currentWorker.user_id)
+                throw new Error(`No se pudo actualizar la ficha: ${disableError.message}`)
+            }
         }
     } catch (accessError) {
-        return { success: false, error: accessError instanceof Error ? accessError.message : 'No se pudo actualizar el acceso.' }
+        const { error: rollbackError } = await supabase
+            .from('workers')
+            .update(previousWorkerData)
+            .eq('id', id)
+        const message = accessError instanceof Error ? accessError.message : 'No se pudo actualizar el acceso.'
+        return {
+            success: false,
+            error: rollbackError
+                ? `${message} Además, no se pudo restaurar la ficha; revisa este trabajador.`
+                : message.includes('restauración automática también falló')
+                    ? message
+                    : `${message} No se ha guardado ningún cambio.`,
+        }
+    }
+
+    if (access_enabled) {
+        await logWorkerAccessChange({
+            workerId: id,
+            userId: provisionedUserId,
+            actorId: user.id,
+            actorEmail: user.email,
+            action: !currentWorker.user_id
+                ? 'invited'
+                : currentWorker.access_enabled
+                    ? 'updated'
+                    : 'reactivated',
+            previousRole,
+            newRole: access_role,
+            details: {
+                email_changed: currentWorker.email !== workerData.email,
+                name_changed: currentWorker.full_name !== workerData.full_name,
+            },
+        })
+    } else if (currentWorker.user_id && currentWorker.access_enabled) {
+        await logWorkerAccessChange({
+            workerId: id,
+            userId: currentWorker.user_id,
+            actorId: user.id,
+            actorEmail: user.email,
+            action: 'revoked',
+            previousRole,
+            newRole: previousRole,
+        })
     }
 
     revalidatePath('/admin/crm/trabajadores')
@@ -224,7 +401,7 @@ export async function updateWorker(id: string, formData: z.infer<typeof WorkerSc
 }
 
 export async function deleteWorker(id: string) {
-    const { supabase } = await requireAdmin()
+    const { supabase, user } = await requireAdmin()
 
     const { data: worker, error: workerError } = await supabase
         .from('workers')
@@ -269,15 +446,35 @@ export async function deleteWorker(id: string) {
         const { error: deleteUserError } = await supabaseAdmin.auth.admin.deleteUser(worker.user_id)
         if (deleteUserError) {
             console.error('Worker deleted but auth cleanup failed:', deleteUserError)
+            await logWorkerAccessChange({
+                workerId: id,
+                userId: worker.user_id,
+                actorId: user.id,
+                actorEmail: user.email,
+                action: 'auth_cleanup_failed',
+                details: { auth_error: deleteUserError.message },
+            })
+            revalidatePath('/admin/crm/trabajadores')
+            return {
+                success: true,
+                warning: 'La ficha se eliminó y la cuenta quedó bloqueada, pero Supabase no pudo borrar la cuenta técnica. Se ha registrado para revisión.',
+            }
         }
     }
 
+    await logWorkerAccessChange({
+        workerId: id,
+        userId: worker.user_id,
+        actorId: user.id,
+        actorEmail: user.email,
+        action: 'deleted',
+    })
     revalidatePath('/admin/crm/trabajadores')
     return { success: true }
 }
 
 export async function resendWorkerAccessEmail(id: string) {
-    const { supabase } = await requireAdmin()
+    const { supabase, user } = await requireAdmin()
     const { data: worker, error } = await supabase
         .from('workers')
         .select('email, user_id, access_enabled')
@@ -297,7 +494,29 @@ export async function resendWorkerAccessEmail(id: string) {
     })
 
     if (resetError) return { success: false, error: `No se pudo enviar el correo: ${resetError.message}` }
+    await logWorkerAccessChange({
+        workerId: id,
+        userId: worker.user_id,
+        actorId: user.id,
+        actorEmail: user.email,
+        action: 'email_resent',
+    })
     return { success: true }
+}
+
+export async function getWorkerAccessAudit() {
+    const { supabase } = await requireAdmin()
+    const { data, error } = await supabase
+        .from('worker_access_audit_log')
+        .select('id, worker_id, actor_email, action, previous_role, new_role, details, created_at')
+        .order('created_at', { ascending: false })
+        .limit(12)
+
+    if (error) {
+        console.error('Error fetching worker access audit:', error)
+        return []
+    }
+    return data || []
 }
 
 export async function uploadWorkerAvatar(formData: FormData) {

@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { requireAcademyStaff } from '@/lib/auth'
+import { requireAdmin } from '@/lib/auth'
 import { z } from 'zod'
 
 const MediaSchema = z.object({
@@ -39,7 +39,7 @@ export async function createMediaAsset(data: {
     child_id?: string | null
     context?: string
 }) {
-    const { supabase } = await requireAcademyStaff()
+    const { supabase } = await requireAdmin()
     const parsed = MediaSchema.safeParse(data)
     if (!parsed.success) return { success: false, error: 'Los datos del vídeo no son válidos.' }
     data = parsed.data
@@ -75,7 +75,7 @@ export async function createMediaAsset(data: {
 }
 
 export async function getMediaAssets(categoryId?: string) {
-    const { supabase } = await requireAcademyStaff()
+    const { supabase } = await requireAdmin()
 
     let query = supabase
         .from('media_assets')
@@ -107,7 +107,7 @@ export async function getMediaAssets(categoryId?: string) {
 }
 
 export async function deleteMediaAsset(id: string) {
-    const { supabase } = await requireAcademyStaff()
+    const { supabase } = await requireAdmin()
 
     const { data: asset } = await supabase
         .from('media_assets')
@@ -137,7 +137,7 @@ export async function deleteMediaAsset(id: string) {
 }
 
 export async function getTeamsForCategory(categoryId: string) {
-    const { supabase } = await requireAcademyStaff()
+    const { supabase } = await requireAdmin()
     const { data, error } = await supabase
         .from('teams')
         .select('id, name')
@@ -152,7 +152,7 @@ export async function getTeamsForCategory(categoryId: string) {
 }
 
 export async function getChildrenForTeam(teamId: string) {
-    const { supabase } = await requireAcademyStaff()
+    const { supabase } = await requireAdmin()
     const { data, error } = await supabase
         .from('children')
         .select('id, full_name')
