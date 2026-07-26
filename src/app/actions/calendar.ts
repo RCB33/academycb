@@ -283,36 +283,31 @@ export async function updateEvent(idInput: string, input: z.input<typeof EventSc
     const { supabase } = await requireCalendarAccess()
     const payload = validated.data
     const warnings = await findWorkerConflicts(supabase, payload.worker_ids, payload.start_date, payload.end_date, parsedId.data)
-    const { error } = await supabase
-        .from('calendar_events')
-        .update({
-            title: payload.title,
-            description: payload.description || null,
-            start_date: payload.start_date,
-            end_date: payload.end_date,
-            color: payload.color,
-            is_all_day: payload.is_all_day,
-            worker_id: payload.worker_ids[0] || null,
-            category_id: payload.category_id || null,
-            team_id: payload.team_id || null,
-            location: payload.location || null,
-            event_type: payload.event_type,
-            status: payload.status,
-            visibility: payload.visibility,
-            updated_at: new Date().toISOString(),
-        })
-        .eq('id', parsedId.data)
+    const { error } = await supabase.rpc('update_manual_calendar_event', {
+        event_uuid: parsedId.data,
+        event_title: payload.title,
+        event_description: payload.description,
+        event_start: payload.start_date,
+        event_end: payload.end_date,
+        event_color: payload.color,
+        event_all_day: payload.is_all_day,
+        event_worker_ids: payload.worker_ids,
+        event_category_id: payload.category_id || null,
+        event_team_id: payload.team_id || null,
+        event_location: payload.location || null,
+        event_type_value: payload.event_type,
+        event_status_value: payload.status,
+        event_visibility_value: payload.visibility,
+    })
 
     if (error) {
         console.error('Error updating event:', error)
-        return { success: false, error: 'No se pudo actualizar el evento' }
-    }
-
-    try {
-        await replaceEventWorkers(supabase, parsedId.data, payload.worker_ids)
-    } catch (assignmentError) {
-        console.error('Error updating event workers:', assignmentError)
-        return { success: false, error: 'El evento se actualizó, pero falló la asignación de trabajadores' }
+        return {
+            success: false,
+            error: error.message.includes('Evento manual no encontrado')
+                ? 'Este evento está sincronizado y debe modificarse desde su módulo de origen'
+                : 'No se pudo actualizar el evento ni sus trabajadores',
+        }
     }
 
     refreshCalendarPaths()

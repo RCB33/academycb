@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
-import { requireAcademyStaff } from '@/lib/auth'
+import { requireCoachAccess } from '@/lib/auth'
 
 const AttendanceSchema = z.object({
     eventId: z.string().uuid(),
@@ -20,7 +20,7 @@ export async function markAttendance(
     const parsed = AttendanceSchema.safeParse({ eventId, childId, attendance, sessionDate })
     if (!parsed.success) throw new Error('Datos de asistencia no válidos')
 
-    const { supabase, user } = await requireAcademyStaff()
+    const { supabase, user } = await requireCoachAccess()
     const { data: event, error: eventError } = await supabase
         .from('calendar_events')
         .select('id, team_id, category_id')

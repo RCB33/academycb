@@ -35,8 +35,8 @@ export function requireAdmin() {
     return requireRole(['admin'])
 }
 
-export function requireAcademyStaff() {
-    return requireRole(['admin', 'staff', 'coach'])
+export function requireCoachAccess() {
+    return requireRole(['admin', 'coach'])
 }
 
 export function requireCalendarAccess() {

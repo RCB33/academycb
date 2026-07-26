@@ -1,9 +1,9 @@
 'use server'
 
-import { requireAcademyStaff } from '@/lib/auth'
+import { requireAdmin } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 
-const createClient = async () => (await requireAcademyStaff()).supabase
+const createClient = async () => (await requireAdmin()).supabase
 
 export async function toggleAchievement(childId: string, achievementId: string) {
     const supabase = await createClient()

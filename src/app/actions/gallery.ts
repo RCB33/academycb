@@ -1,11 +1,11 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { requireAcademyStaff } from '@/lib/auth'
+import { requireAdmin } from '@/lib/auth'
 import { randomUUID } from 'node:crypto'
 
 export async function uploadImage(formData: FormData) {
-    const { supabase, user } = await requireAcademyStaff()
+    const { supabase, user } = await requireAdmin()
 
     const file = formData.get('file') as File
     const childId = formData.get('childId') as string
@@ -55,7 +55,7 @@ export async function uploadImage(formData: FormData) {
 }
 
 export async function deleteImage(id: string, childId: string) {
-    const { supabase } = await requireAcademyStaff()
+    const { supabase } = await requireAdmin()
 
     // Get the file path first? No, we just delete the record and let storage be?
     // Ideally delete from storage too.

@@ -27,7 +27,8 @@ export function DeleteWorkerItem({ worker }: { worker: { id: string, full_name: 
         const res = await deleteWorker(worker.id)
         setLoading(false)
         if (res.success) {
-            toast.success("Trabajador eliminado")
+            if ('warning' in res && res.warning) toast.warning(res.warning)
+            else toast.success("Trabajador eliminado")
             setOpen(false)
             router.refresh()
         } else {
