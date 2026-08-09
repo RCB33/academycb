@@ -115,7 +115,7 @@ export default function AcademyPage() {
                     <h2 className="font-heading text-4xl font-bold mb-5 text-white">Grupos, horarios y tarifas</h2>
                     <p className="text-lg text-gray-300 mb-8">Las condiciones dependen de la edad, el grupo y la convocatoria activa. Solicita la información vigente directamente a la academia.</p>
                     <Button asChild size="lg" className="bg-gold text-navy font-bold">
-                        <Link href="/contacto">Solicitar información</Link>
+                        <Link href="/inscripcion?service=academy">Solicitar plaza</Link>
                     </Button>
                 </div>
             </div>

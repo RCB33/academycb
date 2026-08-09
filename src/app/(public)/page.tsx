@@ -47,7 +47,7 @@ export default async function LandingPage() {
 
                     <div className="flex flex-col sm:flex-row gap-5 w-full sm:w-auto">
                         <Button size="lg" className="h-14 px-10 text-lg font-heading font-bold tracking-wide uppercase rounded-xl shadow-[0_0_20px_rgba(212,175,55,0.4)] hover:shadow-[0_0_30px_rgba(212,175,55,0.6)] transition-all bg-gold hover:bg-gold/90 text-navy border-none" asChild>
-                            <Link href="#agente">Unirse Ahora <ArrowRight className="ml-2 h-5 w-5" /></Link>
+                            <Link href="/inscripcion">Inscribirse <ArrowRight className="ml-2 h-5 w-5" /></Link>
                         </Button>
                         <Button size="lg" variant="outline" className="h-14 px-10 text-lg font-heading font-bold tracking-wide uppercase rounded-xl border-2 border-white/20 bg-white/5 text-white backdrop-blur-sm hover:bg-white/10 hover:border-white/40 shadow-lg" asChild>
                             <Link href="/academia">Ver metodología</Link>

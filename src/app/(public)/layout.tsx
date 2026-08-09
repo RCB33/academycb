@@ -67,7 +67,7 @@ export default async function PublicLayout({
                                     Acceso Familias
                                 </Button>
                             </Link>
-                            <Link href="/contacto" className="hidden md:block">
+                            <Link href="/inscripcion" className="hidden md:block">
                                 <Button size="sm" className="bg-gold text-white hover:bg-gold-light hover:text-white">Inscribirse</Button>
                             </Link>
                             <details className="relative md:hidden">
@@ -76,7 +76,8 @@ export default async function PublicLayout({
                                 </summary>
                                 <nav className="absolute right-0 top-12 w-56 rounded-xl border border-white/10 bg-navy p-3 shadow-2xl">
                                     {navigation.map(([label, href]) => <Link key={href} href={href} className="block rounded-lg px-4 py-3 text-sm font-medium text-white hover:bg-white/10 hover:text-gold">{label}</Link>)}
-                                    <Link href="/portal" className="mt-2 block rounded-lg bg-gold px-4 py-3 text-center text-sm font-bold text-navy">Acceso familias</Link>
+                                    <Link href="/inscripcion" className="mt-2 block rounded-lg bg-gold px-4 py-3 text-center text-sm font-bold text-navy">Inscribirse</Link>
+                                    <Link href="/portal" className="mt-2 block rounded-lg border border-white/15 px-4 py-3 text-center text-sm font-bold text-white">Acceso familias</Link>
                                 </nav>
                             </details>
                         </div>

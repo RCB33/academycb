@@ -67,8 +67,8 @@ export default function LeadWidget({ whatsappNumber = '' }: { whatsappNumber?: s
                     <MessageSquare className="h-6 w-6" />
                 </div>
                 <div>
-                    <h3 className="font-bold">Asistente de Inscripción</h3>
-                    <p className="text-xs opacity-90 font-medium">Te ayudamos a encontrar el mejor plan</p>
+                    <h3 className="font-bold">Solicita información</h3>
+                    <p className="text-xs opacity-90 font-medium">Te orientamos sin compromiso</p>
                 </div>
             </div>
 
@@ -77,7 +77,7 @@ export default function LeadWidget({ whatsappNumber = '' }: { whatsappNumber?: s
                     {step === 'intro' && (
                         <motion.div key="intro" variants={variants} initial="hidden" animate="visible" exit="exit" className="text-center space-y-6">
                             <h4 className="text-2xl font-bold">¡Hola! 👋</h4>
-                            <p className="text-gray-200 text-lg">Me encantaría saber un poco más sobre qué buscas para poder informarte mejor.</p>
+                            <p className="text-gray-200 text-lg">Cuéntanos qué buscas y te orientaremos sobre las opciones disponibles.</p>
                             <Button size="lg" onClick={() => handleNext('child_name')} className="w-full text-lg h-12 font-bold text-navy bg-gold hover:bg-gold-light">
                                 Sí, quiero información
                             </Button>
