@@ -47,3 +47,35 @@ export function SidebarNav() {
         </nav>
     )
 }
+
+export function MobilePortalNav() {
+    const pathname = usePathname()
+
+    return (
+        <nav aria-label="Navegación del portal" className="md:hidden border-b bg-background px-2 py-2 shadow-sm">
+            <div className="flex gap-1 overflow-x-auto overscroll-x-contain pb-1 scrollbar-hide" role="list">
+                {NAV_ITEMS.map((item) => {
+                    const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+                    const Icon = item.icon
+
+                    return (
+                        <Link
+                            key={item.href}
+                            href={item.href}
+                            aria-current={isActive ? 'page' : undefined}
+                            className={cn(
+                                'flex min-w-20 shrink-0 snap-start flex-col items-center gap-1 rounded-lg px-3 py-2 text-[11px] font-medium transition-colors',
+                                isActive
+                                    ? 'bg-primary text-primary-foreground shadow-sm'
+                                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                            )}
+                        >
+                            <Icon className="h-4 w-4" />
+                            <span className="whitespace-nowrap">{item.label.replace('Mi ', '')}</span>
+                        </Link>
+                    )
+                })}
+            </div>
+        </nav>
+    )
+}
