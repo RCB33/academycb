@@ -58,7 +58,7 @@ export default async function CampusPage() {
                                         <p className="flex gap-2 text-gray-300"><Calendar className="h-5 w-5 text-gold" /> {new Date(campus.start_date).toLocaleDateString('es-ES')} – {new Date(campus.end_date).toLocaleDateString('es-ES')}</p>
                                         <p className="flex gap-2 text-gray-300"><Users className="h-5 w-5 text-gold" /> {campus.capacity} plazas</p>
                                         {campus.price !== null && <p className="text-3xl font-bold">{Number(campus.price).toFixed(2)} €</p>}
-                                        <Button asChild className="w-full bg-gold text-navy"><Link href="/contacto">Solicitar información</Link></Button>
+                                        <Button asChild className="w-full bg-gold text-navy"><Link href={`/inscripcion?service=campus&activity=${campus.id}`}>Solicitar plaza</Link></Button>
                                     </CardContent>
                                 </Card>
                             ))}
@@ -68,7 +68,7 @@ export default async function CampusPage() {
                             <Calendar className="h-10 w-10 text-gold mx-auto mb-4" />
                             <h3 className="text-2xl font-bold">Aún no hay fechas publicadas</h3>
                             <p className="mt-3 text-gray-300">Escríbenos si quieres recibir información de la próxima edición.</p>
-                            <Button asChild className="mt-6 bg-gold text-navy"><Link href="/contacto">Contactar</Link></Button>
+                            <Button asChild className="mt-6 bg-gold text-navy"><Link href="/contacto">Recibir información</Link></Button>
                         </div>
                     )}
                 </div>

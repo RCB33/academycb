@@ -13,8 +13,9 @@ export const metadata = {
 
 export default async function TorneosPage() {
     const supabase = await createClient()
+    const today = new Date().toISOString().slice(0, 10)
     const [{ data }, settings] = await Promise.all([
-        supabase.from('tournaments_internal').select('id,title,start_date,end_date,location,price,capacity,external_url,status').eq('status', 'open').order('start_date'),
+        supabase.from('tournaments_internal').select('id,title,start_date,end_date,location,price,capacity,external_url,status').eq('status', 'open').or(`end_date.is.null,end_date.gte.${today}`).order('start_date'),
         getPublicSettings()
     ])
     const tournaments = data || []
@@ -44,7 +45,7 @@ export default async function TorneosPage() {
                                     {tournament.location && <p className="flex gap-2 text-gray-300"><MapPin className="h-5 w-5 text-gold" />{tournament.location}</p>}
                                     <p className="flex gap-2 text-gray-300"><Users className="h-5 w-5 text-gold" />Hasta {tournament.capacity} equipos</p>
                                     {Number(tournament.price) > 0 && <p className="text-3xl font-bold">{Number(tournament.price).toFixed(2)} €</p>}
-                                    <Button asChild className="w-full bg-gold text-navy"><Link href="/contacto">Solicitar información</Link></Button>
+                                    <Button asChild className="w-full bg-gold text-navy"><Link href={`/inscripcion?service=tournament&activity=${tournament.id}`}>Solicitar plaza</Link></Button>
                                     {tournament.external_url && <Button asChild variant="outline" className="w-full"><a href={tournament.external_url} target="_blank" rel="noopener noreferrer">Web del torneo <ExternalLink className="ml-2 h-4 w-4" /></a></Button>}
                                 </CardContent>
                             </Card>
@@ -55,7 +56,7 @@ export default async function TorneosPage() {
                         <Trophy className="h-10 w-10 text-gold mx-auto mb-4" />
                         <h2 className="text-2xl font-bold">No hay torneos abiertos ahora mismo</h2>
                         <p className="mt-3 text-gray-300">Las próximas convocatorias aparecerán aquí cuando estén confirmadas.</p>
-                        <Button asChild className="mt-6 bg-gold text-navy"><Link href="/contacto">Contactar</Link></Button>
+                        <Button asChild className="mt-6 bg-gold text-navy"><Link href="/contacto">Recibir información</Link></Button>
                     </div>
                 )}
             </section>
