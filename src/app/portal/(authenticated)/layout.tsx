@@ -5,7 +5,7 @@ import { LogOut, Trophy } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { NotificationBell } from "@/components/ui/notification-bell"
 import { GlobalSignatureGuard } from "@/components/portal/global-signature-guard"
-import { SidebarNav } from "@/components/portal/sidebar-nav"
+import { MobilePortalNav, SidebarNav } from "@/components/portal/sidebar-nav"
 import { getRoleHome, isAppRole } from '@/lib/roles'
 
 export default async function AuthenticatedLayout({
@@ -56,6 +56,7 @@ export default async function AuthenticatedLayout({
                     </form>
                 </div>
             </div>
+            <MobilePortalNav />
 
             {/* Desktop Sidebar */}
             <aside className="hidden md:flex flex-col w-64 bg-card border-r h-screen shrink-0 relative z-20">
@@ -86,7 +87,7 @@ export default async function AuthenticatedLayout({
                 </div>
             </aside>
 
-            <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:h-screen">
                 <main className="flex-1 p-4 md:p-8 overflow-y-auto overflow-x-hidden relative h-full">
                     <div className="mx-auto w-full max-w-7xl">
                         {children}

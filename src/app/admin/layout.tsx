@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { LayoutDashboard, Users, UserPlus, Activity, CreditCard, Settings, FileText, LogOut, Trophy, ShoppingBag, Briefcase, MessageSquare, CalendarDays, Video, MessageCircle, TrendingUp } from "lucide-react"
+import { LayoutDashboard, Users, UserPlus, Activity, CreditCard, Settings, FileText, LogOut, Trophy, ShoppingBag, Briefcase, MessageSquare, CalendarDays, Video, MessageCircle, TrendingUp, Menu } from "lucide-react"
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { SearchCommand } from "@/components/admin/search-command"
@@ -42,8 +42,9 @@ export default async function AdminLayout({
 
     return (
         <div className="h-screen flex flex-col md:flex-row overflow-hidden flex-1 w-full bg-slate-50">
+            <MobileAdminNav isAdmin={isAdmin} isStaff={isStaff} isFinance={isFinance} isMarketing={isMarketing} roleLabel={getRoleLabel(role)} />
             {/* Sidebar */}
-            <aside className="w-full md:w-64 bg-navy text-white flex flex-col h-auto md:h-screen shrink-0 transition-all duration-300 shadow-xl z-20">
+            <aside className="hidden w-64 shrink-0 flex-col bg-navy text-white shadow-xl transition-all duration-300 md:flex md:h-screen md:w-64">
                 <div className="p-6 border-b border-navy-light flex items-center justify-between bg-navy-dark/50 shrink-0">
                     <div>
                         <h2 className="text-xl font-bold tracking-wider text-white">ACADEMY</h2>
@@ -126,10 +127,11 @@ export default async function AdminLayout({
             </aside>
 
             {/* Main Content Area */}
-            <div className="flex-1 flex flex-col min-w-0 bg-slate-50/50 h-screen overflow-hidden">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-50/50 md:h-screen">
                 {/* Top Header */}
-                <header className="h-16 border-b bg-white/80 backdrop-blur-md flex items-center justify-between px-8 shrink-0 relative z-10 transition-all shadow-sm">
+                <header className="relative z-10 flex h-16 shrink-0 items-center justify-between border-b bg-white/80 px-4 shadow-sm backdrop-blur-md transition-all md:px-8">
                     <div className="flex items-center gap-6">
+                        <span className="text-sm font-bold text-navy md:hidden">Panel de gestión</span>
                         {isAdmin && <SearchCommand />}
                     </div>
                     <div className="flex items-center gap-4">
@@ -159,6 +161,70 @@ export default async function AdminLayout({
             </div>
         </div>
     )
+}
+
+function MobileAdminNav({
+    isAdmin,
+    isStaff,
+    isFinance,
+    isMarketing,
+    roleLabel,
+}: {
+    isAdmin: boolean
+    isStaff: boolean
+    isFinance: boolean
+    isMarketing: boolean
+    roleLabel: string
+}) {
+    return (
+        <header className="flex shrink-0 items-center justify-between border-b border-navy-light bg-navy px-4 py-3 text-white md:hidden">
+            <Link href={isAdmin ? '/admin/dashboard' : isStaff ? '/admin/calendario' : isFinance ? '/admin/finanzas' : '/admin/leads'} className="flex flex-col">
+                <span className="text-base font-black tracking-wide">ACADEMY</span>
+                <span className="text-[10px] font-medium uppercase tracking-widest text-slate-300">{roleLabel}</span>
+            </Link>
+            <details className="relative">
+                <summary aria-label="Abrir menú de gestión" className="flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-lg border border-white/20 [&::-webkit-details-marker]:hidden">
+                    <Menu className="h-5 w-5" />
+                </summary>
+                <nav aria-label="Menú de gestión" className="absolute right-0 top-12 z-50 w-72 max-h-[75vh] overflow-y-auto rounded-xl border border-white/10 bg-navy p-3 shadow-2xl">
+                    {isAdmin && <MobileNavItem href="/admin/dashboard" icon={<LayoutDashboard size={17} />} label="Dashboard" />}
+                    {(isAdmin || isMarketing) && <MobileNavGroup label={isMarketing ? 'Marketing' : 'Gestión CRM'}>
+                        {isAdmin && <MobileNavItem href="/admin/crm/alumnos" icon={<Users size={17} />} label="Jugadores 360º" />}
+                        {isAdmin && <MobileNavItem href="/admin/seguimiento" icon={<TrendingUp size={17} />} label="Seguimiento" />}
+                        <MobileNavItem href="/admin/leads" icon={<MessageSquare size={17} />} label="Solicitudes web" />
+                        {isAdmin && <MobileNavItem href="/admin/crm/tutores" icon={<UserPlus size={17} />} label="Tutores" />}
+                        {isAdmin && <MobileNavItem href="/admin/crm/trabajadores" icon={<Briefcase size={17} />} label="Trabajadores" />}
+                    </MobileNavGroup>}
+                    {(isAdmin || isStaff) && <MobileNavGroup label="Operativa">
+                        <MobileNavItem href="/admin/calendario" icon={<CalendarDays size={17} />} label="Calendario general" />
+                        {isAdmin && <>
+                            <MobileNavItem href="/admin/academia" icon={<Activity size={17} />} label="Academia" />
+                            <MobileNavItem href="/admin/campus" icon={<FileText size={17} />} label="Campus" />
+                            <MobileNavItem href="/admin/torneos" icon={<Trophy size={17} />} label="Torneos" />
+                            <MobileNavItem href="/admin/videoteca" icon={<Video size={17} />} label="Videoteca" />
+                            <MobileNavItem href="/admin/tienda" icon={<ShoppingBag size={17} />} label="Tienda" />
+                        </>}
+                    </MobileNavGroup>}
+                    {isAdmin && <MobileNavGroup label="Comunicación">
+                        <MobileNavItem href="/admin/comunicados" icon={<MessageCircle size={17} />} label="Comunicados" />
+                        <MobileNavItem href="/admin/settings/whatsapp" icon={<Settings size={17} />} label="WhatsApp" />
+                    </MobileNavGroup>}
+                    {(isAdmin || isFinance) && <MobileNavGroup label="Finanzas">
+                        <MobileNavItem href="/admin/finanzas" icon={<CreditCard size={17} />} label="Finanzas" />
+                        {isAdmin && <MobileNavItem href="/admin/ajustes" icon={<Settings size={17} />} label="Ajustes" />}
+                    </MobileNavGroup>}
+                </nav>
+            </details>
+        </header>
+    )
+}
+
+function MobileNavGroup({ label, children }: { label: string, children: React.ReactNode }) {
+    return <div className="mb-3 border-t border-white/10 pt-3 first:border-t-0 first:pt-0"><p className="px-2 pb-1 text-[10px] font-bold uppercase tracking-widest text-gold">{label}</p>{children}</div>
+}
+
+function MobileNavItem({ href, icon, label }: { href: string, icon: React.ReactNode, label: string }) {
+    return <Link href={href} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-100 hover:bg-white/10"><span className="text-gold">{icon}</span>{label}</Link>
 }
 
 function NavItem({ href, icon, label }: { href: string, icon: React.ReactNode, label: string }) {
