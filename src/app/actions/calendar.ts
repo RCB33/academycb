@@ -157,12 +157,12 @@ export async function getEvents(startInput: string, endInput: string): Promise<C
             id, title, description, start_date, end_date, color, is_all_day,
             worker_id, category_id, team_id, location, event_type, status,
             visibility, source_type, source_id,
-            workers(id, full_name, position, color, avatar_url),
+            workers!calendar_events_worker_id_fkey(id, full_name, position, color, avatar_url),
             categories(id, name),
             teams(id, name),
             event_workers:calendar_event_workers(
                 worker_id,
-                worker:workers(id, full_name, position, color, avatar_url)
+                worker:workers!calendar_event_workers_worker_id_fkey(id, full_name, position, color, avatar_url)
             )
         `)
         .lt('start_date', range.data.end)
