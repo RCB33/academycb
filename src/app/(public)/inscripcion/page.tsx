@@ -35,18 +35,28 @@ export default async function InscripcionPage({ searchParams }: { searchParams: 
     }))
 
     return (
-        <div className="min-h-screen bg-slate-50 py-12 text-slate-900 md:py-20">
-            <div className="container max-w-5xl">
-                <div className="mx-auto max-w-3xl text-center">
-                    <span className="inline-flex items-center gap-2 rounded-full bg-gold/15 px-4 py-2 text-sm font-bold text-navy"><ClipboardCheck className="h-4 w-4" /> Solicitud de inscripción</span>
-                    <h1 className="mt-5 font-heading text-4xl font-black uppercase text-navy md:text-6xl">Reserva tu plaza</h1>
-                    <p className="mt-5 text-lg text-slate-600">Envía los datos básicos y secretaría confirmará disponibilidad, condiciones y siguientes pasos. No se realiza ningún cargo en este momento.</p>
+        <div className="min-h-screen overflow-hidden bg-slate-50 text-slate-900">
+            <section className="relative overflow-hidden bg-navy pb-28 pt-16 md:pb-36 md:pt-24">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-15%,rgba(212,175,55,0.34),transparent_42%),linear-gradient(135deg,#0C2241_0%,#0C2241_54%,#163a6b_100%)]" />
+                <div className="absolute -right-28 top-8 h-72 w-72 rounded-full border border-gold/20" />
+                <div className="absolute -bottom-40 -left-28 h-96 w-96 rounded-full border border-white/10" />
+
+                <div className="container relative z-10 max-w-5xl">
+                    <div className="mx-auto max-w-3xl text-center">
+                        <span className="inline-flex items-center gap-2 rounded-full border border-gold/35 bg-gold/10 px-4 py-2 text-sm font-bold text-gold backdrop-blur-sm"><ClipboardCheck className="h-4 w-4" /> INSCRIPCIONES ACADEMY</span>
+                        <h1 className="mt-6 font-heading text-5xl font-black uppercase leading-[0.9] tracking-tight text-white md:text-7xl">Reserva <span className="text-gold">tu plaza</span></h1>
+                        <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-slate-200 md:text-lg">Da el primer paso. Envía los datos básicos y secretaría confirmará disponibilidad, condiciones y siguientes pasos. <span className="font-semibold text-white">No se realiza ningún cargo ahora.</span></p>
+                    </div>
+
+                    <div className="mt-12 grid gap-4 md:grid-cols-3">
+                        <Info icon={<ClipboardCheck className="h-5 w-5" />} title="Solicitud estructurada" text="Identificamos la solicitud por servicio y actividad." />
+                        <Info icon={<CalendarDays className="h-5 w-5" />} title="Confirmación personal" text="Secretaría valida la plaza antes de cualquier pago." />
+                        <Info icon={<ShieldCheck className="h-5 w-5" />} title="Datos protegidos" text="Pedimos solo los datos necesarios para atenderte." />
+                    </div>
                 </div>
-                <div className="mt-10 grid gap-6 md:grid-cols-3">
-                    <Info icon={<ClipboardCheck className="h-5 w-5" />} title="Solicitud estructurada" text="La solicitud queda identificada por servicio y actividad." />
-                    <Info icon={<CalendarDays className="h-5 w-5" />} title="Plaza confirmada por secretaría" text="La inscripción final se valida antes de asignar plaza o realizar pagos." />
-                    <Info icon={<ShieldCheck className="h-5 w-5" />} title="Datos protegidos" text="Solo se solicitan los datos necesarios para tramitar tu petición." />
-                </div>
+            </section>
+
+            <div className="container relative z-10 -mt-14 max-w-5xl pb-16 md:-mt-20 md:pb-24">
                 <EnrollmentForm
                     campuses={campuses}
                     tournaments={tournaments}
@@ -59,5 +69,5 @@ export default async function InscripcionPage({ searchParams }: { searchParams: 
 }
 
 function Info({ icon, title, text }: { icon: ReactNode; title: string; text: string }) {
-    return <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="mb-3 text-gold">{icon}</div><h2 className="font-bold text-navy">{title}</h2><p className="mt-1 text-sm text-slate-600">{text}</p></div>
+    return <div className="rounded-2xl border border-white/15 bg-white/8 p-5 text-left shadow-lg shadow-navy/15 backdrop-blur-sm"><div className="mb-3 text-gold">{icon}</div><h2 className="font-bold text-white">{title}</h2><p className="mt-1 text-sm leading-relaxed text-slate-300">{text}</p></div>
 }
