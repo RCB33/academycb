@@ -69,7 +69,7 @@ export async function updateSession(request: NextRequest) {
   const isPublicPrefix = PUBLIC_PREFIXES.some((prefix) =>
     pathname.startsWith(prefix)
   )
-  const isStaticAsset = /\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff2?)$/.test(pathname)
+  const isStaticAsset = /\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff2?|pdf)$/.test(pathname)
 
   if (isPublicRoute || isPublicPrefix || isStaticAsset) {
     return supabaseResponse
