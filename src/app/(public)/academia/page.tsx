@@ -37,10 +37,10 @@ export default function AcademyPage() {
             featured: true,
         },
         {
-            title: 'Inscripción anual',
+            title: 'Matrícula de inscripción',
             price: '30 €',
             suffix: ' pago único',
-            detail: 'Para nuevos jugadores de la Academy.',
+            detail: 'Matrícula única al formalizar la inscripción para nuevos jugadores.',
         },
     ]
 
