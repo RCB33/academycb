@@ -1,9 +1,8 @@
 'use client'
 
-import { useActionState, useMemo, useState, type ComponentProps } from 'react'
+import { useMemo, useState, type ComponentProps, type FormEvent } from 'react'
 import Link from 'next/link'
 import { CheckCircle2, Loader2, Send } from 'lucide-react'
-import { submitEnrollment, enrollmentInitialState } from '@/app/actions/enrollment'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -28,17 +27,39 @@ export default function EnrollmentForm({
     initialService: EnrollmentService
     initialActivityId: string
 }) {
-    const [state, action, pending] = useActionState(submitEnrollment, enrollmentInitialState)
+    const [state, setState] = useState<{ success?: boolean; error?: string; message?: string }>({})
+    const [pending, setPending] = useState(false)
     const [service, setService] = useState<EnrollmentService>(initialService)
     const [activityId, setActivityId] = useState(initialActivityId)
     const activities = useMemo(() => service === 'campus' ? campuses : service === 'tournament' ? tournaments : [], [campuses, service, tournaments])
+
+    async function submitForm(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault()
+        setPending(true)
+        setState({})
+        const data = Object.fromEntries(new FormData(event.currentTarget))
+
+        try {
+            const response = await fetch('/api/enrollment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data),
+            })
+            const result = await response.json() as { success?: boolean; error?: string; message?: string }
+            setState(result)
+        } catch {
+            setState({ success: false, error: 'No se ha podido conectar. Comprueba tu conexión e inténtalo de nuevo.' })
+        } finally {
+            setPending(false)
+        }
+    }
 
     if (state.success) {
         return <section className="mx-auto max-w-2xl rounded-3xl border border-green-200 bg-white p-10 text-center shadow-2xl shadow-navy/15" role="status"><CheckCircle2 className="mx-auto h-14 w-14 text-green-600" /><h2 className="mt-5 font-heading text-3xl font-black uppercase text-navy">Solicitud recibida</h2><p className="mt-3 text-slate-600">{state.message}</p><Button asChild className="mt-7 bg-gold font-bold text-navy hover:bg-gold/80"><Link href="/">Volver a la web</Link></Button></section>
     }
 
     return (
-        <form action={action} className="mx-auto max-w-3xl space-y-8 rounded-3xl border border-slate-200/90 bg-white p-6 shadow-2xl shadow-navy/15 md:p-10">
+        <form onSubmit={submitForm} className="mx-auto max-w-3xl space-y-8 rounded-3xl border border-slate-200/90 bg-white p-6 shadow-2xl shadow-navy/15 md:p-10">
             <section>
                 <p className="text-xs font-bold tracking-[0.18em] text-gold uppercase">Tu inscripción</p>
                 <h2 className="mt-1 font-heading text-3xl font-black uppercase text-navy">1. ¿Qué quieres solicitar?</h2>
