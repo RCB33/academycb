@@ -11,7 +11,7 @@ export type EnrollmentService = 'academy' | 'campus' | 'tournament'
 export type EnrollmentActivity = { id: string; name: string; detail: string }
 
 const serviceLabels: Record<EnrollmentService, string> = {
-    academy: 'Academia anual',
+    academy: 'Academia',
     campus: 'Campus',
     tournament: 'Torneo',
 }
