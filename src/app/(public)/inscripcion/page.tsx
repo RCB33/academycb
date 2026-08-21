@@ -49,9 +49,9 @@ export default async function InscripcionPage({ searchParams }: { searchParams: 
                     </div>
 
                     <div className="mt-12 grid gap-4 md:grid-cols-3">
-                        <Info icon={<ClipboardCheck className="h-5 w-5" />} title="Solicitud estructurada" text="Identificamos la solicitud por servicio y actividad." />
-                        <Info icon={<CalendarDays className="h-5 w-5" />} title="Confirmación personal" text="Secretaría valida la plaza antes de cualquier pago." />
-                        <Info icon={<ShieldCheck className="h-5 w-5" />} title="Datos protegidos" text="Pedimos solo los datos necesarios para atenderte." />
+                        <Info icon={<ClipboardCheck className="h-5 w-5" />} title="Sin pago ahora" text="Enviar la solicitud no genera ningún cargo ni compromiso." />
+                        <Info icon={<CalendarDays className="h-5 w-5" />} title="Atención personal" text="Secretaría te orienta sobre grupo, horario y disponibilidad." />
+                        <Info icon={<ShieldCheck className="h-5 w-5" />} title="Plaza confirmada" text="Solo formalizamos la inscripción cuando la plaza está validada." />
                     </div>
                 </div>
             </section>

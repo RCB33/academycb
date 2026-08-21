@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { LayoutDashboard, Users, UserPlus, Activity, CreditCard, Settings, FileText, LogOut, Trophy, ShoppingBag, Briefcase, MessageSquare, CalendarDays, Video, MessageCircle, TrendingUp, Menu } from "lucide-react"
+import { LayoutDashboard, Users, UserPlus, Activity, CreditCard, Settings, FileText, LogOut, Trophy, ShoppingBag, Briefcase, MessageSquare, CalendarDays, Video, MessageCircle, TrendingUp, Menu, MessageSquareHeart } from "lucide-react"
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { SearchCommand } from "@/components/admin/search-command"
@@ -102,6 +102,7 @@ export default async function AdminLayout({
                         </div>
                         <div className="space-y-1">
                             <NavItem href="/admin/comunicados" icon={<MessageCircle size={18} />} label="Comunicados" />
+                            <NavItem href="/admin/muro" icon={<MessageSquareHeart size={18} />} label="Muro Academy" />
                             <NavItem href="/admin/settings/whatsapp" icon={<Settings size={18} />} label="Configuración API" />
                         </div>
                     </div>}
@@ -207,6 +208,7 @@ function MobileAdminNav({
                     </MobileNavGroup>}
                     {isAdmin && <MobileNavGroup label="Comunicación">
                         <MobileNavItem href="/admin/comunicados" icon={<MessageCircle size={17} />} label="Comunicados" />
+                        <MobileNavItem href="/admin/muro" icon={<MessageSquareHeart size={17} />} label="Muro Academy" />
                         <MobileNavItem href="/admin/settings/whatsapp" icon={<Settings size={17} />} label="WhatsApp" />
                     </MobileNavGroup>}
                     {(isAdmin || isFinance) && <MobileNavGroup label="Finanzas">

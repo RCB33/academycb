@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
 import {
     AlertTriangle, Archive, BadgeCheck, Building2, CheckCircle2,
     Clock3, CreditCard, Database, Edit, Euro, ExternalLink, FileText,
@@ -94,6 +95,7 @@ export default function AjustesPage() {
                 <Button variant="outline" onClick={() => void loadAll()} disabled={loading}>
                     <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Actualizar diagnóstico
                 </Button>
+                <Button asChild variant="outline"><Link href="/admin/ajustes/documento-base"><FileText className="mr-2 h-4 w-4" />Documento base</Link></Button>
             </header>
 
             <SettingsHealth overview={overview} />
