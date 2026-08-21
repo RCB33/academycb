@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Search, Filter, User, MoreHorizontal, GraduationCap, Tent, Calendar, X, Trophy } from "lucide-react"
+import { Search, Filter, User, MoreHorizontal, GraduationCap, Tent, Calendar, X, Trophy, ClipboardCheck, Mail, Phone, UserPlus } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -20,10 +20,13 @@ import {
 
 import { CreateStudentDialog } from "@/components/admin/create-student-dialog"
 import { deleteStudent } from "@/app/actions/students"
+import { convertEnrollmentRequest, updateEnrollmentRequestStatus } from "@/app/actions/enrollment"
 import { toast } from "sonner"
 
 export default function CRMMasterListPage() {
     const [students, setStudents] = useState<any[]>([])
+    const [enrollmentRequests, setEnrollmentRequests] = useState<any[]>([])
+    const [canConvertEnrollment, setCanConvertEnrollment] = useState(false)
     const [loading, setLoading] = useState(true)
     const [search, setSearch] = useState('')
     const [selectedCategory, setSelectedCategory] = useState<string>('all')
@@ -34,27 +37,35 @@ export default function CRMMasterListPage() {
     const router = useRouter()
 
     useEffect(() => {
-        fetchStudents()
+        refreshData()
     }, [])
 
-    async function fetchStudents() {
+    async function refreshData() {
         setLoading(true)
-        const { data, error } = await supabase
-            .from('children')
-            .select(`
+        const [studentResult, enrollmentResult, profileResult] = await Promise.all([
+            supabase.from('children').select(`
                 *,
                 category:categories(name, id),
                 academy_memberships(id, status),
                 campus_enrollments(id, status),
                 tournament_players(id, status)
-            `)
-            .order('full_name')
+            `).order('full_name'),
+            supabase.from('enrollment_requests').select('*').order('created_at', { ascending: false }),
+            supabase.auth.getUser().then(async ({ data: { user } }) => {
+                if (!user) return null
+                const { data } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
+                return data
+            }),
+        ])
 
-        if (data) {
-            setStudents(data)
-        } else if (error) {
+        if (studentResult.data) {
+            setStudents(studentResult.data)
+        } else if (studentResult.error) {
             toast.error('No se pudo cargar Jugadores 360º')
         }
+        if (enrollmentResult.data) setEnrollmentRequests(enrollmentResult.data)
+        else if (enrollmentResult.error) toast.error('No se pudieron cargar las solicitudes de inscripción')
+        setCanConvertEnrollment(profileResult?.role === 'admin')
         setLoading(false)
     }
 
@@ -79,12 +90,34 @@ export default function CRMMasterListPage() {
         const result = await deleteStudent(id)
         if (result.success) {
             toast.success("Alumno eliminado correctamente")
-            fetchStudents()
+            refreshData()
         } else {
             toast.error("Error al eliminar: " + result.error)
             setLoading(false)
         }
     }
+
+    async function updateEnrollmentStatus(id: string, status: string) {
+        const result = await updateEnrollmentRequestStatus(id, status)
+        if (!result.success) toast.error(result.error || 'No se pudo actualizar la solicitud')
+        else {
+            toast.success('Solicitud actualizada')
+            refreshData()
+        }
+    }
+
+    async function acceptEnrollmentRequest(id: string) {
+        toast.loading('Creando la ficha del jugador…')
+        const result = await convertEnrollmentRequest(id)
+        toast.dismiss()
+        if (!result.success) toast.error(result.error || 'No se pudo crear la ficha')
+        else {
+            toast.success('Solicitud aceptada: ficha de alumno y tutor creada')
+            refreshData()
+        }
+    }
+
+    const pendingEnrollmentRequests = enrollmentRequests.filter((request) => request.status !== 'enrolled' && request.status !== 'lost')
 
     return (
         <div className="space-y-6">
@@ -93,8 +126,55 @@ export default function CRMMasterListPage() {
                     <h1 className="text-3xl font-bold tracking-tight">Jugadores 360º</h1>
                     <p className="text-muted-foreground">Ficha maestra y vinculaciones con Academia, Campus y Torneos</p>
                 </div>
-                <CreateStudentDialog onUpdate={fetchStudents} />
+                <CreateStudentDialog onUpdate={refreshData} />
             </div>
+
+            <Card className="border-gold/30">
+                <CardHeader className="border-b bg-gold/5">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-start gap-3">
+                            <div className="rounded-xl bg-gold/15 p-2 text-gold"><ClipboardCheck className="h-5 w-5" /></div>
+                            <div>
+                                <CardTitle className="text-xl">Solicitudes de inscripción</CardTitle>
+                                <CardDescription>Revisa las solicitudes web antes de crear las fichas en Jugadores 360º.</CardDescription>
+                            </div>
+                        </div>
+                        <Badge variant="outline" className="w-fit border-gold/40 bg-white text-navy">{pendingEnrollmentRequests.length} pendientes</Badge>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-4 sm:p-6">
+                    {loading ? <p className="text-sm text-muted-foreground">Cargando solicitudes…</p> : pendingEnrollmentRequests.length === 0 ? (
+                        <p className="rounded-xl bg-slate-50 px-4 py-5 text-center text-sm text-muted-foreground">No hay solicitudes de inscripción pendientes.</p>
+                    ) : (
+                        <div className="grid gap-4 lg:grid-cols-2">
+                            {pendingEnrollmentRequests.map((request) => (
+                                <article key={request.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                                    <div className="flex flex-wrap items-start justify-between gap-3">
+                                        <div>
+                                            <h2 className="font-bold text-navy">{request.child_name}</h2>
+                                            <p className="mt-1 text-sm text-muted-foreground">{enrollmentServiceLabel(request.service)}{request.activity_name ? ` · ${request.activity_name}` : ''}</p>
+                                        </div>
+                                        <Badge className={enrollmentStatusClass(request.status)}>{enrollmentStatusLabel(request.status)}</Badge>
+                                    </div>
+                                    <div className="mt-4 grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
+                                        <p><span className="font-semibold text-slate-800">Tutor/a:</span> {request.guardian_name}</p>
+                                        <p><span className="font-semibold text-slate-800">Nacimiento:</span> {new Date(`${request.birth_date}T00:00:00`).toLocaleDateString('es-ES')}</p>
+                                        <a className="inline-flex items-center gap-1.5 font-medium text-navy hover:underline" href={`mailto:${request.email}`}><Mail className="h-4 w-4" />{request.email}</a>
+                                        <a className="inline-flex items-center gap-1.5 font-medium text-navy hover:underline" href={`tel:${request.phone}`}><Phone className="h-4 w-4" />{request.phone}</a>
+                                    </div>
+                                    {request.notes && <p className="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-600">{request.notes}</p>}
+                                    <div className="mt-4 flex flex-wrap gap-2 border-t pt-4">
+                                        <Button size="sm" variant="outline" onClick={() => updateEnrollmentStatus(request.id, 'contacted')}>Contactado</Button>
+                                        <Button size="sm" variant="outline" onClick={() => updateEnrollmentStatus(request.id, 'interested')}>En trámite</Button>
+                                        {canConvertEnrollment && <Button size="sm" className="bg-gold font-bold text-navy hover:bg-gold/80" onClick={() => acceptEnrollmentRequest(request.id)}><UserPlus className="mr-1.5 h-4 w-4" />Aceptar y crear ficha</Button>}
+                                        <Button size="sm" variant="ghost" className="text-red-600 hover:bg-red-50 hover:text-red-700" onClick={() => updateEnrollmentStatus(request.id, 'lost')}>Descartar</Button>
+                                    </div>
+                                </article>
+                            ))}
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
 
             <Card>
                 <CardHeader className="border-b px-6 py-4">
@@ -273,4 +353,24 @@ function getBranchLinks(student: any) {
     if (student.campus_enrollments?.some((item: any) => item.status !== 'cancelled')) links.push('campus')
     if (student.tournament_players?.some((item: any) => item.status !== 'cancelled')) links.push('tournament')
     return links
+}
+
+function enrollmentServiceLabel(service: string) {
+    if (service === 'academy') return 'Academia'
+    if (service === 'campus') return 'Campus'
+    if (service === 'tournament') return 'Torneo'
+    return 'Inscripción'
+}
+
+function enrollmentStatusLabel(status: string) {
+    if (status === 'new') return 'Nueva'
+    if (status === 'contacted') return 'Contactado'
+    if (status === 'interested') return 'En trámite'
+    return status
+}
+
+function enrollmentStatusClass(status: string) {
+    if (status === 'new') return 'bg-blue-100 text-blue-800 hover:bg-blue-100'
+    if (status === 'contacted') return 'bg-amber-100 text-amber-800 hover:bg-amber-100'
+    return 'bg-violet-100 text-violet-800 hover:bg-violet-100'
 }
