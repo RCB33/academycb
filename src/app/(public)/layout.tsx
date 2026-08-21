@@ -39,7 +39,7 @@ export default async function PublicLayout({
 
     return (
         <div className="flex min-h-screen flex-col">
-            <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-navy/80 backdrop-blur supports-[backdrop-filter]:bg-navy/70">
+            <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-navy shadow-lg shadow-navy/20">
                     <div className="container flex h-16 items-center justify-between">
                         <Link href="/" className="flex items-center space-x-3 font-bold text-xl tracking-tight">
                             <div className="relative h-12 w-12">
