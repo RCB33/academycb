@@ -85,9 +85,11 @@ using (
 create or replace function public.notify_community_post_pending()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
-  insert into public.notifications (user_id, title, message, type, link_url)
-  select id, 'Nueva publicación para moderar', 'Una familia ha enviado una publicación al Muro Academy.', 'community_post', '/admin/muro'
-  from public.profiles where role = 'admin';
+  if new.status = 'pending' then
+    insert into public.notifications (user_id, title, message, type, link_url)
+    select id, 'Nueva publicación para moderar', 'Una familia ha enviado una publicación al Muro Academy.', 'community_post', '/admin/muro'
+    from public.profiles where role = 'admin';
+  end if;
   return new;
 end;
 $$;
