@@ -42,7 +42,7 @@ export async function createCommunityPost(formData: FormData) {
 
     const { error } = await supabase.from('community_posts').insert({
         author_user_id: user.id, child_id: parsed.data.childId, body: parsed.data.body,
-        visibility: parsed.data.visibility, status: 'pending', media_path: mediaPath, media_type: mediaType,
+        visibility: parsed.data.visibility, status: 'published', published_at: new Date().toISOString(), media_path: mediaPath, media_type: mediaType,
     })
     if (error) {
         if (mediaPath) await supabase.storage.from('community-wall').remove([mediaPath])
@@ -57,6 +57,17 @@ export async function moderateCommunityPost(id: string, status: 'published' | 'r
     if (!z.string().uuid().safeParse(id).success) return { success: false, error: 'Publicación no válida.' }
     const { error } = await supabase.from('community_posts').update({ status, published_at: status === 'published' ? new Date().toISOString() : null }).eq('id', id)
     if (error) return { success: false, error: 'No se pudo actualizar la publicación.' }
+    revalidatePath('/portal/muro'); revalidatePath('/admin/muro')
+    return { success: true }
+}
+
+export async function deleteCommunityPost(id: string) {
+    const { supabase } = await requireAdmin()
+    if (!z.string().uuid().safeParse(id).success) return { success: false, error: 'Publicación no válida.' }
+    const { data: post } = await supabase.from('community_posts').select('media_path').eq('id', id).maybeSingle()
+    const { error } = await supabase.from('community_posts').delete().eq('id', id)
+    if (error) return { success: false, error: 'No se pudo eliminar la publicación.' }
+    if (post?.media_path) await supabase.storage.from('community-wall').remove([post.media_path])
     revalidatePath('/portal/muro'); revalidatePath('/admin/muro')
     return { success: true }
 }
