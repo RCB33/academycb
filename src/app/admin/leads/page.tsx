@@ -68,13 +68,18 @@ export default function AdminLeadsPage() {
     }
 
     async function handleEnrollmentConversion(id: string) {
-        toast.loading('Creando ficha del jugador…')
-        const result = await convertEnrollmentRequest(id)
-        toast.dismiss()
-        if (!result.success) toast.error(result.error || 'No se pudo crear la ficha')
-        else {
-            toast.success('Ficha de alumno y tutor creada')
-            fetchLeads()
+        const toastId = toast.loading('Creando ficha del jugador…')
+        try {
+            const result = await convertEnrollmentRequest(id)
+            if (!result.success) toast.error(result.error || 'No se pudo crear la ficha')
+            else {
+                toast.success('Ficha de alumno y tutor creada')
+                fetchLeads()
+            }
+        } catch {
+            toast.error('No se pudo completar la ficha. Actualiza la página e inténtalo de nuevo.')
+        } finally {
+            toast.dismiss(toastId)
         }
     }
 

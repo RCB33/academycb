@@ -107,13 +107,18 @@ export default function CRMMasterListPage() {
     }
 
     async function acceptEnrollmentRequest(id: string) {
-        toast.loading('Creando la ficha del jugador…')
-        const result = await convertEnrollmentRequest(id)
-        toast.dismiss()
-        if (!result.success) toast.error(result.error || 'No se pudo crear la ficha')
-        else {
-            toast.success('Solicitud aceptada: ficha de alumno y tutor creada')
-            refreshData()
+        const toastId = toast.loading('Creando la ficha del jugador…')
+        try {
+            const result = await convertEnrollmentRequest(id)
+            if (!result.success) toast.error(result.error || 'No se pudo crear la ficha')
+            else {
+                toast.success('Solicitud aceptada: ficha de alumno y tutor creada')
+                refreshData()
+            }
+        } catch {
+            toast.error('No se pudo completar la ficha. Actualiza la página e inténtalo de nuevo.')
+        } finally {
+            toast.dismiss(toastId)
         }
     }
 
