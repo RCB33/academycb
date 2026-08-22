@@ -24,7 +24,8 @@ export async function submitEnrollment(_previousState: EnrollmentState, formData
         email: formData.get('email'),
         phone: formData.get('phone'),
         notes: formData.get('notes') || undefined,
-        consent: formData.get('consent'),
+        privacy_consent: formData.get('privacy_consent'),
+        terms_consent: formData.get('terms_consent'),
         website: formData.get('website') || '',
     })
 }

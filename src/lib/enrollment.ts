@@ -21,7 +21,8 @@ export const enrollmentSchema = z.object({
     email: z.string().trim().email('Indica un email válido.').max(200),
     phone: z.string().trim().regex(/^\+?[0-9\s()-]{9,20}$/, 'Indica un teléfono válido.'),
     notes: z.string().trim().max(1000, 'Las observaciones no pueden superar 1.000 caracteres.').optional(),
-    consent: z.literal('on'),
+    privacy_consent: z.literal('on', { error: 'Debes aceptar la política de privacidad para enviar la solicitud.' }),
+    terms_consent: z.literal('on', { error: 'Debes aceptar las condiciones generales para enviar la solicitud.' }),
     website: z.string().max(0),
 })
 

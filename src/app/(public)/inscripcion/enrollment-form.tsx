@@ -80,7 +80,12 @@ export default function EnrollmentForm({
             </section>
 
             <input name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
-            <label className="flex items-start gap-3 rounded-xl bg-slate-50 p-4 text-sm text-slate-600"><input name="consent" type="checkbox" required className="mt-0.5 h-4 w-4" /><span>Autorizo el tratamiento de estos datos para gestionar esta solicitud, según la <Link href="/privacidad" className="font-semibold text-navy underline">política de privacidad</Link>.</span></label>
+            <section aria-labelledby="enrollment-consents" className="space-y-3 border-t border-slate-200 pt-8">
+                <h2 id="enrollment-consents" className="font-heading text-2xl font-black text-navy">4. Confirmaciones</h2>
+                <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 transition hover:border-gold/60"><input name="privacy_consent" type="checkbox" required className="mt-0.5 h-4 w-4 accent-gold" /><span>He leído la <Link href="/privacidad" target="_blank" className="font-semibold text-navy underline">política de privacidad</Link> y autorizo el tratamiento de estos datos para gestionar esta solicitud.</span></label>
+                <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 transition hover:border-gold/60"><input name="terms_consent" type="checkbox" required className="mt-0.5 h-4 w-4 accent-gold" /><span>He leído y acepto las <Link href="/terminos" target="_blank" className="font-semibold text-navy underline">condiciones generales de inscripción</Link>.</span></label>
+                <p className="px-1 text-xs leading-relaxed text-slate-500">Al activar el acceso al Portal Familias, el tutor legal firmará el documento de aceptación. Quedará disponible en <strong>Mis documentos</strong> y en la ficha del jugador.</p>
+            </section>
             {state.error && <p className="rounded-xl bg-red-50 p-4 text-sm font-medium text-red-700" role="alert">{state.error}</p>}
             <Button disabled={pending || (service !== 'academy' && activities.length === 0)} className="h-12 w-full bg-gold text-base font-black text-navy shadow-lg shadow-gold/20 hover:bg-gold/80">{pending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enviando solicitud…</> : <><Send className="mr-2 h-4 w-4" /> Enviar solicitud de inscripción</>}</Button>
             <p className="text-center text-xs text-slate-500">Enviar esta solicitud no crea un cargo ni confirma una plaza automáticamente.</p>

@@ -355,7 +355,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
                                     {student.guardians.map((gRef: any) => {
                                         const g = gRef.guardian
                                         const isPrimary = gRef.is_primary
-                                        const hasSigned = signatures.some(s => s.guardian_id === g.id && s.document_type === 'Condiciones Generales Academia')
+                                        const hasSigned = signatures.some(s => s.guardian_id === g.id && s.document_type === 'Condiciones Generales Academia' && s.document_version === '2026.08')
                                         return (
                                             <div key={g.id} className="group relative bg-slate-50 p-3 rounded-lg border border-slate-100 hover:border-yellow-200 transition-colors">
                                                 <div className="flex justify-between items-start mb-2">
@@ -369,7 +369,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
                                                                         <TooltipTrigger>
                                                                             <ShieldCheck className="h-4 w-4 text-green-500" />
                                                                         </TooltipTrigger>
-                                                                        <TooltipContent>Documentos firmados</TooltipContent>
+                                                                        <TooltipContent>Condiciones y privacidad firmadas · v2026.08</TooltipContent>
                                                                     </Tooltip>
                                                                 </TooltipProvider>
                                                             )}
@@ -400,6 +400,10 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
                                                     <a href={`mailto:${g.email}`} className="flex items-center gap-2 text-slate-600 hover:text-yellow-600 transition-colors text-xs">
                                                         <Mail className="h-3 w-3" /> <span className="truncate">{g.email}</span>
                                                     </a>
+                                                    <div className={`mt-2 flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[10px] font-bold ${hasSigned ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}>
+                                                        <ShieldCheck className="h-3.5 w-3.5" />
+                                                        {hasSigned ? 'Condiciones y privacidad firmadas · v2026.08' : 'Pendiente de firma en Portal Familias'}
+                                                    </div>
                                                 </div>
                                             </div>
                                         )

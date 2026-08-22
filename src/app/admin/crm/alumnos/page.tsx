@@ -175,6 +175,7 @@ export default function CRMMasterListPage() {
                                         <a className="inline-flex items-center gap-1.5 font-medium text-navy hover:underline" href={`mailto:${request.email}`}><Mail className="h-4 w-4" />{request.email}</a>
                                         <a className="inline-flex items-center gap-1.5 font-medium text-navy hover:underline" href={`tel:${request.phone}`}><Phone className="h-4 w-4" />{request.phone}</a>
                                     </div>
+                                    {request.privacy_accepted_at && request.terms_accepted_at ? <p className="mt-3 rounded-lg bg-green-50 px-3 py-2 text-xs font-medium text-green-800">Privacidad y condiciones aceptadas · v{request.terms_version || request.privacy_policy_version}</p> : <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">Solicitud anterior sin evidencia de aceptación registrada.</p>}
                                     {request.notes && <p className="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-600">{request.notes}</p>}
                                     <div className="mt-4 flex flex-wrap gap-2 border-t pt-4">
                                         <Button size="sm" variant="outline" onClick={() => updateEnrollmentStatus(request.id, 'contacted')}>Contactado</Button>

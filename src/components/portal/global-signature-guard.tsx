@@ -18,7 +18,7 @@ export async function GlobalSignatureGuard({ userId }: { userId: string }) {
 
     // 2. Check if signed
     const docType = 'Condiciones Generales Academia'
-    const docVersion = '1.0'
+    const docVersion = '2026.08'
     const hasSigned = await hasSignedDocument(guardian.id, docType, docVersion)
 
     // 3. Render client wrapper if not signed

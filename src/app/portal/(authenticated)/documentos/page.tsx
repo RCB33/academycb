@@ -30,8 +30,9 @@ export default async function DocumentosPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div>
                 <h1 className="text-3xl font-bold tracking-tight text-navy">Mis Documentos</h1>
+                <p className="mt-1 text-sm text-slate-500">Aquí se guardan los consentimientos y documentos firmados por el tutor legal.</p>
             </div>
             
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -61,7 +62,7 @@ export default async function DocumentosPage() {
                                 {doc.signedUrl && <div className="pt-3 mt-1 border-t border-slate-100">
                                      <a href={doc.signedUrl} target="_blank" rel="noreferrer" className="text-sm font-bold text-indigo-600 hover:text-indigo-800 hover:underline flex items-center transition-colors">
                                         <FileText className="mr-1.5 h-4 w-4" />
-                                        Ver Certificado Original
+                                        Ver firma registrada
                                      </a>
                                 </div>}
                             </CardContent>

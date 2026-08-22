@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import { createSignature } from '@/app/actions/signatures'
 import { toast } from 'sonner'
 import { Loader2, PenLine } from 'lucide-react'
+import Link from 'next/link'
 
 interface SignatureModalProps {
     isOpen: boolean;
@@ -68,14 +69,14 @@ export function SignatureModal({ isOpen, onClose, guardianId, documentType, docu
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-md bg-white border-none shadow-2xl">
                 <DialogHeader>
-                    <div className="mx-auto bg-indigo-50 w-12 h-12 rounded-full flex items-center justify-center mb-4">
-                        <PenLine className="h-6 w-6 text-indigo-600" />
+                    <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-gold/15">
+                        <PenLine className="h-6 w-6 text-gold" />
                     </div>
                     <DialogTitle className="text-center text-xl font-black">Firma de Consentimiento</DialogTitle>
                     <DialogDescription className="text-center text-slate-500">
-                        Por favor, firma en el recuadro inferior para aceptar las condiciones del documento:
+                        Por favor, firma en el recuadro inferior para aceptar las condiciones de inscripción y privacidad:
                         <strong className="block mt-1 text-slate-700">{documentType} (v{documentVersion})</strong>
-                        <a href="/terminos" target="_blank" className="text-indigo-600 hover:underline mt-2 inline-block font-bold text-xs" >🔗 Leer términos y condiciones completos</a>
+                        <span className="mt-2 flex justify-center gap-3 text-xs font-bold"><Link href="/terminos" target="_blank" className="text-navy underline hover:text-gold">Leer condiciones</Link><Link href="/privacidad" target="_blank" className="text-navy underline hover:text-gold">Leer privacidad</Link></span>
                     </DialogDescription>
                 </DialogHeader>
 
@@ -95,7 +96,7 @@ export function SignatureModal({ isOpen, onClose, guardianId, documentType, docu
                         <button
                             type="button"
                             onClick={clearSignature}
-                            className="text-xs text-indigo-600 font-bold hover:text-indigo-800 transition-colors"
+                            className="text-xs font-bold text-navy transition-colors hover:text-gold"
                         >
                             Limpiar firma
                         </button>
@@ -103,7 +104,7 @@ export function SignatureModal({ isOpen, onClose, guardianId, documentType, docu
                 </div>
 
                 <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 mb-6 text-xs text-slate-500 leading-relaxed text-center">
-                    Al firmar este documento, declaro que soy el tutor legal y que he leído y acepto las condiciones de la academia. La firma y sus datos técnicos quedarán registrados como evidencia de aceptación.
+                    Al firmar declaro que soy el tutor legal y que he leído y acepto las condiciones generales de inscripción y la política de privacidad. La firma, fecha, versión y datos técnicos quedarán registrados como evidencia de aceptación.
                 </div>
 
                 <DialogFooter className="flex-col sm:flex-row gap-2">
@@ -120,7 +121,7 @@ export function SignatureModal({ isOpen, onClose, guardianId, documentType, docu
                         type="button"
                         onClick={saveSignature}
                         disabled={isSubmitting}
-                        className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
+                        className="w-full bg-gold font-bold text-navy hover:bg-gold/80 sm:w-auto"
                     >
                         {isSubmitting ? (
                             <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Procesando...</>
