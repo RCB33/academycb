@@ -10,6 +10,13 @@ export const metadata: Metadata = {
     title: 'Academy Costa Brava',
     description: 'Gestión integral de academia de fútbol, campus y seguimiento de jugadores.',
     applicationName: 'Academy Costa Brava',
+    icons: {
+        icon: [
+            { url: '/icon.png', type: 'image/png', sizes: '512x512' },
+            { url: '/favicon.ico', type: 'image/x-icon', sizes: '64x64' },
+        ],
+        apple: [{ url: '/apple-icon.png', type: 'image/png', sizes: '180x180' }],
+    },
     openGraph: {
         type: 'website',
         locale: 'es_ES',
