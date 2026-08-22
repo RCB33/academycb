@@ -294,17 +294,29 @@ export async function unlinkGuardian(childId: string, guardianId: string) {
     return { success: true }
 }
 
-export async function deleteStudent(id: string) {
-    const { supabase } = await requireAdmin()
+export async function archiveStudent(id: string) {
+    const { supabase, user } = await requireAdmin()
 
     try {
         const { error } = await supabase
             .from('children')
-            .delete()
+            .update({ archived_at: new Date().toISOString(), archived_by: user.id })
             .eq('id', id)
 
         if (error) throw error
 
+        revalidatePath('/admin/crm/alumnos')
+        return { success: true }
+    } catch (error: any) {
+        return { success: false, error: error.message }
+    }
+}
+
+export async function restoreStudent(id: string) {
+    const { supabase } = await requireAdmin()
+    try {
+        const { error } = await supabase.from('children').update({ archived_at: null, archived_by: null }).eq('id', id)
+        if (error) throw error
         revalidatePath('/admin/crm/alumnos')
         return { success: true }
     } catch (error: any) {

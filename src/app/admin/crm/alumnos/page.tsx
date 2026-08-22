@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Search, Filter, User, MoreHorizontal, GraduationCap, Tent, Calendar, X, Trophy, ClipboardCheck, Mail, Phone, UserPlus } from "lucide-react"
+import { Search, Filter, User, MoreHorizontal, GraduationCap, Tent, Calendar, X, Trophy, ClipboardCheck, Mail, Phone, UserPlus, ArchiveRestore } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 import { CreateStudentDialog } from "@/components/admin/create-student-dialog"
-import { deleteStudent } from "@/app/actions/students"
+import { archiveStudent, restoreStudent } from "@/app/actions/students"
 import { convertEnrollmentRequest, updateEnrollmentRequestStatus } from "@/app/actions/enrollment"
 import { toast } from "sonner"
 
@@ -32,6 +32,7 @@ export default function CRMMasterListPage() {
     const [selectedCategory, setSelectedCategory] = useState<string>('all')
     const [selectedYear, setSelectedYear] = useState<string>('all')
     const [selectedBranch, setSelectedBranch] = useState<string>('all')
+    const [selectedLifecycle, setSelectedLifecycle] = useState<'active' | 'archived' | 'all'>('active')
 
     const supabase = createClient()
     const router = useRouter()
@@ -74,27 +75,34 @@ export default function CRMMasterListPage() {
     const years = Array.from(new Set(students.map(s => s.birth_year).filter(Boolean))).sort().reverse()
 
     const filtered = students.filter(s => {
+        const matchesLifecycle = selectedLifecycle === 'all' || (selectedLifecycle === 'archived' ? Boolean(s.archived_at) : !s.archived_at)
         const matchesSearch = s.full_name.toLowerCase().includes(search.toLowerCase())
         const matchesCategory = selectedCategory === 'all' || s.category?.name === selectedCategory
         const matchesYear = selectedYear === 'all' || s.birth_year?.toString() === selectedYear
         const links = getBranchLinks(s)
         const matchesBranch = selectedBranch === 'all'
             || (selectedBranch === 'none' ? links.length === 0 : links.includes(selectedBranch))
-        return matchesSearch && matchesCategory && matchesYear && matchesBranch
+        return matchesLifecycle && matchesSearch && matchesCategory && matchesYear && matchesBranch
     })
 
     const handleArchive = async (id: string, name: string) => {
-        if (!confirm(`¿Estás seguro de que quieres eliminar a ${name}? Esta acción no se puede deshacer.`)) return
+        if (!confirm(`¿Archivar a ${name}? Se ocultará de los jugadores activos, pero se conservará todo su historial y podrás restaurarlo cuando vuelva.`)) return
         
         setLoading(true)
-        const result = await deleteStudent(id)
+        const result = await archiveStudent(id)
         if (result.success) {
-            toast.success("Alumno eliminado correctamente")
+            toast.success("Jugador archivado. Su historial se conserva.")
             refreshData()
         } else {
             toast.error("Error al eliminar: " + result.error)
             setLoading(false)
         }
+    }
+
+    const handleRestore = async (id: string, name: string) => {
+        const result = await restoreStudent(id)
+        if (result.success) { toast.success(`${name} vuelve a estar activo`); refreshData() }
+        else toast.error("Error al restaurar: " + result.error)
     }
 
     async function updateEnrollmentStatus(id: string, status: string) {
@@ -184,6 +192,9 @@ export default function CRMMasterListPage() {
             <Card>
                 <CardHeader className="border-b px-6 py-4">
                     <div className="flex flex-col gap-4">
+                        <div className="flex flex-wrap gap-2">
+                            {([['active', 'Activos'], ['archived', 'Archivados'], ['all', 'Todos']] as const).map(([value, label]) => <Button key={value} variant={selectedLifecycle === value ? 'default' : 'outline'} size="sm" onClick={() => setSelectedLifecycle(value)}>{label}</Button>)}
+                        </div>
                         <div className="flex flex-wrap gap-2">
                             {[
                                 ['all', 'Todos'],
@@ -279,7 +290,7 @@ export default function CRMMasterListPage() {
                                 {loading ? (
                                     <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">Cargando base de datos...</td></tr>
                                 ) : filtered.length === 0 ? (
-                                    <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">No se encontraron alumnos.</td></tr>
+                                    <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">{selectedLifecycle === 'archived' ? 'No hay jugadores archivados.' : 'No se encontraron alumnos.'}</td></tr>
                                 ) : (
                                     filtered.map((student) => (
                                         <tr
@@ -293,6 +304,7 @@ export default function CRMMasterListPage() {
                                                         <User className="h-4 w-4 text-primary" />
                                                     </div>
                                                     <span className="font-semibold">{student.full_name}</span>
+                                                    {student.archived_at && <Badge variant="secondary" className="bg-slate-100 text-slate-600">Archivado</Badge>}
                                                 </div>
                                             </td>
                                             <td className="p-6">{student.birth_year}</td>
@@ -328,15 +340,7 @@ export default function CRMMasterListPage() {
                                                             <DropdownMenuItem>Editar Datos</DropdownMenuItem>
                                                         </Link>
                                                         <DropdownMenuSeparator />
-                                                        <DropdownMenuItem 
-                                                            className="text-red-600"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation()
-                                                                handleArchive(student.id, student.full_name)
-                                                            }}
-                                                        >
-                                                            Archivar
-                                                        </DropdownMenuItem>
+                                                        {student.archived_at ? <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleRestore(student.id, student.full_name) }}><ArchiveRestore className="mr-2 h-4 w-4" />Restaurar jugador</DropdownMenuItem> : <DropdownMenuItem className="text-amber-700" onClick={(e) => { e.stopPropagation(); handleArchive(student.id, student.full_name) }}><ArchiveRestore className="mr-2 h-4 w-4" />Archivar jugador</DropdownMenuItem>}
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
                                             </td>
