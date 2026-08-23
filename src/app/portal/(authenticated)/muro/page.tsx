@@ -8,8 +8,14 @@ export default async function CommunityWallPage() {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     const { data: guardian } = await supabase.from('guardians').select('id').eq('user_id', user?.id || '').maybeSingle()
-    const { data: childLinks } = guardian ? await supabase.from('child_guardians').select('child:children(id, full_name)').eq('guardian_id', guardian.id) : { data: [] }
-    const children = (childLinks || []).map((link: any) => link.child).filter(Boolean) as { id: string; full_name: string }[]
+    const [{ data: childLinks }, { data: imageConsents }] = guardian ? await Promise.all([
+        supabase.from('child_guardians').select('child:children(id, full_name)').eq('guardian_id', guardian.id),
+        supabase.from('signatures').select('child_id, consent_options').eq('guardian_id', guardian.id).eq('document_type', 'Autorización de imagen y vídeo').order('signed_at', { ascending: false }),
+    ]) : [{ data: [] }, { data: [] }]
+    const children = (childLinks || []).map((link: any) => link.child).filter(Boolean).map((child: any) => {
+        const consent = (imageConsents || []).find((item: any) => item.child_id === child.id)
+        return { ...child, can_share_media: Boolean(consent?.consent_options?.portal_internal) }
+    }) as { id: string; full_name: string; can_share_media: boolean }[]
     const { data: posts } = await supabase.from('community_posts').select('*').order('published_at', { ascending: false }).order('created_at', { ascending: false }).limit(50)
 
     const renderedPosts = await Promise.all((posts || []).map(async (post) => {

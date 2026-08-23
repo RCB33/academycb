@@ -34,6 +34,20 @@ export async function createCommunityPost(formData: FormData) {
     if (file instanceof File && file.size > 0) {
         const fileMeta = allowedFiles[file.type]
         if (!fileMeta || file.size > 20 * 1024 * 1024) return { success: false, error: 'Adjunta una imagen o vídeo válido de hasta 20 MB.' }
+        const { data: guardian } = await supabase.from('guardians').select('id').eq('user_id', user.id).maybeSingle()
+        const { data: consent } = guardian ? await supabase
+            .from('signatures')
+            .select('consent_options')
+            .eq('guardian_id', guardian.id)
+            .eq('child_id', parsed.data.childId)
+            .eq('document_type', 'Autorización de imagen y vídeo')
+            .order('signed_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+            : { data: null }
+        if (!consent?.consent_options?.portal_internal) {
+            return { success: false, error: 'Para adjuntar una foto o vídeo necesitas autorizar primero el uso interno en Portal Familias → Autorizaciones.' }
+        }
         mediaPath = `${user.id}/${randomUUID()}.${fileMeta.extension}`
         mediaType = fileMeta.mediaType
         const { error } = await supabase.storage.from('community-wall').upload(mediaPath, file, { contentType: file.type })

@@ -6,6 +6,7 @@ import { headers } from 'next/headers'
 import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
 import { requireAdmin, requireUser } from '@/lib/auth'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 const imageConsentOptionsSchema = z.object({
     portal_internal: z.boolean(),
@@ -100,9 +101,22 @@ export async function createSignature(input: unknown) {
             return { success: false, error: dbError.message };
         }
 
+        // Withdrawing the internal option must take existing family media out
+        // of the Academy wall immediately. The signed record is preserved.
+        if (data.documentType === 'Autorización de imagen y vídeo' && data.childId && !data.consentOptions?.portal_internal) {
+            const { error: hideMediaError } = await createAdminClient()
+                .from('community_posts')
+                .update({ status: 'rejected', published_at: null, moderation_note: 'Ocultada tras retirada de autorización de imagen.' })
+                .eq('author_user_id', user.id)
+                .eq('child_id', data.childId)
+                .not('media_path', 'is', null)
+            if (hideMediaError) console.error('Could not hide wall media after consent withdrawal:', hideMediaError)
+        }
+
         revalidatePath('/portal/dashboard')
         revalidatePath('/portal/documentos')
         revalidatePath('/portal/autorizaciones')
+        revalidatePath('/portal/muro')
         return { success: true };
 
     } catch (error: any) {
