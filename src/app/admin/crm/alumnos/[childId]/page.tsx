@@ -356,6 +356,13 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
                                         const g = gRef.guardian
                                         const isPrimary = gRef.is_primary
                                         const hasSigned = signatures.some(s => s.guardian_id === g.id && s.document_type === 'Condiciones Generales Academia' && s.document_version === '2026.08')
+                                        const imageConsent = signatures.find(s => s.guardian_id === g.id && s.child_id === childId && s.document_type === 'Autorización de imagen y vídeo')
+                                        const imageOptions = imageConsent?.consent_options || {}
+                                        const imageConsentText = !imageConsent
+                                            ? 'Imagen no autorizada (sin decisión registrada)'
+                                            : imageOptions.portal_internal || imageOptions.public_communications
+                                                ? `Imagen autorizada: ${[imageOptions.portal_internal && 'uso interno', imageOptions.public_communications && 'uso público'].filter(Boolean).join(' · ')}`
+                                                : 'Imagen no autorizada (decisión firmada)'
                                         return (
                                             <div key={g.id} className="group relative bg-slate-50 p-3 rounded-lg border border-slate-100 hover:border-yellow-200 transition-colors">
                                                 <div className="flex justify-between items-start mb-2">
@@ -403,6 +410,10 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
                                                     <div className={`mt-2 flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[10px] font-bold ${hasSigned ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}>
                                                         <ShieldCheck className="h-3.5 w-3.5" />
                                                         {hasSigned ? 'Condiciones y privacidad firmadas · v2026.08' : 'Pendiente de firma en Portal Familias'}
+                                                    </div>
+                                                    <div className={`mt-2 flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[10px] font-bold ${imageOptions.portal_internal || imageOptions.public_communications ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-600'}`}>
+                                                        <ShieldCheck className="h-3.5 w-3.5" />
+                                                        {imageConsentText}
                                                     </div>
                                                 </div>
                                             </div>

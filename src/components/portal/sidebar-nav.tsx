@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Home, Calendar as CalendarIcon, FileText, User, Download, ShoppingBag, Video, Store, MessageSquare, Heart } from "lucide-react"
+import { Home, Calendar as CalendarIcon, FileText, User, Download, ShoppingBag, Video, Store, MessageSquare, Heart, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -14,6 +14,7 @@ const NAV_ITEMS = [
     { href: '/portal/calendario', label: 'Mi Calendario', icon: CalendarIcon },
     { href: '/portal/videoteca', label: 'Videoteca', icon: Video },
     { href: '/portal/documentos', label: 'Documentos', icon: FileText },
+    { href: '/portal/autorizaciones', label: 'Autorizaciones', icon: ShieldCheck },
     { href: '/portal/pagos', label: 'Pagos', icon: ShoppingBag },
     { href: '/portal/tienda', label: 'Tienda', icon: Store },
     { href: '/portal/descargas', label: 'Descargas', icon: Download },

@@ -209,7 +209,7 @@ export function WorkerDialog({ mode, worker, trigger, open, onOpenChange }: Work
                                 <p className="mt-1 text-xs text-slate-500">
                                     {worker?.user_id
                                         ? 'Puedes cambiar su rol o revocar temporalmente su acceso.'
-                                        : 'Al activarlo recibirá un correo para establecer su contraseña.'}
+                                        : 'Al activarlo recibirá un enlace seguro para crear su propia contraseña. La academia no la genera ni la conoce.'}
                                 </p>
                             </div>
                             <Switch id="worker-access" checked={accessEnabled} onCheckedChange={setAccessEnabled} />

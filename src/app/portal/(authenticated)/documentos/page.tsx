@@ -17,7 +17,7 @@ export default async function DocumentosPage() {
 
     const { data: signatures } = guardian ? await supabase
         .from('signatures')
-        .select('*')
+        .select('*, child:children(full_name)')
         .eq('guardian_id', guardian.id)
         .order('signed_at', { ascending: false })
         : { data: [] }
@@ -59,6 +59,8 @@ export default async function DocumentosPage() {
                                 <div className="text-xs text-slate-500 ml-10">
                                     Versión: <span className="font-mono bg-slate-100 px-1 rounded">{doc.document_version}</span>
                                 </div>
+                                {doc.child?.full_name && <div className="text-xs text-slate-500 ml-10">Jugador: <span className="font-semibold text-slate-700">{doc.child.full_name}</span></div>}
+                                {doc.document_type === 'Autorización de imagen y vídeo' && <div className="ml-10 rounded-lg bg-slate-50 p-2 text-xs text-slate-600">Uso interno: <strong>{doc.consent_options?.portal_internal ? 'autorizado' : 'no autorizado'}</strong> · Uso público: <strong>{doc.consent_options?.public_communications ? 'autorizado' : 'no autorizado'}</strong></div>}
                                 {doc.signedUrl && <div className="pt-3 mt-1 border-t border-slate-100">
                                      <a href={doc.signedUrl} target="_blank" rel="noreferrer" className="text-sm font-bold text-indigo-600 hover:text-indigo-800 hover:underline flex items-center transition-colors">
                                         <FileText className="mr-1.5 h-4 w-4" />
