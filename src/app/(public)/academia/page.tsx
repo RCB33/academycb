@@ -1,4 +1,4 @@
-import { Badge, CalendarDays, CheckCircle2, Clock3, ExternalLink, FileText, MapPin, ShieldCheck, Sparkles } from "lucide-react"
+import { Badge, Brain, CalendarDays, Clock3, Dumbbell, ExternalLink, FileText, HeartHandshake, MapPin, ShieldCheck, Sparkles } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { CarouselCustom } from "@/components/ui/carousel-custom"
@@ -49,6 +49,13 @@ export default function AcademyPage() {
         { day: 'Miércoles', slots: ['17:30 - 19:00 · Benjamines', '19:00 - 20:30 · Infantiles / Cadetes'] },
         { day: 'Jueves', slots: ['17:30 - 19:00 · Alevines'] },
         { day: 'Viernes', slots: ['17:00 - 18:30 · Escoleta / Prebenjamines'] },
+    ]
+
+    const methodologyDimensions = [
+        { title: 'Técnica individual', icon: Badge, text: 'Control, pase, conducción, regate y finalización. Un objetivo técnico cada mes, adaptado a la edad y al nivel.' },
+        { title: 'Táctica y cognitiva', icon: Brain, text: 'Lectura del juego, ocupación de espacios, percepción y toma de decisiones para comprender mejor el juego.' },
+        { title: 'Física y coordinativa', icon: Dumbbell, text: 'Agilidad, velocidad, fuerza, potencia y control corporal para crecer con seguridad y confianza.' },
+        { title: 'Socioafectiva', icon: HeartHandshake, text: 'Confianza, autonomía, responsabilidad y gestión del error dentro y fuera del campo.' },
     ]
 
     return (
@@ -140,60 +147,29 @@ export default function AcademyPage() {
                     </div>
                 </section>
 
-                {/* Methodology Section */}
-                <div className="grid md:grid-cols-2 gap-12 mb-32 items-center">
-                    <div className="order-2 md:order-1">
-                        <h2 className="font-heading text-4xl font-bold mb-8 text-white">Metodología <span className="text-gold">Pro</span></h2>
-                        <p className="text-gray-300 mb-8 text-lg leading-relaxed">
-                            Nos basamos en el aprendizaje cognitivo y la toma de decisiones. No solo entrenamos el cuerpo, sino también la mente del jugador.
-                        </p>
-                        <ul className="space-y-8">
-                            <li className="flex items-start group">
-                                <div className="mr-4 mt-1 p-2 rounded-lg bg-navy-light border border-gold/20 group-hover:border-gold/50 transition-colors">
-                                    <Badge className="h-6 w-6 text-gold" />
-                                </div>
-                                <div>
-                                    <h4 className="font-heading font-bold text-2xl text-white mb-2 group-hover:text-gold transition-colors">Técnica Individual</h4>
-                                    <p className="text-gray-400">Dominio del balón en todas las situaciones de juego de alta presión.</p>
-                                </div>
-                            </li>
-                            <li className="flex items-start group">
-                                <div className="mr-4 mt-1 p-2 rounded-lg bg-navy-light border border-gold/20 group-hover:border-gold/50 transition-colors">
-                                    <Badge className="h-6 w-6 text-gold" />
-                                </div>
-                                <div>
-                                    <h4 className="font-heading font-bold text-2xl text-white mb-2 group-hover:text-gold transition-colors">Inteligencia Táctica</h4>
-                                    <p className="text-gray-400">Comprensión profunda del juego, espacios y movimientos sin balón.</p>
-                                </div>
-                            </li>
-                            <li className="flex items-start group">
-                                <div className="mr-4 mt-1 p-2 rounded-lg bg-navy-light border border-gold/20 group-hover:border-gold/50 transition-colors">
-                                    <Badge className="h-6 w-6 text-gold" />
-                                </div>
-                                <div>
-                                    <h4 className="font-heading font-bold text-2xl text-white mb-2 group-hover:text-gold transition-colors">Desarrollo Físico</h4>
-                                    <p className="text-gray-400">Trabajo de coordinación, velocidad, movilidad y hábitos para una práctica deportiva segura.</p>
-                                </div>
-                            </li>
-                        </ul>
-                    </div>
-
-                    <div className="order-1 md:order-2 relative group">
-                        <div className="absolute inset-0 bg-gold/20 rounded-2xl blur-xl transform group-hover:scale-105 transition-transform duration-700"></div>
-                        <div className="relative rounded-2xl overflow-hidden border-2 border-gold/30 shadow-2xl">
-                            <Image
-                                src="/academy-session.jpg"
-                                alt="Entrenamiento en Grupo Academy Costa Brava"
-                                width={800}
-                                height={600}
-                                className="object-cover w-full h-full transform hover:scale-105 transition-transform duration-700"
-                            />
-                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-navy to-transparent p-8">
-                                <p className="text-white font-heading font-bold text-xl border-l-4 border-gold pl-4">Sesiones Grupales de Alto Rendimiento</p>
+                <section className="mb-32" aria-labelledby="metodologia-title">
+                    <div className="grid items-center gap-10 lg:grid-cols-[.9fr_1.1fr] lg:gap-16">
+                        <div className="relative mx-auto w-full max-w-[30rem]">
+                            <div className="absolute -inset-4 rounded-[2rem] bg-gold/15 blur-2xl" />
+                            <div className="relative overflow-hidden rounded-[1.7rem] border-2 border-gold/30 bg-navy-light p-2 shadow-2xl shadow-black/40">
+                                <Image src="/academy-dossier-360.jpg" alt="Metodología 360 grados Academy Costa Brava" width={1000} height={1500} className="h-auto w-full rounded-[1.2rem]" />
                             </div>
                         </div>
+                        <div>
+                            <p className="text-sm font-bold tracking-[0.2em] text-gold uppercase">Metodología 360º</p>
+                            <h2 id="metodologia-title" className="mt-3 font-heading text-4xl font-black uppercase leading-tight text-white md:text-5xl">Cuatro dimensiones.<br /><span className="text-gold">Un mismo jugador.</span></h2>
+                            <p className="mt-5 max-w-2xl text-lg leading-relaxed text-gray-300">No entrenamos únicamente para ejecutar mejor, sino para comprender mejor el juego. Cada contenido se adapta a la edad y nivel del jugador y progresa hacia situaciones reales de juego y competición.</p>
+                            <div className="mt-8 grid gap-4 sm:grid-cols-2">
+                                {methodologyDimensions.map((dimension) => <article key={dimension.title} className="rounded-2xl border border-white/10 bg-white/5 p-5 transition hover:border-gold/40 hover:bg-white/[.08]">
+                                    <dimension.icon className="h-6 w-6 text-gold" />
+                                    <h3 className="mt-4 font-heading text-xl font-bold uppercase text-white">{dimension.title}</h3>
+                                    <p className="mt-2 text-sm leading-relaxed text-gray-300">{dimension.text}</p>
+                                </article>)}
+                            </div>
+                            <div className="mt-7 rounded-2xl border border-gold/30 bg-gold/10 p-5"><p className="font-heading text-xl font-black uppercase text-white">Evaluación y <span className="text-gold">seguimiento individual</span></p><p className="mt-2 text-sm leading-relaxed text-gray-300">Dos ciclos de evaluación nos permiten comparar el punto de partida con el nivel alcanzado, identificar áreas de mejora y adaptar el trabajo a cada futbolista.</p></div>
+                        </div>
                     </div>
-                </div>
+                </section>
 
                 {/* Photo Gallery Section */}
                 <div className="mb-32">

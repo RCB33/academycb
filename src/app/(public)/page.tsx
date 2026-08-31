@@ -1,7 +1,6 @@
 import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { ArrowRight, Star, Shield, Zap, TrendingUp, HeartHandshake } from "lucide-react"
 import LeadWidget from "./components/lead-widget"
 import WhoWeAreSection from "./components/who-we-are-section"
@@ -81,64 +80,7 @@ export default async function LandingPage() {
                 </div>
             </section>
 
-            {/* ACADEMY METHODOLOGY */}
-            <section className="py-24 bg-white relative overflow-hidden">
-                <div className="container relative z-10">
-                    <div className="text-center mb-16">
-                        <h2 className="font-heading text-5xl md:text-7xl font-bold text-navy mb-4 uppercase">
-                            Nuestra <span className="text-primary">Filosofía</span>
-                        </h2>
-                        <div className="w-24 h-1.5 bg-secondary mx-auto rounded-full"></div>
-                    </div>
-
-                    <div className="grid md:grid-cols-3 gap-8">
-                        <Card className="group relative overflow-hidden border-2 border-gray-100 bg-white hover:border-primary/50 transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 rounded-2xl">
-                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                                <Zap className="w-32 h-32 text-primary" />
-                            </div>
-                            <CardHeader className="relative z-10 pt-10 pb-8 px-8">
-                                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-6 group-hover:bg-primary group-hover:text-white transition-colors duration-300">
-                                    <Zap className="h-7 w-7 text-primary group-hover:text-white" />
-                                </div>
-                                <CardTitle className="font-heading text-3xl font-bold text-navy mb-3 uppercase">Alto Rendimiento</CardTitle>
-                                <CardDescription className="text-lg leading-relaxed text-gray-600">
-                                    Entrenamientos diseñados bajo metodología profesional para maximizar la técnica, táctica y capacidad física.
-                                </CardDescription>
-                            </CardHeader>
-                        </Card>
-
-                        <Card className="group relative overflow-hidden border-2 border-gray-100 bg-navy text-white hover:border-secondary/50 transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 rounded-2xl">
-                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                                <TrendingUp className="w-32 h-32 text-secondary" />
-                            </div>
-                            <CardHeader className="relative z-10 pt-10 pb-8 px-8">
-                                <div className="w-14 h-14 rounded-2xl bg-secondary/10 flex items-center justify-center mb-6 group-hover:bg-secondary group-hover:text-navy transition-colors duration-300">
-                                    <TrendingUp className="h-7 w-7 text-secondary group-hover:text-navy" />
-                                </div>
-                                <CardTitle className="font-heading text-3xl font-bold text-white mb-3 uppercase">Data Driven</CardTitle>
-                                <CardDescription className="text-lg leading-relaxed text-gray-300">
-                                    Seguimiento digital detallado. Métricas FIFA, análisis de rendimiento y tarjetas de jugador personalizadas.
-                                </CardDescription>
-                            </CardHeader>
-                        </Card>
-
-                        <Card className="group relative overflow-hidden border-2 border-gray-100 bg-white hover:border-primary/50 transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 rounded-2xl">
-                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                                <Shield className="w-32 h-32 text-primary" />
-                            </div>
-                            <CardHeader className="relative z-10 pt-10 pb-8 px-8">
-                                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-6 group-hover:bg-primary group-hover:text-white transition-colors duration-300">
-                                    <Shield className="h-7 w-7 text-primary group-hover:text-white" />
-                                </div>
-                                <CardTitle className="font-heading text-3xl font-bold text-navy mb-3 uppercase">Valores Pro</CardTitle>
-                                <CardDescription className="text-lg leading-relaxed text-gray-600">
-                                    Formamos personas, no solo futbolistas. Disciplina, respeto, trabajo en equipo y mentalidad ganadora.
-                                </CardDescription>
-                            </CardHeader>
-                        </Card>
-                    </div>
-                </div>
-            </section>
+            <WhoWeAreSection />
 
             {/* PROGRAMS SPLIT */}
             <section className="grid md:grid-cols-2 min-h-[600px]">
@@ -168,9 +110,6 @@ export default async function LandingPage() {
                     </div>
                 </div>
             </section>
-
-            {/* WHO WE ARE SECTION */}
-            <WhoWeAreSection />
 
             {/* AGENT WIDGET SECTION */}
             <section id="agente" className="py-24 bg-navy relative overflow-hidden">
