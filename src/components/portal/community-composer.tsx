@@ -79,6 +79,9 @@ export function CommunityComposer({ players }: { players: Child[] }) {
 
     function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault()
+        // React libera el evento al terminar este manejador. Conservamos el formulario
+        // antes de empezar la subida asíncrona para construir el FormData después.
+        const form = event.currentTarget
         setMessage(null)
         setIsError(false)
         if (!selectedChildId) {
@@ -99,7 +102,7 @@ export function CommunityComposer({ players }: { players: Child[] }) {
                     setUploading(true)
                     uploaded = await uploadSelectedMedia()
                 }
-                const formData = new FormData(event.currentTarget)
+                const formData = new FormData(form)
                 if (uploaded) {
                     formData.set('media_path', uploaded.path)
                     formData.set('media_type', uploaded.mediaType)
