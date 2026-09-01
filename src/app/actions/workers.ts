@@ -24,7 +24,7 @@ const WorkerSchema = z.object({
     color: z.string().default('blue'),
     avatar_url: z.string().url().optional().nullable(),
     access_enabled: z.boolean().default(false),
-    access_role: z.enum(['staff', 'finance', 'marketing', 'coach']).default('coach'),
+    access_role: z.enum(['admin', 'staff', 'finance', 'marketing', 'coach']).default('coach'),
 })
 
 export async function getWorkers() {
@@ -48,7 +48,7 @@ export async function getWorkers() {
             .in('id', userIds)
 
         for (const profile of profiles || []) {
-            if (['staff', 'finance', 'marketing', 'coach'].includes(profile.role)) {
+            if (['admin', 'staff', 'finance', 'marketing', 'coach'].includes(profile.role)) {
                 rolesByUser.set(profile.id, profile.role as WorkerAccessRole)
             }
         }

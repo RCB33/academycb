@@ -1,13 +1,17 @@
 export const APP_ROLES = ['admin', 'staff', 'finance', 'marketing', 'guardian', 'coach'] as const
 
 export type AppRole = (typeof APP_ROLES)[number]
-export type WorkerAccessRole = Exclude<AppRole, 'admin' | 'guardian'>
+// Solo un administrador ya autenticado puede asignar estos roles desde la
+// gestión de trabajadores. Incluimos `admin` para responsables de absoluta
+// confianza, como dirección o secretaría con control total de la academia.
+export type WorkerAccessRole = Exclude<AppRole, 'guardian'>
 
 export const WORKER_ACCESS_ROLES: Array<{
     value: WorkerAccessRole
     label: string
     description: string
 }> = [
+    { value: 'admin', label: 'Administrador total', description: 'Acceso completo a gestión, finanzas, ajustes, usuarios y permisos. Asignar solo a personal de máxima confianza.' },
     { value: 'coach', label: 'Entrenador', description: 'Ve sus sesiones, equipos y controles de asistencia.' },
     { value: 'staff', label: 'Coordinación', description: 'Gestiona el calendario general y la operativa diaria.' },
     { value: 'finance', label: 'Finanzas', description: 'Accede exclusivamente al control económico.' },
