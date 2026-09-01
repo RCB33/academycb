@@ -87,6 +87,33 @@ export async function deleteCommunityPost(id: string) {
     return { success: true }
 }
 
+export async function deleteOwnCommunityPost(id: string) {
+    const { supabase, user } = await requireUser()
+    if (!z.string().uuid().safeParse(id).success) return { success: false, error: 'Publicación no válida.' }
+
+    const { data: post } = await supabase
+        .from('community_posts')
+        .select('media_path')
+        .eq('id', id)
+        .eq('author_user_id', user.id)
+        .maybeSingle()
+    if (!post) return { success: false, error: 'Solo puedes eliminar tus propias publicaciones.' }
+
+    const { error } = await supabase
+        .from('community_posts')
+        .delete()
+        .eq('id', id)
+        .eq('author_user_id', user.id)
+    if (error) return { success: false, error: 'No se pudo eliminar la publicación.' }
+    if (post.media_path) await supabase.storage.from('community-wall').remove([post.media_path])
+    revalidatePath('/portal/muro'); revalidatePath('/admin/muro')
+    return { success: true }
+}
+
+export async function deleteOwnCommunityPostFromForm(id: string): Promise<void> {
+    await deleteOwnCommunityPost(id)
+}
+
 export async function createAcademyWallPost(formData: FormData) {
     const { supabase, user } = await requireAdmin()
     const body = z.string().trim().min(2).max(1500).safeParse(formData.get('body'))
