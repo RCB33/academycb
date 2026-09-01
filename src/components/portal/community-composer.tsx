@@ -136,6 +136,7 @@ export function CommunityComposer({ players }: { players: Child[] }) {
             <div><p className="font-heading text-xl font-black uppercase leading-none">Comparte un logro</p><p className="mt-1 text-xs text-slate-300">Un momento bonito para la comunidad Academy.</p></div>
         </div>
         <div className="space-y-4 p-4 sm:p-6">
+            <input type="hidden" name="child_id" value={selectedChildId} />
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 shadow-inner">
                 <Textarea name="body" required minLength={2} maxLength={1500} className="min-h-24 resize-none border-0 bg-transparent px-2 py-1 text-base shadow-none focus-visible:ring-0" placeholder="¿Qué logro quieres celebrar hoy? Por ejemplo: gran torneo, primera convocatoria, esfuerzo en los entrenos…" />
                 <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-slate-200 pt-3">
