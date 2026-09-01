@@ -1,6 +1,5 @@
 'use server'
 
-import { randomUUID } from 'node:crypto'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { requireAdmin, requireUser } from '@/lib/auth'
@@ -11,13 +10,13 @@ const postSchema = z.object({
     visibility: z.enum(['private', 'community']),
 })
 
-const allowedFiles: Record<string, { extension: string; mediaType: 'image' | 'video' }> = {
-    'image/jpeg': { extension: 'jpg', mediaType: 'image' },
-    'image/png': { extension: 'png', mediaType: 'image' },
-    'image/webp': { extension: 'webp', mediaType: 'image' },
-    'video/mp4': { extension: 'mp4', mediaType: 'video' },
-    'video/webm': { extension: 'webm', mediaType: 'video' },
-    'video/quicktime': { extension: 'mov', mediaType: 'video' },
+const allowedMedia: Record<string, { extension: string; mediaType: 'image' | 'video' }> = {
+    jpg: { extension: 'jpg', mediaType: 'image' },
+    png: { extension: 'png', mediaType: 'image' },
+    webp: { extension: 'webp', mediaType: 'image' },
+    mp4: { extension: 'mp4', mediaType: 'video' },
+    webm: { extension: 'webm', mediaType: 'video' },
+    mov: { extension: 'mov', mediaType: 'video' },
 }
 
 export async function createCommunityPost(formData: FormData) {
@@ -28,12 +27,14 @@ export async function createCommunityPost(formData: FormData) {
     const { data: link } = await supabase.from('child_guardians').select('child_id, guardians!inner(user_id)').eq('child_id', parsed.data.childId).eq('guardians.user_id', user.id).maybeSingle()
     if (!link) return { success: false, error: 'Solo puedes publicar logros de tus jugadores vinculados.' }
 
-    const file = formData.get('file')
+    const submittedMediaPath = formData.get('media_path')
+    const submittedMediaType = formData.get('media_type')
     let mediaPath: string | null = null
     let mediaType: 'image' | 'video' | null = null
-    if (file instanceof File && file.size > 0) {
-        const fileMeta = allowedFiles[file.type]
-        if (!fileMeta || file.size > 20 * 1024 * 1024) return { success: false, error: 'Adjunta una imagen o vídeo válido de hasta 20 MB.' }
+    if (typeof submittedMediaPath === 'string' && submittedMediaPath) {
+        const pathMatch = submittedMediaPath.match(new RegExp(`^${user.id}/[0-9a-f-]{36}\\.(jpg|png|webp|mp4|webm|mov)$`, 'i'))
+        const fileMeta = pathMatch ? allowedMedia[pathMatch[1].toLowerCase()] : null
+        if (!fileMeta || submittedMediaType !== fileMeta.mediaType) return { success: false, error: 'El archivo adjunto no es válido. Vuelve a seleccionarlo.' }
         const { data: guardian } = await supabase.from('guardians').select('id').eq('user_id', user.id).maybeSingle()
         const { data: consent } = guardian ? await supabase
             .from('signatures')
@@ -48,10 +49,10 @@ export async function createCommunityPost(formData: FormData) {
         if (!consent?.consent_options?.portal_internal) {
             return { success: false, error: 'Para adjuntar una foto o vídeo necesitas autorizar primero el uso interno en Portal Familias → Autorizaciones.' }
         }
-        mediaPath = `${user.id}/${randomUUID()}.${fileMeta.extension}`
+        const { data: uploadedFile, error: uploadedFileError } = await supabase.storage.from('community-wall').createSignedUrl(submittedMediaPath, 60)
+        if (uploadedFileError || !uploadedFile?.signedUrl) return { success: false, error: 'No hemos encontrado el archivo adjunto. Vuelve a seleccionarlo e inténtalo de nuevo.' }
+        mediaPath = submittedMediaPath
         mediaType = fileMeta.mediaType
-        const { error } = await supabase.storage.from('community-wall').upload(mediaPath, file, { contentType: file.type })
-        if (error) return { success: false, error: 'No se pudo subir el archivo. Inténtalo de nuevo.' }
     }
 
     const { error } = await supabase.from('community_posts').insert({
