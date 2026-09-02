@@ -87,6 +87,8 @@ export type Recipient = {
     childName: string
     guardianName: string
     phone: string
+    guardianIds: string[]
+    userIds: string[]
     teamName?: string
     categoryName?: string
 }
@@ -125,7 +127,7 @@ export async function getRecipientsByCategory(categoryId: string): Promise<Recip
             id, full_name, category_id,
             category:categories(name),
             team:teams(name),
-            child_guardians(guardian:guardians(id, full_name, phone))
+            child_guardians(guardian:guardians(id, user_id, full_name, phone))
         `)
         .eq('category_id', categoryId)
 
@@ -142,7 +144,7 @@ export async function getRecipientsByTeam(teamId: string): Promise<Recipient[]> 
             id, full_name,
             category:categories(name),
             team:teams(name),
-            child_guardians(guardian:guardians(id, full_name, phone))
+            child_guardians(guardian:guardians(id, user_id, full_name, phone))
         `)
         .eq('team_id', teamId)
 
@@ -154,7 +156,7 @@ export async function getRecipientsAllGuardians(): Promise<Recipient[]> {
     const { data: guardians, error } = await supabase
         .from('guardians')
         .select(`
-            id, full_name, phone,
+            id, user_id, full_name, phone,
             children:child_guardians(
                 child:children(full_name, archived_at, category:categories(name), team:teams(name))
             )
@@ -168,9 +170,8 @@ export async function getRecipientsAllGuardians(): Promise<Recipient[]> {
 
     const recipients: Recipient[] = []
     for (const guardian of guardians || []) {
-        if (!guardian.phone) continue
-        const phone = guardian.phone.replace(/\D/g, '')
-        if (phone.length < 9) continue
+        const phone = guardian.phone?.replace(/\D/g, '') || ''
+        if (phone.length < 9 && !guardian.user_id) continue
 
         const activeChildren = ((guardian.children || []) as any[])
             .map((relation) => relation.child)
@@ -184,6 +185,8 @@ export async function getRecipientsAllGuardians(): Promise<Recipient[]> {
             childName: childNames.join(' · ') || 'Tutor sin jugador activo',
             guardianName: guardian.full_name,
             phone,
+            guardianIds: [guardian.id],
+            userIds: guardian.user_id ? [guardian.user_id] : [],
             teamName: teamNames.join(' · '),
             categoryName: categoryNames.join(' · '),
         })
@@ -202,15 +205,17 @@ function extractRecipients(children: any[]): Recipient[] {
         if (!child.child_guardians) continue
         for (const cg of child.child_guardians) {
             const g = cg.guardian as any
-            if (!g?.phone) continue
-            const cleanPhone = g.phone.replace(/\D/g, '')
-            if (cleanPhone.length < 9) continue
+            if (!g?.id) continue
+            const cleanPhone = g.phone?.replace(/\D/g, '') || ''
+            if (cleanPhone.length < 9 && !g.user_id) continue
 
             recipients.push({
                 id: g.id,
                 childName: child.full_name,
                 guardianName: g.full_name,
                 phone: cleanPhone,
+                guardianIds: [g.id],
+                userIds: g.user_id ? [g.user_id] : [],
                 teamName,
                 categoryName
             })
@@ -223,9 +228,10 @@ function dedupeRecipientsByPhone(recipients: Recipient[]): Recipient[] {
     const byPhone = new Map<string, Recipient>()
 
     for (const recipient of recipients) {
-        const existing = byPhone.get(recipient.phone)
+        const recipientKey = recipient.phone || recipient.userIds[0] || recipient.id
+        const existing = byPhone.get(recipientKey)
         if (!existing) {
-            byPhone.set(recipient.phone, recipient)
+            byPhone.set(recipientKey, recipient)
             continue
         }
 
@@ -238,6 +244,8 @@ function dedupeRecipientsByPhone(recipients: Recipient[]): Recipient[] {
         existing.guardianName = appendUnique(existing.guardianName, recipient.guardianName)
         existing.teamName = appendUnique(existing.teamName, recipient.teamName)
         existing.categoryName = appendUnique(existing.categoryName, recipient.categoryName)
+        existing.guardianIds = Array.from(new Set([...existing.guardianIds, ...recipient.guardianIds]))
+        existing.userIds = Array.from(new Set([...existing.userIds, ...recipient.userIds]))
     }
 
     return Array.from(byPhone.values())
@@ -306,10 +314,53 @@ export async function sendToRecipients(phones: string[], message: string, label:
         message,
         sent_count: successCount,
         failed_count: failCount,
+        channel: 'whatsapp',
     }])
 
     revalidatePath('/admin/comunicados')
     return { success: true, summary: { success: successCount, failed: failCount, total: phones.length } }
+}
+
+export async function publishPortalAnnouncement(userIds: string[], message: string, label: string, targetScope: 'all' | 'category' | 'team') {
+    const { supabase } = await requireAdmin()
+    const cleanMessage = message.trim()
+    const recipients = Array.from(new Set(userIds.filter(Boolean)))
+
+    if (cleanMessage.length < 2 || cleanMessage.length > 2000) {
+        return { success: false, error: 'El comunicado debe tener entre 2 y 2000 caracteres.' }
+    }
+    if (recipients.length === 0) {
+        return { success: false, error: 'No hay tutores con acceso al Portal Familias en la selección.' }
+    }
+
+    const { error: logError } = await supabase.from('broadcast_logs').insert({
+        category_name: label,
+        message: cleanMessage,
+        sent_count: recipients.length,
+        failed_count: 0,
+        channel: 'portal',
+        target_scope: targetScope,
+    })
+    if (logError) return { success: false, error: logError.message }
+
+    const { error: notificationError } = await supabase.from('notifications').insert(
+        recipients.map((userId) => ({
+            user_id: userId,
+            title: 'Nuevo comunicado Academy',
+            message: cleanMessage.length > 180 ? `${cleanMessage.slice(0, 177)}…` : cleanMessage,
+            type: 'info',
+            link_url: '/portal/comunicados',
+        }))
+    )
+    if (notificationError) {
+        console.error('Portal announcement notification error:', notificationError)
+        return { success: false, error: 'El comunicado se publicó, pero no se pudieron crear sus notificaciones.' }
+    }
+
+    revalidatePath('/admin/comunicados')
+    revalidatePath('/portal/comunicados')
+    revalidatePath('/portal', 'layout')
+    return { success: true, summary: { published: recipients.length } }
 }
 
 // Legacy function kept for backwards compat

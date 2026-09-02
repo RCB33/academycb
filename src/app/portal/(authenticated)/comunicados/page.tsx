@@ -43,12 +43,12 @@ export default async function ComunicadosWallPage() {
 
     const allowedLabels = Array.from(labels)
 
-    // Fetch broadcast logs that match these categories
-    // broadcast_logs doesn't have a direct 'Todos' sometimes, but we'll fetch everything that matches allowedLabels
-    // Alternatively, we can just fetch all if it's a small academy, but filtering is better.
+    // Only internal Portal Familias messages live here. WhatsApp and email
+    // deliveries have their own channels and never leak into the portal feed.
     const { data: messages } = await supabase
         .from('broadcast_logs')
         .select('*')
+        .eq('channel', 'portal')
         .in('category_name', allowedLabels)
         .order('created_at', { ascending: false })
         .limit(30) // Last 30 messages
