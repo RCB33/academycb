@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Toaster } from 'sonner';
 import { Providers } from '@/app/providers';
@@ -24,6 +24,13 @@ export const metadata: Metadata = {
         images: [{ url: '/landing-hero-new.png', alt: 'Academy Costa Brava' }],
     },
     twitter: { card: 'summary_large_image' },
+};
+
+export const viewport: Viewport = {
+    width: 'device-width',
+    initialScale: 1,
+    viewportFit: 'cover',
+    themeColor: '#102a4d',
 };
 
 export default function RootLayout({

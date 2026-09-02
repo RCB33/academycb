@@ -42,9 +42,9 @@ export default async function AuthenticatedLayout({
     }
 
     return (
-        <div className="h-screen flex flex-col md:flex-row bg-muted/20 overflow-hidden w-full">
+        <div className="h-[100dvh] min-h-[100dvh] w-full overflow-hidden bg-muted/20 md:h-screen md:min-h-0 flex flex-col md:flex-row">
             {/* Mobile Header */}
-            <div className="md:hidden flex items-center justify-between p-4 bg-background border-b">
+            <div className="flex shrink-0 items-center justify-between border-b bg-background p-4 md:hidden">
                 <Link href="/portal/dashboard" className="flex items-center space-x-2 font-bold">
                     <Trophy className="h-5 w-5 text-primary" />
                     <span>Portal</span>
@@ -88,12 +88,11 @@ export default async function AuthenticatedLayout({
             </aside>
 
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:h-screen">
-                <main className="flex-1 p-4 md:p-8 overflow-y-auto overflow-x-hidden relative h-full">
+                <main className="relative h-full flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] [-webkit-overflow-scrolling:touch] md:p-8">
                     <div className="mx-auto w-full max-w-7xl">
                         {children}
                     </div>
-                    {/* Add some padding space at the very bottom strictly to prevent cut-offs */}
-                    <div className="h-8 shrink-0 w-full" />
+                    <div className="h-4 shrink-0 w-full md:h-8" />
                 </main>
             </div>
 
