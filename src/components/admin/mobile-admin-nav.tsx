@@ -13,8 +13,12 @@ import {
 type Item = { href: string, label: string, icon: ReactNode }
 type Group = { label: string, items: Item[] }
 
+function isActiveSection(pathname: string, href: string) {
+    return pathname === href || pathname.startsWith(`${href}/`)
+}
+
 function MenuLink({ item, active, onNavigate }: { item: Item, active?: boolean, onNavigate?: () => void }) {
-    return <Link href={item.href} onClick={onNavigate} className={`flex min-h-12 items-center gap-3 rounded-xl px-3 text-sm font-semibold transition-colors ${active ? 'bg-gold text-navy' : 'text-slate-100 active:bg-white/10'}`}>
+    return <Link href={item.href} onClick={onNavigate} aria-current={active ? 'page' : undefined} className={`flex min-h-12 items-center gap-3 rounded-xl px-3 text-sm font-semibold transition-all ${active ? 'bg-gold text-navy shadow-lg shadow-black/20' : 'text-slate-100 active:bg-white/10'}`}>
         <span className={active ? 'text-navy' : 'text-gold'}>{item.icon}</span><span>{item.label}</span>
     </Link>
 }
@@ -58,6 +62,7 @@ export function MobileAdminNav({ isAdmin, isStaff, isFinance, isMarketing }: { i
             ...(isAdmin ? [{ href: '/admin/ajustes', label: 'Ajustes', icon: <Settings className="h-5 w-5" /> }] : []),
         ] }] : []),
     ]
+    const isMoreActive = groups.some((group) => group.items.some((item) => isActiveSection(pathname, item.href)))
 
     return <div className="md:hidden">
         {open && <>
@@ -65,12 +70,15 @@ export function MobileAdminNav({ isAdmin, isStaff, isFinance, isMarketing }: { i
             <section aria-label="Más secciones" className="fixed inset-x-0 bottom-[calc(4.65rem+env(safe-area-inset-bottom))] z-50 max-h-[min(68dvh,38rem)] overflow-y-auto overscroll-contain rounded-t-3xl border-t border-white/15 bg-navy px-4 pb-4 pt-3 text-white shadow-[0_-16px_50px_rgba(12,34,65,0.28)]">
                 <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-white/35" />
                 <div className="mb-3 flex items-center justify-between"><h2 className="text-base font-black tracking-wide">Más secciones</h2><button type="button" onClick={() => setOpen(false)} className="flex h-10 items-center gap-1 rounded-lg px-2 text-sm font-semibold text-gold"><ChevronUp className="h-4 w-4" />Cerrar</button></div>
-                <div className="space-y-4">{groups.map((group) => <div key={group.label} className="border-t border-white/10 pt-3 first:border-t-0 first:pt-0"><p className="mb-1 px-3 text-[10px] font-black uppercase tracking-[0.18em] text-gold">{group.label}</p>{group.items.map((item) => <MenuLink key={item.href} item={item} active={pathname === item.href} onNavigate={() => setOpen(false)} />)}</div>)}</div>
+                <div className="space-y-4">{groups.map((group) => <div key={group.label} className="border-t border-white/10 pt-3 first:border-t-0 first:pt-0"><p className="mb-1 px-3 text-[10px] font-black uppercase tracking-[0.18em] text-gold">{group.label}</p>{group.items.map((item) => <MenuLink key={item.href} item={item} active={isActiveSection(pathname, item.href)} onNavigate={() => setOpen(false)} />)}</div>)}</div>
             </section>
         </>}
         <nav aria-label="Navegación principal" className="fixed inset-x-0 bottom-0 z-50 flex min-h-[4.65rem] items-stretch border-t border-slate-200 bg-white/95 px-1 pb-[env(safe-area-inset-bottom)] pt-1 shadow-[0_-6px_20px_rgba(12,34,65,0.10)] backdrop-blur">
-            {primary.map((item) => <Link key={item.href} href={item.href} className={`flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-1 py-2 text-[10px] font-bold ${pathname === item.href ? 'bg-gold/15 text-navy' : 'text-slate-500 active:bg-slate-100'}`}><span className={pathname === item.href ? 'text-gold' : ''}>{item.icon}</span><span className="truncate">{item.label}</span></Link>)}
-            <button type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)} className={`flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-1 py-2 text-[10px] font-bold ${open ? 'bg-gold text-navy' : 'text-slate-500 active:bg-slate-100'}`}><MoreHorizontal className="h-5 w-5" /><span>Más</span></button>
+            {primary.map((item) => {
+                const active = isActiveSection(pathname, item.href)
+                return <Link key={item.href} href={item.href} aria-current={active ? 'page' : undefined} className={`my-1 flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-[10px] font-bold transition-all ${active ? 'bg-gold text-navy shadow-md shadow-gold/30' : 'text-slate-500 active:bg-slate-100'}`}><span className={active ? 'text-navy' : ''}>{item.icon}</span><span className="truncate">{item.label}</span></Link>
+            })}
+            <button type="button" aria-expanded={open} aria-current={isMoreActive ? 'page' : undefined} onClick={() => setOpen((value) => !value)} className={`my-1 flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-[10px] font-bold transition-all ${open || isMoreActive ? 'bg-gold text-navy shadow-md shadow-gold/30' : 'text-slate-500 active:bg-slate-100'}`}><MoreHorizontal className="h-5 w-5" /><span>Más</span></button>
         </nav>
     </div>
 }
