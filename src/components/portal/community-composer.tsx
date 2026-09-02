@@ -8,14 +8,27 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 
 type Child = { id: string; full_name: string; can_share_media: boolean }
+type MediaDetails = { extension: string; mediaType: 'image' | 'video'; mimeType: string }
 
-const uploadableMedia: Record<string, { extension: string; mediaType: 'image' | 'video' }> = {
-    'image/jpeg': { extension: 'jpg', mediaType: 'image' },
-    'image/png': { extension: 'png', mediaType: 'image' },
-    'image/webp': { extension: 'webp', mediaType: 'image' },
-    'video/mp4': { extension: 'mp4', mediaType: 'video' },
-    'video/webm': { extension: 'webm', mediaType: 'video' },
-    'video/quicktime': { extension: 'mov', mediaType: 'video' },
+const uploadableMedia: Record<string, MediaDetails> = {
+    'image/jpeg': { extension: 'jpg', mediaType: 'image', mimeType: 'image/jpeg' },
+    'image/png': { extension: 'png', mediaType: 'image', mimeType: 'image/png' },
+    'image/webp': { extension: 'webp', mediaType: 'image', mimeType: 'image/webp' },
+    'video/mp4': { extension: 'mp4', mediaType: 'video', mimeType: 'video/mp4' },
+    'video/webm': { extension: 'webm', mediaType: 'video', mimeType: 'video/webm' },
+    'video/quicktime': { extension: 'mov', mediaType: 'video', mimeType: 'video/quicktime' },
+}
+
+const mediaByExtension: Record<string, MediaDetails> = {
+    jpg: uploadableMedia['image/jpeg'], jpeg: uploadableMedia['image/jpeg'], png: uploadableMedia['image/png'], webp: uploadableMedia['image/webp'],
+    mp4: uploadableMedia['video/mp4'], webm: uploadableMedia['video/webm'], mov: uploadableMedia['video/quicktime'],
+}
+
+function getMediaDetails(file: File): MediaDetails | null {
+    const mimeMatch = uploadableMedia[file.type.toLowerCase()]
+    if (mimeMatch) return mimeMatch
+    const extension = file.name.split('.').pop()?.toLowerCase() || ''
+    return mediaByExtension[extension] || null
 }
 
 export function CommunityComposer({ players }: { players: Child[] }) {
@@ -51,7 +64,7 @@ export function CommunityComposer({ players }: { players: Child[] }) {
         setMessage(null)
         setIsError(false)
         if (!file) return
-        if (!uploadableMedia[file.type] || file.size > 20 * 1024 * 1024) {
+        if (!getMediaDetails(file) || file.size > 20 * 1024 * 1024) {
             setIsError(true)
             setMessage('Selecciona una imagen o vídeo válido de hasta 20 MB.')
             clearFile()
@@ -62,14 +75,14 @@ export function CommunityComposer({ players }: { players: Child[] }) {
 
     async function uploadSelectedMedia() {
         if (!selectedFile) return null
-        const media = uploadableMedia[selectedFile.type]
+        const media = getMediaDetails(selectedFile)
         if (!media) throw new Error('Tipo de archivo no permitido.')
         const supabase = createClient()
         const { data: { user }, error: userError } = await supabase.auth.getUser()
         if (userError || !user) throw new Error('Tu sesión ha caducado. Vuelve a entrar para compartir el archivo.')
         const path = `${user.id}/${crypto.randomUUID()}.${media.extension}`
         const { error: uploadError } = await supabase.storage.from('community-wall').upload(path, selectedFile, {
-            contentType: selectedFile.type,
+            contentType: media.mimeType,
             cacheControl: '3600',
             upsert: false,
         })
@@ -140,8 +153,8 @@ export function CommunityComposer({ players }: { players: Child[] }) {
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 shadow-inner">
                 <Textarea name="body" required minLength={2} maxLength={1500} className="min-h-24 resize-none border-0 bg-transparent px-2 py-1 text-base shadow-none focus-visible:ring-0" placeholder="¿Qué logro quieres celebrar hoy? Por ejemplo: gran torneo, primera convocatoria, esfuerzo en los entrenos…" />
                 <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-slate-200 pt-3">
-                    <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime" className="sr-only" onChange={(event) => selectFile(event.target.files?.[0] || null)} />
-                    <Button type="button" variant="ghost" onClick={() => fileInputRef.current?.click()} className="h-9 rounded-xl px-3 text-navy hover:bg-gold/15 hover:text-navy"><ImagePlus className="mr-2 h-4 w-4 text-gold" />Foto o vídeo</Button>
+                    <input id="community-media-input" ref={fileInputRef} type="file" accept="image/*,video/*" className="sr-only" disabled={isBusy} onChange={(event) => selectFile(event.target.files?.[0] || null)} />
+                    <label htmlFor="community-media-input" className={`inline-flex min-h-11 cursor-pointer items-center rounded-xl px-3 text-sm font-medium text-navy transition hover:bg-gold/15 ${isBusy ? 'pointer-events-none opacity-50' : ''}`}><ImagePlus className="mr-2 h-4 w-4 text-gold" />Añadir foto o vídeo</label>
                     <span className="text-xs text-slate-500">JPG, PNG, WEBP, MP4, WEBM o MOV · máx. 20 MB</span>
                 </div>
             </div>
@@ -149,12 +162,12 @@ export function CommunityComposer({ players }: { players: Child[] }) {
             {selectedFile && <div className="overflow-hidden rounded-2xl border border-gold/35 bg-gold/5">
                 <div className="flex items-center justify-between gap-3 px-4 py-3">
                     <div className="flex min-w-0 items-center gap-2 text-sm font-semibold text-navy">
-                        {uploadableMedia[selectedFile.type]?.mediaType === 'video' ? <Video className="h-4 w-4 shrink-0 text-gold" /> : <ImagePlus className="h-4 w-4 shrink-0 text-gold" />}
+                        {getMediaDetails(selectedFile)?.mediaType === 'video' ? <Video className="h-4 w-4 shrink-0 text-gold" /> : <ImagePlus className="h-4 w-4 shrink-0 text-gold" />}
                         <span className="truncate">{selectedFile.name}</span>
                     </div>
                     <Button type="button" size="icon" variant="ghost" className="h-8 w-8 shrink-0 text-slate-500 hover:bg-white hover:text-red-600" aria-label="Quitar adjunto" onClick={clearFile}><X className="h-4 w-4" /></Button>
                 </div>
-                {previewUrl && (uploadableMedia[selectedFile.type]?.mediaType === 'image' ? <img src={previewUrl} alt="Vista previa de la publicación" className="max-h-72 w-full object-cover" /> : <video src={previewUrl} controls className="max-h-72 w-full bg-navy" />)}
+                {previewUrl && (getMediaDetails(selectedFile)?.mediaType === 'image' ? <img src={previewUrl} alt="Vista previa de la publicación" className="max-h-72 w-full object-cover" /> : <video src={previewUrl} controls className="max-h-72 w-full bg-navy" />)}
             </div>}
 
             <fieldset className="space-y-3">
