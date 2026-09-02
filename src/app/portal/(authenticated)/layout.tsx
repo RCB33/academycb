@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { NotificationBell } from "@/components/ui/notification-bell"
 import { GlobalSignatureGuard } from "@/components/portal/global-signature-guard"
 import { MobilePortalNav, SidebarNav } from "@/components/portal/sidebar-nav"
+import { PortalPlayerSwitcher } from "@/components/portal/player-switcher"
 import { getRoleHome, isAppRole } from '@/lib/roles'
 
 export default async function AuthenticatedLayout({
@@ -34,6 +35,23 @@ export default async function AuthenticatedLayout({
         redirect(getRoleHome(role))
     }
 
+    const { data: guardian } = await supabase
+        .from('guardians')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+    const { data: childRelations } = guardian
+        ? await supabase
+            .from('child_guardians')
+            .select('child:children(id, full_name, birth_year)')
+            .eq('guardian_id', guardian.id)
+        : { data: [] }
+
+    const familyPlayers = (childRelations || [])
+        .map((relation: any) => relation.child)
+        .filter(Boolean)
+
     const signOut = async () => {
         'use server'
         const supabase = await createClient()
@@ -44,17 +62,20 @@ export default async function AuthenticatedLayout({
     return (
         <div className="h-[100dvh] min-h-[100dvh] w-full overflow-hidden bg-muted/20 md:h-screen md:min-h-0 flex flex-col md:flex-row">
             {/* Mobile Header */}
-            <div className="flex shrink-0 items-center justify-between border-b bg-background p-4 md:hidden">
-                <Link href="/portal/dashboard" className="flex items-center space-x-2 font-bold">
-                    <Trophy className="h-5 w-5 text-primary" />
-                    <span>Portal</span>
-                </Link>
-                <div className="flex items-center gap-2">
-                    <NotificationBell />
-                    <form action={signOut}>
-                        <Button variant="ghost" size="icon"><LogOut className="h-5 w-5" /></Button>
-                    </form>
+            <div className="shrink-0 border-b bg-background md:hidden">
+                <div className="flex items-center justify-between p-4">
+                    <Link href="/portal/dashboard" className="flex items-center space-x-2 font-bold">
+                        <Trophy className="h-5 w-5 text-primary" />
+                        <span>Portal</span>
+                    </Link>
+                    <div className="flex items-center gap-2">
+                        <NotificationBell />
+                        <form action={signOut}>
+                            <Button variant="ghost" size="icon"><LogOut className="h-5 w-5" /></Button>
+                        </form>
+                    </div>
                 </div>
+                <PortalPlayerSwitcher players={familyPlayers} variant="mobile" />
             </div>
             <MobilePortalNav />
 
@@ -65,6 +86,7 @@ export default async function AuthenticatedLayout({
                         <Trophy className="h-6 w-6 text-primary" />
                         <span>Portal Familias</span>
                     </Link>
+                    <PortalPlayerSwitcher players={familyPlayers} />
                 </div>
                 <SidebarNav />
                 <div className="p-4 border-t shrink-0">
