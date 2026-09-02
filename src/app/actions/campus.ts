@@ -91,7 +91,7 @@ export async function createCampus(data: {
             type: data.type,
             start_date: data.start_date,
             end_date: data.end_date,
-            price: data.price || null,
+            price: data.price ?? null,
             capacity: data.capacity,
             status: data.status || 'draft',
             location: data.location || null,

@@ -145,12 +145,12 @@ export function ProductsTable({ products }: { products: any[] }) {
                 </div>
                 <Dialog open={isOpen} onOpenChange={(o) => { setIsOpen(o); if (!o) { setSelectedFile(null); setPreviewUrl(null) } }}>
                     <DialogTrigger asChild>
-                        <Button onClick={openCreate} className="bg-indigo-600 hover:bg-indigo-700">
+                        <Button onClick={openCreate} className="bg-gold text-navy hover:bg-gold-light">
                             <Plus className="mr-2 h-4 w-4" /> Añadir Producto
                         </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-[500px] p-0 border-0 overflow-hidden bg-slate-50 sm:rounded-2xl">
-                        <div className="bg-indigo-600 p-5 flex flex-col items-center">
+                        <div className="bg-navy p-5 flex flex-col items-center">
                             <div className="h-12 w-12 rounded-full bg-white/10 flex items-center justify-center mb-2">
                                 <Tag className="h-6 w-6 text-white" />
                             </div>
@@ -247,10 +247,10 @@ export function ProductsTable({ products }: { products: any[] }) {
                                             <button
                                                 type="button"
                                                 onClick={() => fileInputRef.current?.click()}
-                                                className="w-full p-6 border-2 border-dashed border-slate-200 rounded-xl bg-white hover:border-indigo-400 hover:bg-indigo-50/30 transition-all flex flex-col items-center gap-2 group"
+                                                className="w-full p-6 border-2 border-dashed border-slate-200 rounded-xl bg-white hover:border-gold hover:bg-gold/5 transition-all flex flex-col items-center gap-2 group"
                                             >
-                                                <div className="h-12 w-12 rounded-full bg-slate-100 group-hover:bg-indigo-100 flex items-center justify-center transition-colors">
-                                                    <ImageIcon className="h-5 w-5 text-slate-400 group-hover:text-indigo-600 transition-colors" />
+                                                <div className="h-12 w-12 rounded-full bg-slate-100 group-hover:bg-gold/15 flex items-center justify-center transition-colors">
+                                                    <ImageIcon className="h-5 w-5 text-slate-400 group-hover:text-gold transition-colors" />
                                                 </div>
                                                 <p className="text-sm font-bold text-slate-500 group-hover:text-slate-700">Haz clic para seleccionar una imagen</p>
                                                 <p className="text-[10px] text-slate-400">JPG, PNG, WebP • Máximo 10 MB</p>
@@ -268,7 +268,7 @@ export function ProductsTable({ products }: { products: any[] }) {
                             </div>
                             <div className="pt-3 flex justify-end gap-3 border-t">
                                 <Button type="button" variant="ghost" onClick={() => setIsOpen(false)}>Cancelar</Button>
-                                <Button disabled={loading} type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6">
+                                <Button disabled={loading} type="submit" className="bg-gold hover:bg-gold-light text-navy font-bold px-6">
                                     {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                                     Guardar Producto
                                 </Button>
@@ -314,7 +314,7 @@ export function ProductsTable({ products }: { products: any[] }) {
                                     <Tag className="w-3.5 h-3.5"/> Stock: <span className="font-bold text-slate-900">{product.stock}</span>
                                 </div>
                                 <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Button variant="ghost" size="icon" onClick={() => openEdit(product)} className="h-8 w-8 text-indigo-600 bg-indigo-50 hover:bg-indigo-100">
+                                    <Button variant="ghost" size="icon" onClick={() => openEdit(product)} className="h-8 w-8 text-navy bg-gold/10 hover:bg-gold/20">
                                         <Edit2 className="h-3.5 w-3.5"/>
                                     </Button>
                                     <Button variant="ghost" size="icon" onClick={() => handleDelete(product.id)} className="h-8 w-8 text-red-600 bg-red-50 hover:bg-red-100">

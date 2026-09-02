@@ -463,6 +463,7 @@ function CampusDialog({ open, onOpenChange, campus }: {
         e.preventDefault()
         setLoading(true)
         const fd = new FormData(e.currentTarget)
+        const priceValue = (fd.get('price') as string).trim()
 
         const data = {
             name: fd.get('name') as string,
@@ -470,7 +471,9 @@ function CampusDialog({ open, onOpenChange, campus }: {
             type: fd.get('type') as string,
             start_date: fd.get('start_date') as string,
             end_date: fd.get('end_date') as string,
-            price: parseFloat(fd.get('price') as string) || null,
+            // A campus can legitimately be free. Empty means "without price";
+            // 0 must remain 0 instead of becoming null through a truthy fallback.
+            price: priceValue === '' ? null : Number(priceValue),
             capacity: parseInt(fd.get('capacity') as string) || 30,
             status: fd.get('status') as string || 'draft',
             location: (fd.get('location') as string) || null,
