@@ -8,14 +8,15 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
-    getRecipientsByCategory, getRecipientsByTeam, sendToRecipients,
+    getRecipientsAllGuardians, getRecipientsByCategory, getRecipientsByTeam, sendToRecipients,
     type Recipient
 } from '@/app/actions/whatsapp'
 import { toast } from 'sonner'
 import {
     Loader2, Send, MessageSquare, Clock, CheckCircle, XCircle,
-    Users, Phone, Search, Check, X, AlertTriangle, Mail, Timer
+    Users, Phone, Search, Check, X, AlertTriangle, Mail, Timer, Megaphone, ShieldCheck
 } from 'lucide-react'
 
 interface Props {
@@ -26,13 +27,15 @@ interface Props {
 
 export function ComunicadosClient({ categories, teams, history }: Props) {
     const [channel, setChannel] = useState<'whatsapp' | 'email'>('whatsapp')
-    const [scope, setScope] = useState<'category' | 'team'>('category')
+    const [scope, setScope] = useState<'all' | 'category' | 'team'>('category')
     const [selectedId, setSelectedId] = useState('')
     const [recipients, setRecipients] = useState<Recipient[]>([])
     const [selectedPhones, setSelectedPhones] = useState<Set<string>>(new Set())
     const [loadingRecipients, setLoadingRecipients] = useState(false)
     const [message, setMessage] = useState('')
     const [isSending, setIsSending] = useState(false)
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false)
+    const [sendingProgress, setSendingProgress] = useState<string | null>(null)
     const [search, setSearch] = useState('')
 
     // Fetch recipients when selection changes
@@ -40,9 +43,11 @@ export function ComunicadosClient({ categories, teams, history }: Props) {
         if (!selectedId) { setRecipients([]); return }
         async function fetch() {
             setLoadingRecipients(true)
-            const r = scope === 'category'
-                ? await getRecipientsByCategory(selectedId)
-                : await getRecipientsByTeam(selectedId)
+            const r = scope === 'all'
+                ? await getRecipientsAllGuardians()
+                : scope === 'category'
+                    ? await getRecipientsByCategory(selectedId)
+                    : await getRecipientsByTeam(selectedId)
             setRecipients(r)
             setSelectedPhones(new Set(r.map(x => x.phone))) // select all by default
             setLoadingRecipients(false)
@@ -66,41 +71,57 @@ export function ComunicadosClient({ categories, teams, history }: Props) {
         r.phone.includes(search)
     )
 
-    const handleSend = async () => {
+    const handleSend = () => {
         const phones = Array.from(selectedPhones)
         if (phones.length === 0) { toast.error("Selecciona al menos un destinatario."); return }
         if (!message.trim()) { toast.error("Escribe un mensaje."); return }
 
-        const estimatedTime = phones.length > 1 ? Math.ceil((phones.length - 1)) : 0
-        const confirmed = window.confirm(
-            `¿Enviar a ${phones.length} destinatario(s) por WhatsApp?\n\n` +
-            `⏱️ Tiempo estimado: ~${estimatedTime} minuto(s)\n` +
-            `(Se espera 1 minuto entre cada mensaje para evitar bloqueos)\n\n` +
-            `No se puede deshacer.`
-        )
-        if (!confirmed) return
+        setIsConfirmOpen(true)
+    }
+
+    const handleConfirmedSend = async () => {
+        const phones = Array.from(selectedPhones)
+        if (phones.length === 0 || !message.trim()) return
 
         setIsSending(true)
+        setSendingProgress(null)
         try {
-            const label = scope === 'category'
-                ? categories.find(c => c.id === selectedId)?.name || ''
-                : teams.find(t => t.id === selectedId)?.name || ''
+            const label = scope === 'all'
+                ? 'Todos los tutores'
+                : scope === 'category'
+                    ? categories.find(c => c.id === selectedId)?.name || 'Categoría'
+                    : teams.find(t => t.id === selectedId)?.name || 'Equipo'
+            const batches = Array.from({ length: Math.ceil(phones.length / 25) }, (_, index) => phones.slice(index * 25, index * 25 + 25))
+            let successCount = 0
+            let failedCount = 0
 
-            const result = await sendToRecipients(phones, message, label)
-
-            if (result.success) {
-                toast.success(`✅ Enviado: ${result.summary?.success} éxitos, ${result.summary?.failed} errores`)
-                setMessage('')
-            } else {
-                toast.error(result.error || "Error en el envío.")
+            for (let index = 0; index < batches.length; index++) {
+                setSendingProgress(batches.length > 1 ? `Enviando bloque ${index + 1} de ${batches.length}…` : 'Enviando comunicado…')
+                const result = await sendToRecipients(batches[index], message, label)
+                if (!result.success) throw new Error(result.error || 'No se ha podido completar el envío.')
+                successCount += result.summary?.success || 0
+                failedCount += result.summary?.failed || 0
             }
+
+            toast.success(`Comunicado enviado: ${successCount} entregados${failedCount ? `, ${failedCount} con error` : ''}.`)
+            setMessage('')
+            setIsConfirmOpen(false)
         } catch (e: any) {
-            toast.error("Error inesperado.")
+            toast.error(e.message || "Error inesperado.")
             console.error(e)
         } finally {
             setIsSending(false)
+            setSendingProgress(null)
         }
     }
+
+    const scopeLabel = scope === 'all'
+        ? 'Todos los tutores'
+        : scope === 'category'
+            ? categories.find((category) => category.id === selectedId)?.name || 'Categoría'
+            : teams.find((team) => team.id === selectedId)?.name || 'Equipo'
+    const estimatedSeconds = Math.max(1, Math.ceil(Math.max(0, selectedPhones.size - 1) * 0.75))
+    const estimatedTime = estimatedSeconds < 60 ? `unos ${estimatedSeconds} segundos` : `unos ${Math.ceil(estimatedSeconds / 60)} minutos`
 
     return (
         <div className="space-y-6">
@@ -156,11 +177,21 @@ export function ComunicadosClient({ categories, teams, history }: Props) {
                                                 ${scope === 'team' ? 'bg-yellow-500 text-black' : 'bg-slate-50 text-slate-500 border'}`}>
                                             ⚽ Equipo
                                         </button>
+                                        <button onClick={() => { setScope('all'); setSelectedId('all'); setRecipients([]) }}
+                                            className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all
+                                                ${scope === 'all' ? 'bg-navy text-white shadow-lg shadow-navy/20' : 'bg-slate-50 text-slate-500 border'}`}>
+                                            <Megaphone className="mr-1 inline h-3.5 w-3.5" /> Todos
+                                        </button>
                                     </div>
                                 </div>
 
                                 {/* Select dropdown */}
-                                <div className="space-y-2">
+                                {scope === 'all' ? (
+                                    <div className="rounded-xl border border-navy/15 bg-navy/[0.03] p-3 text-sm text-navy">
+                                        <p className="flex items-center gap-2 font-bold"><Users className="h-4 w-4 text-gold" /> Comunicado general a todos los tutores</p>
+                                        <p className="mt-1 text-xs leading-relaxed text-slate-500">Se incluirá una sola vez cada teléfono válido, aunque un tutor tenga varios jugadores.</p>
+                                    </div>
+                                ) : <div className="space-y-2">
                                     <Label className="font-bold text-[10px] uppercase tracking-wider text-slate-400">
                                         {scope === 'category' ? 'Categoría' : 'Equipo'}
                                     </Label>
@@ -173,7 +204,7 @@ export function ComunicadosClient({ categories, teams, history }: Props) {
                                             }
                                         </SelectContent>
                                     </Select>
-                                </div>
+                                </div>}
 
                                 {/* Message */}
                                 <div className="space-y-2">
@@ -195,8 +226,8 @@ export function ComunicadosClient({ categories, teams, history }: Props) {
                                         <div>
                                             <p className="text-xs font-bold text-amber-700">Envío seguro anti-bloqueo</p>
                                             <p className="text-[11px] text-amber-600 mt-0.5">
-                                                Se enviará 1 mensaje por minuto para evitar bloqueos de WhatsApp.
-                                                Tiempo estimado: ~{Math.max(1, selectedPhones.size - 1)} minuto(s) para {selectedPhones.size} destinatario(s).
+                                                El envío se realiza de forma escalonada para cuidar la cuenta de WhatsApp.
+                                                Tiempo estimado: {estimatedTime} para {selectedPhones.size} destinatario(s).
                                             </p>
                                         </div>
                                     </div>
@@ -212,7 +243,7 @@ export function ComunicadosClient({ categories, teams, history }: Props) {
                                     className="bg-green-600 hover:bg-green-700 text-white font-bold"
                                 >
                                     {isSending ? (
-                                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enviando...</>
+                                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {sendingProgress || 'Enviando…'}</>
                                     ) : (
                                         <><Send className="mr-2 h-4 w-4" /> Enviar ({selectedPhones.size})</>
                                     )}
@@ -294,6 +325,39 @@ export function ComunicadosClient({ categories, teams, history }: Props) {
                     </div>
                 </div>
             )}
+
+            <Dialog open={isConfirmOpen} onOpenChange={(open) => !isSending && setIsConfirmOpen(open)}>
+                <DialogContent className="max-w-md overflow-hidden rounded-3xl border-0 p-0 shadow-2xl">
+                    <div className="bg-gradient-to-br from-navy to-navy/90 px-6 pb-5 pt-7 text-white">
+                        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gold text-navy"><Megaphone className="h-6 w-6" /></div>
+                        <DialogHeader>
+                            <DialogTitle className="font-heading text-2xl font-black text-white">Confirmar comunicado</DialogTitle>
+                            <DialogDescription className="text-white/70">Revisa el alcance antes de iniciar el envío por WhatsApp.</DialogDescription>
+                        </DialogHeader>
+                    </div>
+                    <div className="space-y-4 px-6 py-5">
+                        <div className="rounded-2xl border border-gold/30 bg-gold/10 p-4">
+                            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-gold">Destinatarios</p>
+                            <p className="mt-1 text-lg font-black text-navy">{selectedPhones.size} tutor{selectedPhones.size === 1 ? '' : 'es'}</p>
+                            <p className="mt-1 text-sm text-slate-500">{scopeLabel}</p>
+                        </div>
+                        <div className="flex gap-3 rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
+                            <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
+                            <p>Los mensajes se envían en bloques de hasta 25 contactos y con una pausa corta entre cada uno.</p>
+                        </div>
+                        <div className="flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+                            <p>Una vez iniciado, el comunicado no se puede deshacer.</p>
+                        </div>
+                    </div>
+                    <DialogFooter className="border-t bg-slate-50 px-6 py-4 sm:justify-between">
+                        <Button type="button" variant="outline" onClick={() => setIsConfirmOpen(false)} disabled={isSending}>Cancelar</Button>
+                        <Button type="button" onClick={handleConfirmedSend} disabled={isSending} className="bg-green-600 font-bold text-white hover:bg-green-700">
+                            {isSending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {sendingProgress || 'Enviando…'}</> : <><Send className="mr-2 h-4 w-4" /> Enviar ahora</>}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {/* HISTORY */}
             {history.length > 0 && (

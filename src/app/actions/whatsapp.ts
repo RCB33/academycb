@@ -149,9 +149,51 @@ export async function getRecipientsByTeam(teamId: string): Promise<Recipient[]> 
     return extractRecipients(children || [])
 }
 
+export async function getRecipientsAllGuardians(): Promise<Recipient[]> {
+    const { supabase } = await requireAdmin()
+    const { data: guardians, error } = await supabase
+        .from('guardians')
+        .select(`
+            id, full_name, phone,
+            children:child_guardians(
+                child:children(full_name, archived_at, category:categories(name), team:teams(name))
+            )
+        `)
+        .order('full_name')
+
+    if (error) {
+        console.error('Error fetching all guardian recipients:', error)
+        return []
+    }
+
+    const recipients: Recipient[] = []
+    for (const guardian of guardians || []) {
+        if (!guardian.phone) continue
+        const phone = guardian.phone.replace(/\D/g, '')
+        if (phone.length < 9) continue
+
+        const activeChildren = ((guardian.children || []) as any[])
+            .map((relation) => relation.child)
+            .filter((child) => child && !child.archived_at)
+        const childNames = activeChildren.map((child) => child.full_name)
+        const teamNames = [...new Set(activeChildren.map((child) => child.team?.name).filter(Boolean))]
+        const categoryNames = [...new Set(activeChildren.map((child) => child.category?.name).filter(Boolean))]
+
+        recipients.push({
+            id: guardian.id,
+            childName: childNames.join(' · ') || 'Tutor sin jugador activo',
+            guardianName: guardian.full_name,
+            phone,
+            teamName: teamNames.join(' · '),
+            categoryName: categoryNames.join(' · '),
+        })
+    }
+
+    return dedupeRecipientsByPhone(recipients)
+}
+
 function extractRecipients(children: any[]): Recipient[] {
     const recipients: Recipient[] = []
-    const seen = new Set<string>()
 
     for (const child of children) {
         const teamName = (child.team as any)?.name || ''
@@ -163,12 +205,9 @@ function extractRecipients(children: any[]): Recipient[] {
             if (!g?.phone) continue
             const cleanPhone = g.phone.replace(/\D/g, '')
             if (cleanPhone.length < 9) continue
-            const key = `${g.id}-${child.id}`
-            if (seen.has(key)) continue
-            seen.add(key)
 
             recipients.push({
-                id: key,
+                id: g.id,
                 childName: child.full_name,
                 guardianName: g.full_name,
                 phone: cleanPhone,
@@ -177,7 +216,31 @@ function extractRecipients(children: any[]): Recipient[] {
             })
         }
     }
-    return recipients
+    return dedupeRecipientsByPhone(recipients)
+}
+
+function dedupeRecipientsByPhone(recipients: Recipient[]): Recipient[] {
+    const byPhone = new Map<string, Recipient>()
+
+    for (const recipient of recipients) {
+        const existing = byPhone.get(recipient.phone)
+        if (!existing) {
+            byPhone.set(recipient.phone, recipient)
+            continue
+        }
+
+        const appendUnique = (current: string | undefined, next: string | undefined) => {
+            const values = new Set([...(current || '').split(' · ').filter(Boolean), ...(next || '').split(' · ').filter(Boolean)])
+            return Array.from(values).join(' · ')
+        }
+
+        existing.childName = appendUnique(existing.childName, recipient.childName)
+        existing.guardianName = appendUnique(existing.guardianName, recipient.guardianName)
+        existing.teamName = appendUnique(existing.teamName, recipient.teamName)
+        existing.categoryName = appendUnique(existing.categoryName, recipient.categoryName)
+    }
+
+    return Array.from(byPhone.values())
 }
 
 // ─── SENDING (with rate limiting) ───
@@ -230,7 +293,7 @@ export async function sendToRecipients(phones: string[], message: string, label:
             failCount++
         }
 
-        // Rate limiting: wait 1 minute between messages (except for last one)
+        // Rate limiting: leave a short gap between messages (except for last one).
         if (i < phones.length - 1) {
             await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_MESSAGES_MS))
         }
