@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Home, Calendar as CalendarIcon, ChevronLeft, ChevronRight, ChevronUp, FileText, User, Download, ShoppingBag, Video, Store, MessageSquare, Heart, ShieldCheck, Trophy, X, LogOut } from 'lucide-react'
+import { Home, Calendar as CalendarIcon, ChevronLeft, ChevronRight, ChevronUp, FileText, User, Download, ShoppingBag, Video, Store, MessageSquare, Heart, Trophy, X, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NotificationBell } from '@/components/ui/notification-bell'
 import { PortalPlayerSwitcher } from '@/components/portal/player-switcher'
@@ -15,8 +15,7 @@ const NAV_ITEMS = [
     { href: '/portal/profile', label: 'Mi Perfil', icon: User },
     { href: '/portal/calendario', label: 'Mi Calendario', icon: CalendarIcon },
     { href: '/portal/videoteca', label: 'Videoteca', icon: Video },
-    { href: '/portal/documentos', label: 'Documentos', icon: FileText },
-    { href: '/portal/autorizaciones', label: 'Autorizaciones', icon: ShieldCheck },
+    { href: '/portal/documentos', label: 'Documentos y autorizaciones', icon: FileText },
     { href: '/portal/pagos', label: 'Pagos', icon: ShoppingBag },
     { href: '/portal/tienda', label: 'Tienda', icon: Store },
     { href: '/portal/descargas', label: 'Descargas', icon: Download },
