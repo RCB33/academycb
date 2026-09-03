@@ -39,11 +39,6 @@ export default function WhoWeAreSection() {
                     </figure>
                 </div>
 
-                <div className="mx-auto mt-12 max-w-5xl rounded-3xl border border-gold/30 bg-white/[.05] p-6 shadow-xl shadow-black/15 md:p-8">
-                    <p className="text-center text-base leading-relaxed text-slate-200 md:text-lg">Porque en Academy Costa Brava entendemos el fútbol como mucho más que entrenamiento y competición. Es también una herramienta de aprendizaje para la vida, a través de la cual fomentamos valores como <strong className="text-white">el esfuerzo, la responsabilidad, la autonomía, el respeto, el compañerismo y la capacidad de gestionar el error</strong>.</p>
-                    <p className="mt-5 text-center text-base leading-relaxed text-slate-200 md:text-lg">Queremos que cada entrenamiento, cada campus y cada competición formen parte de un mismo camino: <strong className="text-gold">ayudar a nuestros jugadores a crecer, superarse y disfrutar del fútbol</strong> mientras construyen aprendizajes que van mucho más allá del terreno de juego.</p>
-                </div>
-
                 <div className="mt-8 grid gap-4 md:grid-cols-3">
                     {pillars.map((pillar) => <article key={pillar.title} className="rounded-2xl border border-white/10 bg-white/[.045] p-5 text-center transition hover:-translate-y-1 hover:border-gold/45 hover:bg-white/[.08]">
                         <pillar.icon className="mx-auto h-7 w-7 text-gold" />
