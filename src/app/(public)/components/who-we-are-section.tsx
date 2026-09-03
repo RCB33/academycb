@@ -1,4 +1,5 @@
 import Image from "next/image"
+import Link from "next/link"
 import { PlayCircle, Trophy, UsersRound, Zap } from "lucide-react"
 
 const pillars = [
@@ -49,6 +50,11 @@ export default function WhoWeAreSection() {
                         <h3 className="mt-4 font-heading text-2xl font-bold uppercase text-white">{pillar.title}</h3>
                         <p className="mt-2 text-sm leading-relaxed text-slate-300">{pillar.description}</p>
                     </article>)}
+                </div>
+
+                <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+                    <Link href="/academia" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-gold px-6 py-3 text-center font-bold text-navy transition hover:bg-gold-light">Conocer el programa Academy</Link>
+                    <Link href="/dossier-tecnificacion-2026-27.pdf" target="_blank" rel="noreferrer" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/25 px-6 py-3 text-center font-bold text-white transition hover:border-gold/60 hover:text-gold">Descargar dossier PDF</Link>
                 </div>
 
                 <p className="mt-10 text-center font-heading text-xl font-black tracking-[0.12em] text-gold md:text-2xl">ENTRENA · APRENDE · COMPITE · DISFRUTA</p>
