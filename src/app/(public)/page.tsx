@@ -82,35 +82,6 @@ export default async function LandingPage() {
 
             <WhoWeAreSection />
 
-            {/* PROGRAMS SPLIT */}
-            <section className="grid md:grid-cols-2 min-h-[600px]">
-                <div className="relative group overflow-hidden bg-navy flex items-center justify-center p-12">
-                    <div className="relative z-10 max-w-md text-center md:text-left">
-                        <span className="text-secondary font-bold tracking-widest uppercase text-sm mb-4 block">Formación Continua</span>
-                        <h3 className="font-heading text-5xl font-bold text-white mb-6 uppercase">Academia <br /> Anual</h3>
-                        <p className="text-gray-300 mb-8 text-lg">
-                            Para jugadores que buscan desarrollo a largo plazo. Temporada completa de septiembre a junio.
-                        </p>
-                        <Button asChild variant="link" className="text-white hover:text-secondary p-0 text-xl font-heading font-bold uppercase decoration-2 underline-offset-8">
-                            <Link href="/academia">Ver detalles <ArrowRight className="ml-2" /></Link>
-                        </Button>
-                    </div>
-                </div>
-                <div className="relative group overflow-hidden bg-gray-100 flex items-center justify-center p-12">
-                    <div className="absolute inset-0 bg-white/50"></div>
-                    <div className="relative z-10 max-w-md text-center md:text-left">
-                        <span className="text-primary font-bold tracking-widest uppercase text-sm mb-4 block">Experiencias Intensivas</span>
-                        <h3 className="font-heading text-5xl font-bold text-navy mb-6 uppercase">Campus <br /> de Verano</h3>
-                        <p className="text-gray-600 mb-8 text-lg">
-                            Semanas de inmersión total. Fútbol, diversión y convivencia en instalaciones de primer nivel.
-                        </p>
-                        <Button asChild variant="link" className="text-navy hover:text-primary p-0 text-xl font-heading font-bold uppercase decoration-2 underline-offset-8">
-                            <Link href="/campus">Próximas fechas <ArrowRight className="ml-2" /></Link>
-                        </Button>
-                    </div>
-                </div>
-            </section>
-
             {/* AGENT WIDGET SECTION */}
             <section id="agente" className="py-24 bg-navy relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-navy via-navy to-primary/20" />
