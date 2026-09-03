@@ -24,6 +24,7 @@ const PUBLIC_ROUTES = [
 // Prefixes that are always public
 const PUBLIC_PREFIXES = [
   '/player/public/',
+  '/torneos/',
   '/api/',
   '/auth/',
   '/_next/',
