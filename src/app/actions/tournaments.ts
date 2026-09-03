@@ -14,9 +14,21 @@ export type Tournament = {
     location: string | null
     price: number
     capacity: number
-    status: 'draft' | 'open' | 'closed'
+    status: 'draft' | 'coming_soon' | 'open' | 'closed'
     type: 'propio' | 'externo'
     external_url: string | null
+    image_url: string | null
+    public_summary: string | null
+    season_period: 'navidad' | 'semana_santa' | 'verano' | 'otro' | null
+    experience_type: 'regional' | 'nacional' | 'internacional' | null
+    categories: string | null
+    birth_years: string | null
+    competitive_level: string | null
+    tournament_format: string | null
+    included_services: string | null
+    preparation_info: string | null
+    travel_info: string | null
+    additional_info: string | null
     notes: string | null
     checklist: unknown
     created_at: string
@@ -84,6 +96,18 @@ export async function createTournament(data: {
     type?: string
     external_url?: string | null
     notes?: string | null
+    image_url?: string | null
+    public_summary?: string | null
+    season_period?: string | null
+    experience_type?: string | null
+    categories?: string | null
+    birth_years?: string | null
+    competitive_level?: string | null
+    tournament_format?: string | null
+    included_services?: string | null
+    preparation_info?: string | null
+    travel_info?: string | null
+    additional_info?: string | null
 }) {
     const supabase = await createClient()
     if (!isSafeExternalUrl(data.external_url)) return { success: false, error: 'La URL externa no es válida' }
@@ -98,11 +122,24 @@ export async function createTournament(data: {
         type: data.type || 'propio',
         external_url: data.external_url || null,
         notes: data.notes || null,
+        image_url: data.image_url || null,
+        public_summary: data.public_summary || null,
+        season_period: data.season_period || null,
+        experience_type: data.experience_type || null,
+        categories: data.categories || null,
+        birth_years: data.birth_years || null,
+        competitive_level: data.competitive_level || null,
+        tournament_format: data.tournament_format || null,
+        included_services: data.included_services || null,
+        preparation_info: data.preparation_info || null,
+        travel_info: data.travel_info || null,
+        additional_info: data.additional_info || null,
     }])
     if (error) { console.error("Error creating tournament:", error); return { success: false, error: "Error al crear el torneo" } }
     revalidatePath('/admin/torneos')
     revalidatePath('/admin/calendario')
     revalidatePath('/portal/calendario')
+    revalidatePath('/torneos')
     return { success: true }
 }
 
@@ -114,6 +151,8 @@ export async function updateTournament(id: string, data: Partial<Tournament>) {
     revalidatePath('/admin/torneos')
     revalidatePath('/admin/calendario')
     revalidatePath('/portal/calendario')
+    revalidatePath('/torneos')
+    revalidatePath(`/torneos/${id}`)
     return { success: true }
 }
 
@@ -130,6 +169,7 @@ export async function deleteTournament(id: string) {
     revalidatePath('/admin/torneos')
     revalidatePath('/admin/calendario')
     revalidatePath('/portal/calendario')
+    revalidatePath('/torneos')
     return { success: true }
 }
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -12,7 +13,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
     Plus, Trophy, MapPin, Calendar, Users, Trash2, UserPlus,
-    ChevronLeft, Edit, Loader2, Phone, Mail, ExternalLink, Shield, Zap, UserCheck
+    ChevronLeft, Edit, Loader2, Phone, Mail, ExternalLink, Shield, Zap, UserCheck, Upload, ImageIcon
 } from "lucide-react"
 import {
     getTournaments, createTournament, updateTournament, deleteTournament,
@@ -22,9 +23,11 @@ import {
     type Tournament, type TournamentTeam, type TournamentPlayer
 } from "@/app/actions/tournaments"
 import { toast } from "sonner"
+import { createClient } from '@/lib/supabase/client'
 
 const STATUS_CFG: Record<string, { label: string, color: string }> = {
     'draft': { label: 'Borrador', color: 'bg-slate-100 text-slate-600' },
+    'coming_soon': { label: 'Próximamente', color: 'bg-amber-100 text-amber-700' },
     'open': { label: 'Abierto', color: 'bg-green-100 text-green-700' },
     'closed': { label: 'Cerrado', color: 'bg-red-100 text-red-700' },
 }
@@ -220,7 +223,7 @@ export default function TorneosPage() {
                                                     {selected.location && `📍 ${selected.location} • `}
                                                     {selected.start_date && `${new Date(selected.start_date).toLocaleDateString('es')} `}
                                                     {selected.end_date && `— ${new Date(selected.end_date).toLocaleDateString('es')}`}
-                                                    {selected.price ? ` • ${selected.price}€/equipo` : ''}
+                                                    {selected.price ? ` • ${selected.price}€/plaza` : ''}
                                                 </p>
                                             </div>
                                         </div>
@@ -352,8 +355,9 @@ export default function TorneosPage() {
 
 function TournamentCard({ tournament: t, onSelect, onEdit, onDelete }: { tournament: Tournament, onSelect: () => void, onEdit: () => void, onDelete: () => void }) {
     const statusConf = STATUS_CFG[t.status] || STATUS_CFG.draft
-    const occupancy = t.capacity > 0 ? Math.round(((t.team_count || 0) / t.capacity) * 100) : 0
     const isPropio = t.type === 'propio'
+    const registeredCount = isPropio ? (t.team_count || 0) : (t.player_count || 0)
+    const occupancy = t.capacity > 0 ? Math.round((registeredCount / t.capacity) * 100) : 0
 
     return (
         <Card className="border-none shadow-lg hover:shadow-xl transition-all group overflow-hidden cursor-pointer" onClick={onSelect}>
@@ -386,8 +390,8 @@ function TournamentCard({ tournament: t, onSelect, onEdit, onDelete }: { tournam
 
                 <div className="space-y-1.5">
                     <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest">
-                        <span className="text-slate-400">Equipos</span>
-                        <span className="text-yellow-500">{t.team_count || 0} / {t.capacity}</span>
+                        <span className="text-slate-400">{isPropio ? 'Equipos' : 'Jugadores'}</span>
+                        <span className="text-yellow-500">{registeredCount} / {t.capacity}</span>
                     </div>
                     <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                         <div className="h-full rounded-full transition-all bg-yellow-500" style={{
@@ -398,8 +402,8 @@ function TournamentCard({ tournament: t, onSelect, onEdit, onDelete }: { tournam
                 </div>
 
                 <div className="flex items-center justify-between pt-2 border-t border-slate-50">
-                    {t.price ? <span className="text-lg font-black text-yellow-500">{t.price}€<span className="text-xs text-slate-400 font-normal">/equipo</span></span>
-                        : <span className="text-sm text-slate-300 italic">Gratuito</span>}
+                    {t.price ? <span className="text-lg font-black text-yellow-500">{t.price}€<span className="text-xs text-slate-400 font-normal">/plaza</span></span>
+                        : <span className="text-sm text-slate-300 italic">{t.status === 'open' ? 'Gratuito' : 'Precio por confirmar'}</span>}
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); onEdit() }}><Edit className="h-3.5 w-3.5 text-slate-400" /></Button>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); onDelete() }}><Trash2 className="h-3.5 w-3.5 text-red-400" /></Button>
@@ -412,12 +416,52 @@ function TournamentCard({ tournament: t, onSelect, onEdit, onDelete }: { tournam
 
 function TournamentDialog({ open, onOpenChange, tournament }: { open: boolean, onOpenChange: (o: boolean) => void, tournament: Tournament | null }) {
     const [loading, setLoading] = useState(false)
+    const [imageFile, setImageFile] = useState<File | null>(null)
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null)
     const isEdit = !!tournament
+    const supabase = createClient()
+
+    useEffect(() => {
+        if (open) {
+            setImageFile(null)
+            setPreviewUrl(null)
+        }
+    }, [open, tournament?.id])
+
+    function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
+        const file = event.target.files?.[0]
+        if (!file) return
+        if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 10 * 1024 * 1024) {
+            toast.error('Solo se admiten JPG, PNG o WebP de hasta 10 MB.')
+            event.target.value = ''
+            return
+        }
+        setImageFile(file)
+        const reader = new FileReader()
+        reader.onloadend = () => setPreviewUrl(reader.result as string)
+        reader.readAsDataURL(file)
+    }
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault()
         setLoading(true)
         const fd = new FormData(e.currentTarget)
+        let imageUrl = tournament?.image_url || null
+        let uploadedPath: string | null = null
+
+        if (imageFile) {
+            const extensions: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }
+            const extension = extensions[imageFile.type]
+            uploadedPath = `posters/${crypto.randomUUID()}.${extension}`
+            const { error: uploadError } = await supabase.storage.from('tournament-images').upload(uploadedPath, imageFile, { cacheControl: '3600', upsert: false })
+            if (uploadError) {
+                toast.error(`No se pudo subir el cartel: ${uploadError.message}`)
+                setLoading(false)
+                return
+            }
+            imageUrl = supabase.storage.from('tournament-images').getPublicUrl(uploadedPath).data.publicUrl
+        }
+
         const data = {
             title: fd.get('title') as string,
             start_date: (fd.get('start_date') as string) || null,
@@ -429,16 +473,40 @@ function TournamentDialog({ open, onOpenChange, tournament }: { open: boolean, o
             type: fd.get('type') as string || 'propio',
             external_url: (fd.get('external_url') as string) || null,
             notes: (fd.get('notes') as string) || null,
+            image_url: imageUrl,
+            public_summary: (fd.get('public_summary') as string) || null,
+            season_period: (fd.get('season_period') as string) || null,
+            experience_type: (fd.get('experience_type') as string) || null,
+            categories: (fd.get('categories') as string) || null,
+            birth_years: (fd.get('birth_years') as string) || null,
+            competitive_level: (fd.get('competitive_level') as string) || null,
+            tournament_format: (fd.get('tournament_format') as string) || null,
+            included_services: (fd.get('included_services') as string) || null,
+            preparation_info: (fd.get('preparation_info') as string) || null,
+            travel_info: (fd.get('travel_info') as string) || null,
+            additional_info: (fd.get('additional_info') as string) || null,
         }
         const res = isEdit ? await updateTournament(tournament.id, data as any) : await createTournament(data as any)
         setLoading(false)
-        if (res.success) { toast.success(isEdit ? "Torneo actualizado" : "Torneo creado"); onOpenChange(false) }
-        else toast.error(res.error)
+        if (res.success) {
+            if (uploadedPath && tournament?.image_url) {
+                const publicMarker = '/storage/v1/object/public/tournament-images/'
+                const previousPath = tournament.image_url.split(publicMarker)[1]
+                if (previousPath && previousPath !== uploadedPath) {
+                    await supabase.storage.from('tournament-images').remove([decodeURIComponent(previousPath)])
+                }
+            }
+            toast.success(isEdit ? "Torneo actualizado" : "Torneo creado")
+            onOpenChange(false)
+        } else {
+            if (uploadedPath) await supabase.storage.from('tournament-images').remove([uploadedPath])
+            toast.error(res.error)
+        }
     }
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="p-0 border-0 overflow-hidden bg-slate-50 max-w-lg sm:rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-h-[92vh] max-w-3xl overflow-y-auto border-0 bg-slate-50 p-0 shadow-2xl sm:rounded-2xl">
                 <div className="bg-yellow-500 p-6 flex flex-col items-center">
                     <div className="h-14 w-14 rounded-2xl bg-black/10 backdrop-blur-xl border border-black/10 flex items-center justify-center mb-3">
                         <Trophy className="h-7 w-7 text-black" />
@@ -448,14 +516,16 @@ function TournamentDialog({ open, onOpenChange, tournament }: { open: boolean, o
                     </DialogTitle>
                 </div>
                 <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                        <p className="mb-4 text-xs font-black uppercase tracking-wider text-slate-500">Información principal</p>
                     <div className="space-y-2">
                         <Label className="text-slate-700 font-bold uppercase text-xs tracking-wider">Nombre del Torneo</Label>
                         <Input name="title" defaultValue={tournament?.title} required className="bg-white" placeholder="Ej. Costa Brava Cup 2026" />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div className="space-y-2">
                             <Label className="text-slate-700 font-bold uppercase text-xs tracking-wider">Tipo</Label>
-                            <select name="type" defaultValue={tournament?.type || 'propio'} className="flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm">
+                            <select name="type" defaultValue={tournament?.type || 'externo'} className="flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm">
                                 <option value="propio">🏠 Organización propia</option>
                                 <option value="externo">🌍 Participación externa</option>
                             </select>
@@ -464,12 +534,17 @@ function TournamentDialog({ open, onOpenChange, tournament }: { open: boolean, o
                             <Label className="text-slate-700 font-bold uppercase text-xs tracking-wider">Estado</Label>
                             <select name="status" defaultValue={tournament?.status || 'draft'} className="flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm">
                                 <option value="draft">Borrador</option>
+                                <option value="coming_soon">Próximamente</option>
                                 <option value="open">Abierto</option>
                                 <option value="closed">Cerrado</option>
                             </select>
                         </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div className="space-y-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-700">Momento del año</Label><select name="season_period" defaultValue={tournament?.season_period || ''} className="flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"><option value="">Sin clasificar</option><option value="navidad">Navidad</option><option value="semana_santa">Semana Santa</option><option value="verano">Verano</option><option value="otro">Otro</option></select></div>
+                        <div className="space-y-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-700">Tipo de experiencia</Label><select name="experience_type" defaultValue={tournament?.experience_type || ''} className="flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"><option value="">Sin indicar</option><option value="regional">Regional</option><option value="nacional">Nacional</option><option value="internacional">Internacional</option></select></div>
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div className="space-y-2">
                             <Label className="text-slate-700 font-bold uppercase text-xs tracking-wider">Fecha Inicio</Label>
                             <Input name="start_date" type="date" defaultValue={tournament?.start_date || ''} className="bg-white" />
@@ -479,13 +554,13 @@ function TournamentDialog({ open, onOpenChange, tournament }: { open: boolean, o
                             <Input name="end_date" type="date" defaultValue={tournament?.end_date || ''} className="bg-white" />
                         </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div className="space-y-2">
-                            <Label className="text-slate-700 font-bold uppercase text-xs tracking-wider">Precio (€/equipo)</Label>
+                            <Label className="text-slate-700 font-bold uppercase text-xs tracking-wider">Precio por plaza (€)</Label>
                             <Input name="price" type="number" step="0.01" defaultValue={tournament?.price || ''} placeholder="150" className="bg-white" />
                         </div>
                         <div className="space-y-2">
-                            <Label className="text-slate-700 font-bold uppercase text-xs tracking-wider">Plazas (equipos max.)</Label>
+                            <Label className="text-slate-700 font-bold uppercase text-xs tracking-wider">Plazas disponibles</Label>
                             <Input name="capacity" type="number" defaultValue={tournament?.capacity || 20} min={1} className="bg-white" />
                         </div>
                     </div>
@@ -493,12 +568,29 @@ function TournamentDialog({ open, onOpenChange, tournament }: { open: boolean, o
                         <Label className="text-slate-700 font-bold uppercase text-xs tracking-wider">Sede</Label>
                         <Input name="location" defaultValue={tournament?.location || ''} placeholder="Campo Municipal..." className="bg-white" />
                     </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                        <p className="mb-4 text-xs font-black uppercase tracking-wider text-slate-500">Cartel y presentación pública</p>
+                        <div className="grid gap-4 md:grid-cols-[12rem_1fr]">
+                            <div className="relative aspect-video overflow-hidden rounded-xl border border-dashed border-slate-300 bg-slate-100">{(previewUrl || tournament?.image_url) ? <Image src={previewUrl || tournament!.image_url!} alt="Vista previa del cartel" fill unoptimized={Boolean(previewUrl)} className="object-cover" /> : <div className="flex h-full flex-col items-center justify-center text-slate-400"><ImageIcon className="h-8 w-8" /><span className="mt-2 text-xs">Sin cartel</span></div>}</div>
+                            <div className="space-y-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-700">Imagen o cartel</Label><label className="flex min-h-20 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-yellow-400 bg-yellow-50 px-4 text-center text-sm font-bold text-yellow-800 transition hover:bg-yellow-100"><Upload className="mb-2 h-5 w-5" />Seleccionar imagen<input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleImageChange} className="sr-only" /></label><p className="text-[11px] text-slate-400">JPG, PNG o WebP · máximo 10 MB.</p></div>
+                        </div>
+                        <div className="mt-4 space-y-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-700">Resumen para familias</Label><Textarea name="public_summary" defaultValue={tournament?.public_summary || ''} rows={3} className="resize-none bg-white" placeholder="Explica en pocas líneas qué hace especial esta experiencia." /></div>
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                        <p className="mb-4 text-xs font-black uppercase tracking-wider text-slate-500">Ficha completa del torneo</p>
+                        <div className="grid gap-4 md:grid-cols-2"><div className="space-y-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-700">Categorías</Label><Input name="categories" defaultValue={tournament?.categories || ''} placeholder="Alevín, Infantil, Cadete..." /></div><div className="space-y-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-700">Años de nacimiento</Label><Input name="birth_years" defaultValue={tournament?.birth_years || ''} placeholder="2011, 2012 y 2013" /></div><div className="space-y-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-700">Nivel competitivo</Label><Input name="competitive_level" defaultValue={tournament?.competitive_level || ''} placeholder="Formativo, avanzado, alta exigencia..." /></div><div className="space-y-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-700">Formato</Label><Input name="tournament_format" defaultValue={tournament?.tournament_format || ''} placeholder="Fútbol 7, fase de grupos..." /></div></div>
+                        <div className="mt-4 grid gap-4 md:grid-cols-2"><div className="space-y-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-700">Qué incluye</Label><Textarea name="included_services" defaultValue={tournament?.included_services || ''} rows={3} placeholder="Inscripción, equipación, desplazamiento..." /></div><div className="space-y-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-700">Entrenamientos previos</Label><Textarea name="preparation_info" defaultValue={tournament?.preparation_info || ''} rows={3} placeholder="Fechas y dinámica de preparación." /></div><div className="space-y-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-700">Viaje y alojamiento</Label><Textarea name="travel_info" defaultValue={tournament?.travel_info || ''} rows={3} placeholder="Información solo cuando corresponda." /></div><div className="space-y-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-700">Información adicional</Label><Textarea name="additional_info" defaultValue={tournament?.additional_info || ''} rows={3} placeholder="Material, documentación, condiciones..." /></div></div>
+                    </div>
+
                     <div className="space-y-2">
                         <Label className="text-slate-700 font-bold uppercase text-xs tracking-wider">URL Externa (opcional)</Label>
                         <Input name="external_url" defaultValue={tournament?.external_url || ''} placeholder="https://..." className="bg-white" />
                     </div>
                     <div className="space-y-2">
-                        <Label className="text-slate-700 font-bold uppercase text-xs tracking-wider">Notas</Label>
+                        <Label className="text-slate-700 font-bold uppercase text-xs tracking-wider">Notas internas (no se publican)</Label>
                         <Textarea name="notes" defaultValue={tournament?.notes || ''} rows={2} className="bg-white resize-none" />
                     </div>
                     <div className="pt-4 flex justify-end gap-3 border-t">
