@@ -4,14 +4,14 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import Image from "next/image"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
+import { PortalPageHeader } from '@/components/portal/portal-page-header'
 
 export const dynamic = 'force-dynamic'
 
 const CONTEXT_CFG: Record<string, { label: string, color: string }> = {
-    academia: { label: 'Academia', color: 'bg-blue-500' },
-    campus: { label: 'Campus', color: 'bg-green-500' },
-    torneo: { label: 'Torneo', color: 'bg-yellow-500' },
+    academia: { label: 'Academia', color: 'bg-navy' },
+    campus: { label: 'Campus', color: 'bg-emerald-600' },
+    torneo: { label: 'Torneo', color: 'bg-gold text-navy' },
 }
 
 export default async function FamilyVideotecaPage() {
@@ -84,15 +84,7 @@ export default async function FamilyVideotecaPage() {
 
     return (
         <div className="space-y-6 max-w-7xl mx-auto">
-            <div>
-                <h1 className="text-3xl font-black tracking-tight text-slate-900 flex items-center gap-3">
-                    <Video className="h-8 w-8 text-indigo-600" />
-                    Videoteca
-                </h1>
-                <p className="text-muted-foreground font-medium text-sm">
-                    Momentos destacados y partidos de los equipos de tus hijos.
-                </p>
-            </div>
+            <PortalPageHeader icon={<Video className="h-6 w-6" />} title="Videoteca" description="Entrenamientos, partidos y momentos destacados de los equipos de tus jugadores." />
 
             {assets.length === 0 ? (
                 <Card className="border-dashed shadow-sm bg-slate-50/50">
@@ -123,14 +115,14 @@ export default async function FamilyVideotecaPage() {
                                                 <Image src={thumb} alt={asset.title} fill className="object-cover group-hover:scale-105 transition-transform duration-700" />
                                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
                                                 <div className="absolute inset-0 flex items-center justify-center">
-                                                    <div className="h-14 w-14 bg-indigo-600/90 backdrop-blur-sm rounded-full flex items-center justify-center border-2 border-white/50 shadow-[0_0_20px_rgba(79,70,229,0.5)] group-hover:scale-110 group-hover:bg-indigo-500 transition-all duration-300">
-                                                        <PlayCircle className="h-8 w-8 text-white ml-1" />
+                                                    <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-white/50 bg-gold/90 shadow-[0_0_20px_rgba(212,175,55,0.45)] backdrop-blur-sm transition-all duration-300 group-hover:scale-110 group-hover:bg-gold-light">
+                                                        <PlayCircle className="ml-1 h-8 w-8 text-navy" />
                                                     </div>
                                                 </div>
                                             </div>
                                         ) : (
-                                            <div className="flex items-center justify-center h-full bg-indigo-950">
-                                                <PlayCircle className="h-16 w-16 text-indigo-500/50" />
+                                            <div className="flex h-full items-center justify-center bg-navy">
+                                                <PlayCircle className="h-16 w-16 text-gold/50" />
                                             </div>
                                         )}
                                         <div className="absolute top-3 left-3 flex gap-1.5 flex-wrap">
@@ -143,7 +135,7 @@ export default async function FamilyVideotecaPage() {
                                                 </Badge>
                                             )}
                                             {isIndividual && (
-                                                <Badge className="bg-indigo-500 text-white border-none font-bold text-[9px] shadow-sm">
+                                                <Badge className="border-none bg-gold text-[9px] font-bold text-navy shadow-sm">
                                                     <UserCircle className="h-2.5 w-2.5 mr-1" />
                                                     Para ti
                                                 </Badge>
@@ -151,7 +143,7 @@ export default async function FamilyVideotecaPage() {
                                         </div>
                                     </div>
                                     <CardContent className="p-5">
-                                        <h3 className="font-black text-lg text-slate-900 line-clamp-2 leading-tight mb-2 group-hover:text-indigo-600 transition-colors">
+                                        <h3 className="mb-2 line-clamp-2 text-lg font-black leading-tight text-slate-900 transition-colors group-hover:text-gold">
                                             {asset.title}
                                         </h3>
                                         {asset.description && (
@@ -163,9 +155,9 @@ export default async function FamilyVideotecaPage() {
                                             <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
                                                 {new Date(asset.created_at).toLocaleDateString()}
                                             </span>
-                                            <Button variant="ghost" size="sm" className="h-8 text-indigo-600 hover:bg-indigo-50 font-bold p-0 px-2">
+                                            <span className="inline-flex h-8 items-center rounded-lg px-2 text-sm font-bold text-gold transition group-hover:bg-gold/10">
                                                 Ver Vídeo
-                                            </Button>
+                                            </span>
                                         </div>
                                     </CardContent>
                                 </Card>

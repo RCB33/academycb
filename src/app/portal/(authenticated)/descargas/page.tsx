@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent } from "@/components/ui/card"
 import { Download, FileText, FileSpreadsheet, Image as ImageIcon, Film, File, FolderOpen } from "lucide-react"
+import { PortalPageHeader } from '@/components/portal/portal-page-header'
 
 const ICON_MAP: Record<string, any> = {
     pdf: FileText,
@@ -66,8 +67,7 @@ export default async function DescargasPage() {
 
     return (
         <div className="space-y-6">
-            <h1 className="text-3xl font-bold tracking-tight text-navy">Zona de Descargas</h1>
-            <p className="text-muted-foreground">Documentos, plantillas y recursos de la academia disponibles para ti.</p>
+            <PortalPageHeader icon={<Download className="h-6 w-6" />} title="Descargas" description="Documentos, plantillas y recursos de Academy disponibles para tu familia." />
 
             {filesWithUrls.length === 0 ? (
                 <Card className="border-2 border-dashed border-slate-200 shadow-sm">
@@ -98,7 +98,7 @@ export default async function DescargasPage() {
                                             {getFileIcon(file.name)}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="font-bold text-slate-900 truncate text-sm group-hover:text-indigo-600 transition-colors">
+                                            <p className="truncate text-sm font-bold text-slate-900 transition-colors group-hover:text-gold">
                                                 {file.name.replace(/\.[^/.]+$/, '').replace(/_/g, ' ')}
                                             </p>
                                             <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium mt-1">
@@ -111,7 +111,7 @@ export default async function DescargasPage() {
                                                 )}
                                             </div>
                                         </div>
-                                        <div className="p-2 rounded-lg bg-indigo-50 text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                                        <div className="shrink-0 rounded-lg bg-gold/10 p-2 text-gold opacity-0 transition-opacity group-hover:opacity-100">
                                             <Download className="h-4 w-4" />
                                         </div>
                                     </div>

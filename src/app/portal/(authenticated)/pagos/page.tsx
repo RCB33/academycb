@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { Receipt, Calendar, CreditCard, ShoppingBag, GraduationCap, Tent, Trophy as TrophyIcon } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { redirect } from 'next/navigation'
+import { PortalPageHeader } from '@/components/portal/portal-page-header'
 
 export default async function PagosPage() {
     const supabase = await createClient()
@@ -82,7 +83,7 @@ export default async function PagosPage() {
 
     return (
         <div className="space-y-6">
-            <h1 className="text-3xl font-bold tracking-tight text-navy">Mis Pagos e Historial</h1>
+            <PortalPageHeader icon={<Receipt className="h-6 w-6" />} title="Pagos" description="Consulta cuotas, inscripciones y compras asociadas a tu familia." />
             
             <div className="space-y-4">
                 {allTransactions && allTransactions.length > 0 ? (
@@ -112,7 +113,7 @@ export default async function PagosPage() {
                                                     {tx.items.map((item: any) => (
                                                         <div key={item.id} className="flex justify-between items-center bg-slate-50 py-1.5 px-3 rounded-md">
                                                             <span className="font-medium text-slate-700">
-                                                                <span className="text-indigo-600 font-bold mr-2">{item.quantity}x</span> 
+                                                                <span className="mr-2 font-bold text-gold">{item.quantity}x</span>
                                                                 {item.product_name} {item.size ? <span className="text-slate-500 text-xs ml-1 border rounded px-1">Talla: {item.size}</span> : ''}
                                                             </span>
                                                             <span className="text-slate-600 font-medium">{(item.price * item.quantity).toFixed(2)} €</span>
@@ -128,13 +129,13 @@ export default async function PagosPage() {
                                         <div className="text-3xl font-black text-slate-900 tracking-tight w-full text-right sm:text-center">{tx.amount?.toFixed(2)} €</div>
                                         
                                         {tx.isStore && (
-                                            <a href={`/portal/tienda`} className="mt-3 text-xs font-bold text-purple-600 hover:text-purple-700 flex items-center justify-center w-full py-2 bg-purple-50 rounded-md hover:bg-purple-100 transition-colors">
+                                            <a href="/portal/tienda" className="mt-3 flex w-full items-center justify-center rounded-md bg-gold/10 py-2 text-xs font-bold text-navy transition-colors hover:bg-gold/20">
                                                 Volver a Tienda
                                             </a>
                                         )}
                                         {!tx.isStore && tx.status !== 'paid' && (
-                                            <div className="mt-3 text-xs font-bold text-amber-600 flex items-center justify-center w-full py-2 bg-amber-50 rounded-md">
-                                                Contactar Administración
+                                            <div className="mt-3 flex w-full items-center justify-center rounded-md bg-amber-50 py-2 text-xs font-bold text-amber-700">
+                                                Pendiente de gestión
                                             </div>
                                         )}
                                     </div>
@@ -149,7 +150,7 @@ export default async function PagosPage() {
                         </div>
                         <h3 className="text-lg font-bold text-slate-700 mb-1">Sin Transacciones</h3>
                         <p className="max-w-md mx-auto">Todavía no tienes historial de compras o pagos registrados en la academia.</p>
-                        <a href="/portal/tienda" className="mt-6 px-4 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition-colors shadow-sm">
+                        <a href="/portal/tienda" className="mt-6 rounded-xl bg-gold px-4 py-2 font-bold text-navy shadow-sm transition-colors hover:bg-gold-light">
                             Visitar Tienda Oficial
                         </a>
                     </div>

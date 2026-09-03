@@ -63,7 +63,7 @@ export default async function AdminLayout({
                             <span className="text-sm font-semibold text-slate-900 leading-none">{user.email?.split('@')[0]}</span>
                             <span className="text-[10px] text-slate-500 font-medium">{getRoleLabel(role)}</span>
                         </div>
-                        <div className="h-9 w-9 rounded-full bg-indigo-600 flex items-center justify-center text-xs font-bold text-white shadow-sm ring-2 ring-indigo-100 shrink-0">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gold text-xs font-black text-navy shadow-sm ring-2 ring-gold/20">
                             {user.email?.charAt(0).toUpperCase()}
                         </div>
                         <form action={signOut}>

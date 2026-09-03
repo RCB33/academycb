@@ -61,6 +61,7 @@ export function AttendanceClient({ childrenData, sessionDate, eventId }: { child
                                             kid.attendance !== 'present' && "border-green-200 text-green-600 hover:bg-green-50"
                                         )}
                                         onClick={() => handleMark(kid.id, 'present')}
+                                        aria-label={`Marcar a ${kid.full_name} como presente`}
                                     >
                                         <Check className="h-5 w-5" />
                                     </Button>
@@ -73,6 +74,7 @@ export function AttendanceClient({ childrenData, sessionDate, eventId }: { child
                                             kid.attendance !== 'absent' && "border-red-200 text-red-600 hover:bg-red-50"
                                         )}
                                         onClick={() => handleMark(kid.id, 'absent')}
+                                        aria-label={`Marcar a ${kid.full_name} como ausente`}
                                     >
                                         <X className="h-5 w-5" />
                                     </Button>
@@ -85,6 +87,7 @@ export function AttendanceClient({ childrenData, sessionDate, eventId }: { child
                                             kid.attendance !== 'excused' && "border-amber-200 text-amber-600 hover:bg-amber-50"
                                         )}
                                         onClick={() => handleMark(kid.id, 'excused')}
+                                        aria-label={`Marcar a ${kid.full_name} como ausencia justificada`}
                                     >
                                         <UserMinus className="h-5 w-5" />
                                     </Button>

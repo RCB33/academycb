@@ -5,7 +5,7 @@ import { LogOut, Trophy } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { NotificationBell } from "@/components/ui/notification-bell"
 import { GlobalSignatureGuard } from "@/components/portal/global-signature-guard"
-import { MobilePortalNav, SidebarNav } from "@/components/portal/sidebar-nav"
+import { MobilePortalNav, PortalDesktopSidebar } from "@/components/portal/sidebar-nav"
 import { PortalPlayerSwitcher } from "@/components/portal/player-switcher"
 import { getRoleHome, isAppRole } from '@/lib/roles'
 
@@ -62,16 +62,16 @@ export default async function AuthenticatedLayout({
     return (
         <div className="h-[100dvh] min-h-[100dvh] w-full overflow-hidden bg-muted/20 md:h-screen md:min-h-0 flex flex-col md:flex-row">
             {/* Mobile Header */}
-            <div className="shrink-0 border-b bg-background md:hidden">
-                <div className="flex items-center justify-between p-4">
+            <div className="shrink-0 border-b border-white/10 bg-navy text-white shadow-md md:hidden">
+                <div className="flex min-h-16 items-center justify-between px-4 pt-[env(safe-area-inset-top)]">
                     <Link href="/portal/dashboard" className="flex items-center space-x-2 font-bold">
-                        <Trophy className="h-5 w-5 text-primary" />
-                        <span>Portal</span>
+                        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gold text-navy"><Trophy className="h-5 w-5" /></span>
+                        <span><span className="block font-heading text-base font-black uppercase tracking-wide">Academy</span><span className="block text-[9px] uppercase tracking-[0.16em] text-slate-300">Familias</span></span>
                     </Link>
                     <div className="flex items-center gap-2">
                         <NotificationBell />
                         <form action={signOut}>
-                            <Button variant="ghost" size="icon"><LogOut className="h-5 w-5" /></Button>
+                            <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 hover:text-white"><LogOut className="h-5 w-5" /></Button>
                         </form>
                     </div>
                 </div>
@@ -80,37 +80,10 @@ export default async function AuthenticatedLayout({
             <MobilePortalNav />
 
             {/* Desktop Sidebar */}
-            <aside className="hidden md:flex flex-col w-64 bg-card border-r h-screen shrink-0 relative z-20">
-                <div className="p-6 border-b shrink-0">
-                    <Link href="/portal/dashboard" className="flex items-center space-x-2 font-bold text-xl">
-                        <Trophy className="h-6 w-6 text-primary" />
-                        <span>Portal Familias</span>
-                    </Link>
-                    <PortalPlayerSwitcher players={familyPlayers} />
-                </div>
-                <SidebarNav />
-                <div className="p-4 border-t shrink-0">
-                    <div className="flex items-center justify-between mb-4 px-2">
-                        <div className="flex items-center space-x-3 overflow-hidden">
-                            <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-xs shrink-0">
-                                {user.email?.charAt(0).toUpperCase()}
-                            </div>
-                            <div className="flex-1 overflow-hidden">
-                                <p className="text-sm font-medium truncate">{user.email}</p>
-                            </div>
-                        </div>
-                        <NotificationBell />
-                    </div>
-                    <form action={signOut}>
-                        <Button variant="outline" className="w-full">
-                            <LogOut className="mr-2 h-4 w-4" /> Cerrar Sesión
-                        </Button>
-                    </form>
-                </div>
-            </aside>
+            <PortalDesktopSidebar players={familyPlayers} userEmail={user.email || 'Familia'} signOut={signOut} />
 
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:h-screen">
-                <main className="relative h-full flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] [-webkit-overflow-scrolling:touch] md:p-8">
+                <main className="relative h-full flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] [-webkit-overflow-scrolling:touch] md:p-6 xl:p-8">
                     <div className="mx-auto w-full max-w-7xl">
                         {children}
                     </div>

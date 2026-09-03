@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { MonthlyCalendar, CalendarEvent } from '@/components/ui/monthly-calendar'
+import { CalendarDays } from 'lucide-react'
+import { PortalPageHeader } from '@/components/portal/portal-page-header'
 
 export const dynamic = 'force-dynamic'
 
@@ -58,12 +60,7 @@ export default async function FamilyCalendarPage() {
 
     return (
         <div className="max-w-6xl mx-auto space-y-6">
-            <div className="flex flex-col gap-1">
-                <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-navy">Calendario de Actividades</h1>
-                <p className="text-muted-foreground text-sm">
-                    Visualiza los próximos entrenamientos y partidos de tus hijos.
-                </p>
-            </div>
+            <PortalPageHeader icon={<CalendarDays className="h-6 w-6" />} title="Mi calendario" description="Entrenamientos, partidos, campus y torneos de tus jugadores en un único lugar." />
 
             {childIds.length === 0 ? (
                 <div className="bg-white p-8 text-center rounded-xl border border-dashed text-slate-500">

@@ -56,13 +56,13 @@ export function PhotoGallery({ childId, initialImages, canEdit }: PhotoGalleryPr
         <Card className="border-none shadow-xl bg-white overflow-hidden">
             <CardHeader className="bg-slate-900 flex flex-row items-center justify-between pb-8">
                 <CardTitle className="flex items-center gap-2 text-white text-lg font-black uppercase">
-                    <ImageIcon className="h-5 w-5 text-blue-500" />
+                    <ImageIcon className="h-5 w-5 text-gold" />
                     Galería de Fotos
                 </CardTitle>
                 {canEdit && (
                     <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
                         <DialogTrigger asChild>
-                            <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white border-none shadow-lg shadow-blue-900/20">
+                            <Button size="sm" className="border-none bg-gold font-bold text-navy shadow-lg shadow-gold/20 hover:bg-gold-light">
                                 <Plus className="h-4 w-4 mr-2" />
                                 Subir Foto
                             </Button>

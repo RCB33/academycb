@@ -66,8 +66,8 @@ export function ProductCard({ product }: { product: Product }) {
                                     onClick={() => setSelectedSize(size)}
                                     className={`h-8 min-w-[2rem] px-2 text-xs font-bold rounded-md border transition-colors ${
                                         selectedSize === size 
-                                        ? 'bg-indigo-600 text-white border-indigo-600' 
-                                        : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300 hover:text-indigo-600'
+                                        ? 'border-gold bg-gold text-navy'
+                                        : 'border-slate-200 bg-white text-slate-600 hover:border-gold hover:text-navy'
                                     }`}
                                 >
                                     {size}
@@ -81,7 +81,7 @@ export function ProductCard({ product }: { product: Product }) {
                 <Button 
                     onClick={handleAddToCart}
                     disabled={product.stock <= 0}
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 font-bold border-none shadow-md shadow-indigo-600/20"
+                    className="w-full border-none bg-gold font-bold text-navy shadow-md shadow-gold/20 hover:bg-gold-light"
                 >
                     <ShoppingCart className="mr-2 h-4 w-4" /> Añadir al carrito
                 </Button>

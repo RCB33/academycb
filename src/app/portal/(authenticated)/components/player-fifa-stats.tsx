@@ -1,14 +1,11 @@
 'use client'
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
-import { TrendingUp, Award, Activity } from "lucide-react"
-import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, Radar, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts'
-import { motion } from "framer-motion"
+import { Activity } from "lucide-react"
+import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, Radar } from 'recharts'
 import { FifaCard } from "@/components/fifa-card"
 import { PlayerEvolutionChart } from "@/components/admin/player-evolution-chart"
 
-// Mock data types for now, will receive real props
 type Stats = {
     pace: number
     shooting: number
@@ -19,7 +16,8 @@ type Stats = {
     discipline: number
 }
 
-export default function PlayerFIFAStats({ stats, history, child }: { stats: Stats, history: any[], child: any }) {
+export default function PlayerFIFAStats({ stats, history, child }: { stats: Stats | null, history: any[], child: any }) {
+    if (!stats) return <Card className="overflow-hidden border border-gold/20 bg-white shadow-lg"><CardContent className="flex min-h-64 flex-col items-center justify-center p-8 text-center"><span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gold/15 text-gold"><Activity className="h-7 w-7" /></span><h2 className="mt-5 font-heading text-2xl font-black uppercase text-navy">Primera evaluación pendiente</h2><p className="mt-2 max-w-md text-sm leading-relaxed text-slate-500">Cuando el equipo técnico registre la primera evaluación aparecerán aquí la tarjeta, el análisis técnico y la evolución real del jugador.</p></CardContent></Card>
     // Calculate OVR (average of top 6)
     const values = [stats.pace, stats.shooting, stats.passing, stats.dribbling, stats.defending, stats.physical]
     const ovr = Math.round(values.reduce((a, b) => a + b, 0) / values.length)
@@ -49,7 +47,7 @@ export default function PlayerFIFAStats({ stats, history, child }: { stats: Stat
                             <div className="flex items-center gap-2">
                                 <Activity className="w-5 h-5 text-primary" /> Análisis Técnico
                             </div>
-                            <div className="px-3 py-1 bg-gradient-to-r from-yellow-500 to-amber-600 text-white shadow-sm text-[10px] font-black uppercase tracking-widest rounded-full">
+                            <div className="rounded-full bg-gold px-3 py-1 text-[10px] font-black uppercase tracking-widest text-navy shadow-sm">
                                 Nivel {level}
                             </div>
                         </CardTitle>
@@ -62,8 +60,8 @@ export default function PlayerFIFAStats({ stats, history, child }: { stats: Stat
                                 <Radar
                                     name="Stats"
                                     dataKey="A"
-                                    stroke="#2563eb"
-                                    fill="#2563eb"
+                            stroke="#D4AF37"
+                            fill="#D4AF37"
                                     fillOpacity={0.5}
                                 />
                             </RadarChart>

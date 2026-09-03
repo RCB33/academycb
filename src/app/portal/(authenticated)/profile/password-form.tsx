@@ -85,7 +85,7 @@ export function PasswordForm() {
                             required
                         />
                     </div>
-                    <Button type="submit" className="w-full bg-slate-900 text-white" disabled={loading}>
+                    <Button type="submit" className="w-full bg-gold font-bold text-navy hover:bg-gold-light" disabled={loading}>
                         {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Actualizar Contraseña
                     </Button>

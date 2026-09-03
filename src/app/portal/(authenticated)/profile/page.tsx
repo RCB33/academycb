@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { PasswordForm } from "./password-form"
+import Link from 'next/link'
+import { CircleUserRound } from 'lucide-react'
 
 export default async function ProfilePage() {
     const supabase = await createClient()
@@ -36,10 +38,10 @@ export default async function ProfilePage() {
         .single()
 
     return (
-        <div className="max-w-2xl mx-auto space-y-6">
-            <h1 className="text-3xl font-bold tracking-tight">Mi Perfil</h1>
+        <div className="mx-auto max-w-2xl space-y-6">
+            <header className="rounded-3xl bg-navy p-6 text-white shadow-lg"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gold text-navy"><CircleUserRound className="h-6 w-6" /></span><h1 className="mt-4 font-heading text-3xl font-black uppercase">Mi perfil</h1><p className="mt-2 text-sm text-slate-300">Gestiona tus datos de contacto, contraseña y jugadores vinculados.</p></header>
 
-            <Card>
+            <Card className="rounded-2xl border-slate-200 shadow-sm">
                 <CardHeader>
                     <div className="flex items-center space-x-4">
                         <Avatar className="h-20 w-20">
@@ -93,14 +95,14 @@ export default async function ProfilePage() {
                                 El correo electrónico no se puede cambiar desde aquí.
                             </p>
                         </div>
-                        <Button type="submit" className="w-full">
+                        <Button type="submit" className="w-full bg-gold font-bold text-navy hover:bg-gold-light">
                             Guardar Cambios
                         </Button>
                     </form>
                 </CardContent>
             </Card>
 
-            <Card>
+            <Card className="rounded-2xl border-slate-200 shadow-sm">
                 <CardHeader>
                     <CardTitle>Jugadores Asignados</CardTitle>
                     <CardDescription>Alumnos bajo tu tutoría en la academia.</CardDescription>
@@ -126,22 +128,18 @@ export default async function ProfilePage() {
 
             <PasswordForm />
 
-            <Card className="border-destructive/20">
+            <Card className="rounded-2xl border-slate-200 shadow-sm">
                 <CardHeader>
-                    <CardTitle className="text-destructive">Zona de Peligro</CardTitle>
+                    <CardTitle className="text-navy">Ayuda con tu cuenta</CardTitle>
                     <CardDescription>
-                        Acciones que afectan a tu cuenta de forma permanente.
+                        Para cambiar el correo o solicitar la eliminación de la cuenta, contacta con Academy.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <p className="text-sm text-muted-foreground mb-4">
-                        Si deseas cerrar tu cuenta o tienes problemas con tus datos, contacta con el administrador.
-                    </p>
+                    <p className="mb-4 text-sm text-muted-foreground">Secretaría comprobará tu identidad antes de realizar cambios sensibles.</p>
                 </CardContent>
-                <CardFooter className="bg-destructive/5 rounded-b-lg border-t border-destructive/10">
-                    <Button variant="outline" className="text-destructive hover:bg-destructive hover:text-white" disabled>
-                        Eliminar Cuenta
-                    </Button>
+                <CardFooter className="rounded-b-2xl border-t bg-slate-50">
+                    <Button asChild variant="outline" className="border-navy/20 text-navy hover:bg-navy hover:text-white"><Link href="/contacto">Contactar con Academy</Link></Button>
                 </CardFooter>
             </Card>
         </div>

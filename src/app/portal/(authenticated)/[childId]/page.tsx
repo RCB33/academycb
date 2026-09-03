@@ -1,16 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
-import { notFound, redirect } from 'next/navigation'
 import PlayerFIFAStats from '../components/player-fifa-stats'
 import { TrophyCard } from '@/components/portal/trophy-card'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Activity, CalendarDays, Medal, Trophy } from 'lucide-react'
-import { format } from 'date-fns' // assuming date-fns might be handy, or just native Date
-import { es } from 'date-fns/locale'
+import { Activity, AlertCircle, CalendarDays, Medal, Trophy } from 'lucide-react'
 import { PhotoGallery } from '@/components/portal/photo-gallery'
 import { ShareProfile } from '@/components/portal/share-profile'
 import { ReportDownloadButton } from '@/components/admin/report-download-button'
+import Link from 'next/link'
 
 export default async function ChildPage({ params }: { params: Promise<{ childId: string }> }) {
     const { childId } = await params
@@ -25,7 +23,7 @@ export default async function ChildPage({ params }: { params: Promise<{ childId:
         .single()
 
     if (!child) {
-        return <div>No se encontró el alumno o no tienes permisos.</div>
+        return <div className="mx-auto flex min-h-[55vh] max-w-xl flex-col items-center justify-center rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm"><span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50 text-red-600"><AlertCircle className="h-7 w-7" /></span><h1 className="mt-5 font-heading text-3xl font-black uppercase text-navy">Ficha no disponible</h1><p className="mt-2 text-sm leading-relaxed text-slate-500">No hemos encontrado este jugador o tu cuenta no tiene acceso a su ficha. Vuelve a tus jugadores o contacta con Academy.</p><Button asChild className="mt-6 bg-gold font-bold text-navy hover:bg-gold-light"><Link href="/portal/dashboard">Volver a mis jugadores</Link></Button></div>
     }
 
     // Fetch Latest Metrics
@@ -36,7 +34,7 @@ export default async function ChildPage({ params }: { params: Promise<{ childId:
         .order('recorded_at', { ascending: false })
         .limit(10) // Get last 10 for history
 
-    const latestMetric = metrics?.[0] || { pace: 50, shooting: 50, passing: 50, dribbling: 50, defending: 50, physical: 50, discipline: 50 }
+    const latestMetric = metrics?.[0] || null
 
     // Pass raw metrics history to the chart component
     const history = metrics || []
@@ -59,16 +57,33 @@ export default async function ChildPage({ params }: { params: Promise<{ childId:
 
     const nextTrophy = allAchievements?.find(a => !childAchievements?.some(ca => ca.achievement_id === a.id))
 
-    // Fetch Next Event
+    const [{ data: attendanceRows }, { data: campusEnrollments }, { data: tournamentEnrollments }] = await Promise.all([
+        supabase.from('training_sessions').select('attendance').eq('child_id', childId).eq('visible_to_guardian', true),
+        supabase.from('campus_enrollments').select('campus_id').eq('child_id', childId).neq('status', 'cancelled'),
+        supabase.from('tournament_players').select('tournament_id').eq('child_id', childId).neq('status', 'cancelled'),
+    ])
+    const attendanceTotal = attendanceRows?.length || 0
+    const attendancePresent = attendanceRows?.filter((row) => row.attendance === 'present').length || 0
+    const attendancePercentage = attendanceTotal > 0 ? Math.round((attendancePresent / attendanceTotal) * 100) : 0
+
+    // RLS limits the result to this family. We then narrow it to this player,
+    // so siblings do not accidentally share the same "next event" card.
     const now = new Date().toISOString()
     const { data: upcomingEvents } = await supabase
         .from('calendar_events')
         .select('*')
-        .eq('category_id', child.category_id)
         .gte('start_date', now)
         .order('start_date', { ascending: true })
-        .limit(1)
-    const nextEvent = upcomingEvents?.[0]
+        .limit(50)
+    const campusIds = new Set((campusEnrollments || []).map((row) => row.campus_id))
+    const tournamentIds = new Set((tournamentEnrollments || []).map((row) => row.tournament_id))
+    const nextEvent = upcomingEvents?.find((event) => {
+        if (event.source_type === 'campus') return campusIds.has(event.source_id)
+        if (event.source_type === 'tournament') return tournamentIds.has(event.source_id)
+        if (event.team_id) return event.team_id === child.team_id
+        if (event.category_id) return event.category_id === child.category_id
+        return event.source_type === 'manual'
+    })
 
     // Fetch Gallery
     const { data: galleryImages } = await supabase
@@ -85,23 +100,23 @@ export default async function ChildPage({ params }: { params: Promise<{ childId:
     }))
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-6 md:space-y-8">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-slate-900">{child.full_name}</h1>
                     <div className="flex items-center gap-2 text-muted-foreground">
-                        <span className="px-2 py-1 bg-yellow-500/10 rounded text-[10px] font-black text-yellow-600 uppercase tracking-wider border border-yellow-500/20">{child.category?.name || 'Academia'}</span>
+                        <span className="rounded border border-gold/20 bg-gold/10 px-2 py-1 text-[10px] font-black uppercase tracking-wider text-gold">{child.category?.name || 'Academia'}</span>
                         <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
                         <span className="text-xs font-bold uppercase tracking-widest opacity-60">Gen. {child.birth_year}</span>
                     </div>
                 </div>
-                <div className="flex gap-2 items-center">
-                    <ReportDownloadButton
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                    {latestMetric ? <ReportDownloadButton
                         student={child}
                         metrics={latestMetric}
-                        attendanceStats={{ total: 20, present: 18, percentage: "90" }} // Placeholder until attendance is calculated fully
+                        attendanceStats={{ total: attendanceTotal, present: attendancePresent, percentage: String(attendancePercentage) }}
                         coachNotes={notes && notes.length > 0 ? notes[0].content : "Sin observaciones recientes."}
-                    />
+                    /> : <span className="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-500">Informe disponible tras la primera evaluación</span>}
                     {child.public_share_token && (
                         <ShareProfile token={child.public_share_token} childId={child.id} childName={child.full_name} />
                     )}
@@ -118,7 +133,7 @@ export default async function ChildPage({ params }: { params: Promise<{ childId:
                     <CardContent className="p-6 relative z-10">
                         <div className="flex justify-between items-start">
                             <div>
-                                <p className="text-yellow-500 font-bold uppercase tracking-wider text-[10px] mb-1">Próximo Evento</p>
+                                <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-gold">Próximo evento</p>
                                 {nextEvent ? (
                                     <>
                                         <h3 className="text-xl font-black mb-1">{nextEvent.title}</h3>
@@ -127,8 +142,8 @@ export default async function ChildPage({ params }: { params: Promise<{ childId:
                                             {new Date(nextEvent.start_date).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })} • {new Date(nextEvent.start_date).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
                                         </p>
                                         <div className="flex gap-2">
-                                            <Button size="sm" className="bg-yellow-500 text-slate-900 hover:bg-yellow-400 font-bold text-xs h-8">Ver Detalles</Button>
-                                            <Button size="sm" variant="outline" className="border-slate-600 text-white hover:bg-slate-700 hover:text-white font-bold text-xs h-8">Ausencia</Button>
+                                            <Button asChild size="sm" className="h-9 bg-gold text-navy hover:bg-gold-light font-bold text-xs"><Link href="/portal/calendario">Ver calendario</Link></Button>
+                                            <Button asChild size="sm" variant="outline" className="h-9 border-slate-600 text-white hover:bg-slate-700 hover:text-white font-bold text-xs"><Link href="/portal/comunicados">Ver avisos</Link></Button>
                                         </div>
                                     </>
                                 ) : (
@@ -143,7 +158,7 @@ export default async function ChildPage({ params }: { params: Promise<{ childId:
                 </Card>
 
                 {/* Next Trophy */}
-                <Card className="bg-gradient-to-r from-yellow-500 to-amber-600 text-white border-none shadow-lg overflow-hidden relative">
+                <Card className="relative overflow-hidden border-none bg-gradient-to-r from-gold to-[#b88717] text-white shadow-lg">
                     <div className="absolute right-0 top-0 opacity-20 transform translate-x-4 -translate-y-4">
                         <Trophy className="h-32 w-32" />
                     </div>
@@ -157,12 +172,7 @@ export default async function ChildPage({ params }: { params: Promise<{ childId:
                                         <p className="text-amber-900 text-sm mb-4 line-clamp-2 max-w-[85%] font-medium">
                                             {nextTrophy.description}
                                         </p>
-                                        <div className="flex items-center gap-3">
-                                            <div className="flex-1 bg-black/10 h-2 rounded-full overflow-hidden min-w-[120px]">
-                                                <div className="bg-slate-900 h-full w-[65%]" />
-                                            </div>
-                                            <span className="text-[10px] uppercase font-black text-slate-900">En progreso</span>
-                                        </div>
+                                        <span className="inline-flex rounded-full bg-navy px-3 py-1 text-[10px] font-black uppercase tracking-wider text-white">Próximo objetivo</span>
                                     </>
                                 ) : (
                                     <>
@@ -184,8 +194,8 @@ export default async function ChildPage({ params }: { params: Promise<{ childId:
                 <div className="lg:col-span-2 space-y-6">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                            <div className="h-8 w-8 rounded-lg bg-yellow-500/10 flex items-center justify-center">
-                                <Medal className="h-5 w-5 text-yellow-600" />
+                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gold/10">
+                                <Medal className="h-5 w-5 text-gold" />
                             </div>
                             <h2 className="text-xl font-black tracking-tight text-slate-900 uppercase">Sala de Trofeos</h2>
                         </div>
@@ -228,14 +238,14 @@ export default async function ChildPage({ params }: { params: Promise<{ childId:
                 <Card className="border-none shadow-xl bg-white overflow-hidden self-start">
                     <CardHeader className="bg-slate-900 pb-8">
                         <CardTitle className="flex items-center gap-2 text-white text-lg font-black uppercase">
-                            <CalendarDays className="h-5 w-5 text-yellow-500" />
+                            <CalendarDays className="h-5 w-5 text-gold" />
                             Feedback Coach
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-6 -mt-4 bg-white rounded-t-2xl pt-6">
                         {notes?.map((note) => (
-                            <div key={note.id} className="relative pl-6 border-l-2 border-yellow-500/30 py-1">
-                                <div className="absolute left-[-5px] top-1.5 h-2 w-2 rounded-full bg-yellow-500 border-2 border-white" />
+                            <div key={note.id} className="relative border-l-2 border-gold/30 py-1 pl-6">
+                                <div className="absolute left-[-5px] top-1.5 h-2 w-2 rounded-full border-2 border-white bg-gold" />
                                 <h4 className="font-bold text-slate-900 text-sm leading-none mb-1">{note.title}</h4>
                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2">
                                     {new Date(note.note_date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}

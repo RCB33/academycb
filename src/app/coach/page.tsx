@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, Clock, CalendarDays } from "lucide-react"
+import { Users, Clock, CalendarDays, Sparkles } from "lucide-react"
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 
@@ -69,17 +69,16 @@ export default async function CoachDashboard() {
     }
 
     return (
-        <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-6">
-            <div className="flex flex-col gap-1">
-                <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-navy">
-                    Hola, {worker ? worker.full_name : 'Entrenador'}
-                </h1>
-                <p className="text-muted-foreground text-sm">
-                    Este es tu resumen de sesiones para hoy, {
+        <div className="mx-auto max-w-4xl space-y-6 p-4 sm:p-6 md:p-8">
+            <header className="relative overflow-hidden rounded-3xl bg-navy p-6 text-white shadow-lg sm:p-7">
+                <div className="absolute -right-12 -top-16 h-40 w-40 rounded-full border border-gold/20" />
+                <div className="relative"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gold text-navy"><Sparkles className="h-6 w-6" /></span><p className="mt-4 text-[10px] font-black uppercase tracking-[0.18em] text-gold">Tu jornada Academy</p><h1 className="mt-1 font-heading text-3xl font-black uppercase md:text-4xl">Hola, {worker ? worker.full_name : 'Entrenador'}</h1>
+                <p className="mt-2 text-sm text-slate-300">
+                    Sesiones de hoy, {
                         new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())
                     }.
-                </p>
-            </div>
+                </p></div>
+            </header>
 
             {!worker ? (
                 <Card className="border-amber-200 bg-amber-50">
@@ -92,7 +91,7 @@ export default async function CoachDashboard() {
                 </Card>
             ) : (
                 <div className="grid gap-4">
-                    <h2 className="text-lg font-semibold flex items-center gap-2">
+                    <h2 className="flex items-center gap-2 font-heading text-2xl font-black uppercase text-navy">
                         <CalendarDays className="h-5 w-5 text-gold" />
                         Tus Entrenos de Hoy
                     </h2>
@@ -127,12 +126,10 @@ export default async function CoachDashboard() {
                                 </CardHeader>
                                 <CardContent>
                                     <div className="pt-4 flex justify-end">
-                                        <Link href={`/coach/session/${event.id}`}>
-                                            <Button size="sm" className="bg-gold hover:bg-gold/90 text-navy font-bold w-full md:w-auto shadow-sm">
+                                        <Button asChild size="sm" className="w-full bg-gold font-bold text-navy shadow-sm hover:bg-gold-light md:w-auto"><Link href={`/coach/session/${event.id}`}>
                                                 <Users className="h-4 w-4 mr-2" />
                                                 Pasar Lista y Evaluar
-                                            </Button>
-                                        </Link>
+                                        </Link></Button>
                                     </div>
                                 </CardContent>
                             </Card>

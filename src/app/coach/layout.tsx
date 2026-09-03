@@ -1,8 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { Trophy, LogOut } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { CoachNav } from '@/components/coach/coach-nav'
 
 export default async function CoachLayout({
     children,
@@ -34,21 +32,9 @@ export default async function CoachLayout({
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 flex flex-col">
-            {/* Minimal Mobile Header */}
-            <header className="bg-navy text-white p-4 flex items-center justify-between sticky top-0 z-10 shadow-md">
-                <Link href="/coach" className="flex items-center space-x-2 font-bold">
-                    <Trophy className="h-6 w-6 text-gold" />
-                    <span className="tracking-wider uppercase text-sm">Entrenador</span>
-                </Link>
-                <form action={signOut}>
-                    <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
-                        <LogOut className="h-5 w-5" />
-                    </Button>
-                </form>
-            </header>
-
-            <main className="flex-1 overflow-y-auto pb-8">
+        <div className="flex h-[100dvh] min-h-[100dvh] flex-col overflow-hidden bg-slate-50">
+            <CoachNav signOut={signOut} />
+            <main className="flex-1 overflow-y-auto overscroll-y-contain pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:pb-8">
                 {children}
             </main>
         </div>

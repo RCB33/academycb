@@ -1,7 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { MessageSquare, Bell, Calendar as CalendarIcon, Share2, Megaphone } from "lucide-react"
+import { Bell, Calendar as CalendarIcon, Megaphone } from "lucide-react"
 import { redirect } from 'next/navigation'
+import { PortalPageHeader } from '@/components/portal/portal-page-header'
 
 export const dynamic = 'force-dynamic'
 
@@ -55,15 +56,7 @@ export default async function ComunicadosWallPage() {
 
     return (
         <div className="max-w-3xl mx-auto space-y-6">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                    <h1 className="text-3xl font-black tracking-tight text-slate-900 flex items-center gap-3">
-                        <Megaphone className="h-8 w-8 text-yellow-500" />
-                        Muro de Comunicados
-                    </h1>
-                    <p className="text-muted-foreground text-sm font-medium mt-1">Noticias y avisos oficiales de la academia y tus equipos.</p>
-                </div>
-            </div>
+            <PortalPageHeader icon={<Megaphone className="h-6 w-6" />} title="Comunicados" description="Avisos oficiales de Academy y de los equipos de tus jugadores." />
 
             <div className="space-y-6 mt-8">
                 {(!messages || messages.length === 0) ? (
@@ -77,7 +70,7 @@ export default async function ComunicadosWallPage() {
                 ) : (
                     messages.map((msg) => (
                         <Card key={msg.id} className="border-none shadow-md hover:shadow-lg transition-shadow overflow-hidden group">
-                            <div className="h-2 w-full bg-yellow-400" />
+                            <div className="h-2 w-full bg-gold" />
                             <CardHeader className="pb-3 border-b border-slate-50">
                                 <div className="flex justify-between items-start">
                                     <div className="flex items-center gap-2">
@@ -98,9 +91,6 @@ export default async function ComunicadosWallPage() {
                                             </div>
                                         </div>
                                     </div>
-                                    <button className="text-slate-300 hover:text-slate-500 transition-colors opacity-0 group-hover:opacity-100">
-                                        <Share2 className="h-4 w-4" />
-                                    </button>
                                 </div>
                             </CardHeader>
                             <CardContent className="pt-4">
