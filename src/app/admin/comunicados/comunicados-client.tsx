@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
-    getRecipientsAllGuardians, getRecipientsByCategory, getRecipientsByTeam, publishPortalAnnouncement, sendToRecipients,
+    getRecipientsAllGuardians, getRecipientsByCategory, getRecipientsByTeam, publishPortalAnnouncement, sendEmailToGuardians, sendToRecipients,
     type Recipient
 } from '@/app/actions/whatsapp'
 import { toast } from 'sonner'
@@ -32,6 +32,7 @@ export function ComunicadosClient({ categories, teams, history }: Props) {
     const [recipients, setRecipients] = useState<Recipient[]>([])
     const [selectedRecipients, setSelectedRecipients] = useState<Set<string>>(new Set())
     const [loadingRecipients, setLoadingRecipients] = useState(false)
+    const [subject, setSubject] = useState('')
     const [message, setMessage] = useState('')
     const [isSending, setIsSending] = useState(false)
     const [isConfirmOpen, setIsConfirmOpen] = useState(false)
@@ -40,13 +41,19 @@ export function ComunicadosClient({ categories, teams, history }: Props) {
 
     const getRecipientKey = (recipient: Recipient) => channel === 'portal'
         ? recipient.userIds.join('|')
-        : recipient.phone
-    const eligibleRecipients = recipients.filter((recipient) => channel === 'portal' ? recipient.userIds.length > 0 : recipient.phone.length >= 9)
+        : channel === 'email'
+            ? recipient.email.toLowerCase()
+            : recipient.phone
+    const eligibleRecipients = recipients.filter((recipient) => channel === 'portal'
+        ? recipient.userIds.length > 0
+        : channel === 'email'
+            ? /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient.email)
+            : recipient.phone.length >= 9)
     const selectedRecipientRows = eligibleRecipients.filter((recipient) => selectedRecipients.has(getRecipientKey(recipient)))
 
     // Fetch recipients when selection changes
     useEffect(() => {
-        if (!selectedId || channel === 'email') { setRecipients([]); setSelectedRecipients(new Set()); return }
+        if (!selectedId) { setRecipients([]); setSelectedRecipients(new Set()); return }
         async function fetch() {
             setLoadingRecipients(true)
             const r = scope === 'all'
@@ -54,7 +61,11 @@ export function ComunicadosClient({ categories, teams, history }: Props) {
                 : scope === 'category'
                     ? await getRecipientsByCategory(selectedId)
                     : await getRecipientsByTeam(selectedId)
-            const eligible = r.filter((recipient) => channel === 'portal' ? recipient.userIds.length > 0 : recipient.phone.length >= 9)
+            const eligible = r.filter((recipient) => channel === 'portal'
+                ? recipient.userIds.length > 0
+                : channel === 'email'
+                    ? /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient.email)
+                    : recipient.phone.length >= 9)
             setRecipients(r)
             setSelectedRecipients(new Set(eligible.map(getRecipientKey)))
             setLoadingRecipients(false)
@@ -76,11 +87,13 @@ export function ComunicadosClient({ categories, teams, history }: Props) {
     const filtered = recipients.filter(r =>
         !search || r.childName.toLowerCase().includes(search.toLowerCase()) ||
         r.guardianName.toLowerCase().includes(search.toLowerCase()) ||
+        r.email.toLowerCase().includes(search.toLowerCase()) ||
         r.phone.includes(search)
     )
 
     const handleSend = () => {
         if (selectedRecipientRows.length === 0) { toast.error("Selecciona al menos un destinatario."); return }
+        if (channel === 'email' && subject.trim().length < 3) { toast.error("Escribe un asunto para el correo."); return }
         if (!message.trim()) { toast.error("Escribe un mensaje."); return }
 
         setIsConfirmOpen(true)
@@ -103,6 +116,12 @@ export function ComunicadosClient({ categories, teams, history }: Props) {
                 const result = await publishPortalAnnouncement(userIds, message, label, scope)
                 if (!result.success) throw new Error(result.error || 'No se ha podido publicar el comunicado.')
                 toast.success(`Comunicado publicado para ${result.summary?.published || userIds.length} tutor${userIds.length === 1 ? '' : 'es'}.`)
+            } else if (channel === 'email') {
+                setSendingProgress('Enviando correos con Resend…')
+                const guardianIds = Array.from(new Set(selectedRecipientRows.flatMap((recipient) => recipient.guardianIds)))
+                const result = await sendEmailToGuardians(guardianIds, subject, message, label, scope)
+                if (!result.success) throw new Error(result.error || 'No se ha podido completar el envío por email.')
+                toast.success(`Correo enviado a ${result.summary?.success || guardianIds.length} tutor${guardianIds.length === 1 ? '' : 'es'}.`)
             } else {
                 const phones = selectedRecipientRows.map((recipient) => recipient.phone)
                 const batches = Array.from({ length: Math.ceil(phones.length / 25) }, (_, index) => phones.slice(index * 25, index * 25 + 25))
@@ -119,6 +138,7 @@ export function ComunicadosClient({ categories, teams, history }: Props) {
 
                 toast.success(`Comunicado enviado: ${successCount} entregados${failedCount ? `, ${failedCount} con error` : ''}.`)
             }
+            if (channel === 'email') setSubject('')
             setMessage('')
             setIsConfirmOpen(false)
         } catch (e: any) {
@@ -159,27 +179,15 @@ export function ComunicadosClient({ categories, teams, history }: Props) {
                 </button>
             </div>
 
-            {channel === 'email' ? (
-                <Card className="border-dashed border-2 border-blue-200">
-                    <CardContent className="py-16 text-center">
-                        <Mail className="h-16 w-16 text-blue-200 mx-auto mb-4" />
-                        <h3 className="text-xl font-bold text-blue-300 mb-2">Canal Email — Próximamente</h3>
-                        <p className="text-sm text-slate-400 max-w-md mx-auto">
-                            La integración con Resend está preparada y se activará cuando el socio lo apruebe.
-                            Mientras tanto, utiliza WhatsApp para comunicados urgentes.
-                        </p>
-                    </CardContent>
-                </Card>
-            ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
                     {/* LEFT: Compose */}
                     <div className="lg:col-span-3 space-y-4">
                         <Card className="border-none shadow-lg overflow-hidden">
-                            <div className={`h-1.5 ${channel === 'portal' ? 'bg-gold' : 'bg-green-600'}`} />
+                            <div className={`h-1.5 ${channel === 'portal' ? 'bg-gold' : channel === 'email' ? 'bg-blue-600' : 'bg-green-600'}`} />
                             <CardHeader className="pb-3">
                                 <CardTitle className="flex items-center gap-2 text-base">
-                                    {channel === 'portal' ? <BellRing className="h-5 w-5 text-gold" /> : <MessageSquare className="h-5 w-5 text-green-600" />}
-                                    {channel === 'portal' ? 'Publicar en Portal Familias' : 'Componer Mensaje'}
+                                    {channel === 'portal' ? <BellRing className="h-5 w-5 text-gold" /> : channel === 'email' ? <Mail className="h-5 w-5 text-blue-600" /> : <MessageSquare className="h-5 w-5 text-green-600" />}
+                                    {channel === 'portal' ? 'Publicar en Portal Familias' : channel === 'email' ? 'Componer correo' : 'Componer mensaje'}
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-4">
@@ -209,7 +217,7 @@ export function ComunicadosClient({ categories, teams, history }: Props) {
                                 {scope === 'all' ? (
                                     <div className="rounded-xl border border-navy/15 bg-navy/[0.03] p-3 text-sm text-navy">
                                         <p className="flex items-center gap-2 font-bold"><Users className="h-4 w-4 text-gold" /> Comunicado general a todos los tutores</p>
-                                        <p className="mt-1 text-xs leading-relaxed text-slate-500">Se incluirá una sola vez cada teléfono válido, aunque un tutor tenga varios jugadores.</p>
+                                        <p className="mt-1 text-xs leading-relaxed text-slate-500">Cada tutor se incluirá una sola vez, aunque tenga varios jugadores.</p>
                                     </div>
                                 ) : <div className="space-y-2">
                                     <Label className="font-bold text-[10px] uppercase tracking-wider text-slate-400">
@@ -226,6 +234,20 @@ export function ComunicadosClient({ categories, teams, history }: Props) {
                                     </Select>
                                 </div>}
 
+                                {channel === 'email' && (
+                                    <div className="space-y-2">
+                                        <Label htmlFor="email-subject" className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Asunto</Label>
+                                        <Input
+                                            id="email-subject"
+                                            value={subject}
+                                            onChange={(event) => setSubject(event.target.value)}
+                                            maxLength={150}
+                                            placeholder="Ej.: Información importante de Academy"
+                                            className="bg-white"
+                                        />
+                                    </div>
+                                )}
+
                                 {/* Message */}
                                 <div className="space-y-2">
                                     <Label className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Mensaje</Label>
@@ -238,6 +260,16 @@ export function ComunicadosClient({ categories, teams, history }: Props) {
                                     />
                                     <p className="text-xs text-muted-foreground text-right">{message.length} caracteres</p>
                                 </div>
+
+                                {selectedRecipientRows.length > 0 && channel === 'email' && (
+                                    <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 p-3">
+                                        <ShieldCheck className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600" />
+                                        <div>
+                                            <p className="text-xs font-bold text-blue-800">Envío privado con Resend</p>
+                                            <p className="mt-0.5 text-[11px] text-blue-700">Cada tutor recibirá un correo individual desde info@academycostabrava.com. Las direcciones nunca se muestran entre familias.</p>
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* Rate limiting info */}
                                 {selectedRecipientRows.length > 0 && channel === 'whatsapp' && (
@@ -259,13 +291,13 @@ export function ComunicadosClient({ categories, teams, history }: Props) {
                                 </p>
                                 <Button
                                     onClick={handleSend}
-                                    disabled={isSending || selectedRecipientRows.length === 0 || !message.trim()}
-                                    className={channel === 'portal' ? 'bg-navy font-bold text-white hover:bg-navy/90' : 'bg-green-600 font-bold text-white hover:bg-green-700'}
+                                    disabled={isSending || selectedRecipientRows.length === 0 || !message.trim() || (channel === 'email' && subject.trim().length < 3)}
+                                    className={channel === 'portal' ? 'bg-navy font-bold text-white hover:bg-navy/90' : channel === 'email' ? 'bg-blue-600 font-bold text-white hover:bg-blue-700' : 'bg-green-600 font-bold text-white hover:bg-green-700'}
                                 >
                                     {isSending ? (
                                         <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {sendingProgress || 'Enviando…'}</>
                                     ) : (
-                                        <>{channel === 'portal' ? <BellRing className="mr-2 h-4 w-4" /> : <Send className="mr-2 h-4 w-4" />}{channel === 'portal' ? ` Publicar (${selectedRecipientRows.length})` : ` Enviar (${selectedRecipientRows.length})`}</>
+                                        <>{channel === 'portal' ? <BellRing className="mr-2 h-4 w-4" /> : channel === 'email' ? <Mail className="mr-2 h-4 w-4" /> : <Send className="mr-2 h-4 w-4" />}{channel === 'portal' ? ` Publicar (${selectedRecipientRows.length})` : ` Enviar (${selectedRecipientRows.length})`}</>
                                     )}
                                 </Button>
                             </CardFooter>
@@ -296,7 +328,7 @@ export function ComunicadosClient({ categories, teams, history }: Props) {
                                     <div className="relative mb-2">
                                         <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
                                         <Input
-                                            placeholder={channel === 'portal' ? 'Buscar por tutor o jugador...' : 'Buscar por nombre o teléfono...'}
+                                            placeholder={channel === 'portal' ? 'Buscar por tutor o jugador...' : channel === 'email' ? 'Buscar por nombre o email...' : 'Buscar por nombre o teléfono...'}
                                             value={search}
                                             onChange={e => setSearch(e.target.value)}
                                             className="pl-9 h-8 text-xs bg-white"
@@ -311,7 +343,7 @@ export function ComunicadosClient({ categories, teams, history }: Props) {
                                         ← Selecciona una categoría o equipo
                                     </div>
                                 ) : eligibleRecipients.length === 0 ? (
-                                    <div className="py-8 text-center text-sm text-slate-400">{channel === 'portal' ? 'No hay tutores con acceso activo al Portal Familias' : 'No se encontraron tutores con teléfono'}</div>
+                                    <div className="py-8 text-center text-sm text-slate-400">{channel === 'portal' ? 'No hay tutores con acceso activo al Portal Familias' : channel === 'email' ? 'No se encontraron tutores con email válido' : 'No se encontraron tutores con teléfono'}</div>
                                 ) : (
                                     <div className="max-h-[420px] overflow-y-auto space-y-1">
                                         {filtered.filter((recipient) => eligibleRecipients.includes(recipient)).map(r => {
@@ -319,9 +351,9 @@ export function ComunicadosClient({ categories, teams, history }: Props) {
                                             return (
                                                 <button key={r.id} onClick={() => toggleRecipient(r)}
                                                     className={`w-full flex items-center gap-2.5 p-2.5 rounded-lg text-left transition-all text-xs
-                                                        ${isSelected ? 'bg-green-50 border border-green-200' : 'bg-white border border-slate-100 opacity-50'}`}>
+                                                        ${isSelected ? channel === 'email' ? 'border border-blue-200 bg-blue-50' : 'bg-green-50 border border-green-200' : 'bg-white border border-slate-100 opacity-50'}`}>
                                                     <div className={`h-5 w-5 rounded flex items-center justify-center flex-shrink-0 transition-colors
-                                                        ${isSelected ? 'bg-green-600 text-white' : 'bg-slate-100'}`}>
+                                                        ${isSelected ? channel === 'email' ? 'bg-blue-600 text-white' : 'bg-green-600 text-white' : 'bg-slate-100'}`}>
                                                         {isSelected && <Check className="h-3 w-3" />}
                                                     </div>
                                                     <div className="flex-1 min-w-0">
@@ -332,7 +364,7 @@ export function ComunicadosClient({ categories, teams, history }: Props) {
                                                         </p>
                                                     </div>
                                                     <div className="flex items-center gap-1 text-[10px] text-slate-400 flex-shrink-0">
-                                                        {channel === 'portal' ? <><BellRing className="h-3 w-3 text-gold" /> Portal</> : <><Phone className="h-3 w-3" />{r.phone.length > 9 ? `+${r.phone}` : r.phone}</>}
+                                                        {channel === 'portal' ? <><BellRing className="h-3 w-3 text-gold" /> Portal</> : channel === 'email' ? <><Mail className="h-3 w-3 text-blue-600" /><span className="max-w-28 truncate">{r.email}</span></> : <><Phone className="h-3 w-3" />{r.phone.length > 9 ? `+${r.phone}` : r.phone}</>}
                                                     </div>
                                                 </button>
                                             )
@@ -342,16 +374,15 @@ export function ComunicadosClient({ categories, teams, history }: Props) {
                             </CardContent>
                         </Card>
                     </div>
-                </div>
-            )}
+            </div>
 
             <Dialog open={isConfirmOpen} onOpenChange={(open) => !isSending && setIsConfirmOpen(open)}>
                 <DialogContent className="max-w-md overflow-hidden rounded-3xl border-0 p-0 shadow-2xl">
                     <div className="bg-gradient-to-br from-navy to-navy/90 px-6 pb-5 pt-7 text-white">
-                        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gold text-navy">{channel === 'portal' ? <BellRing className="h-6 w-6" /> : <Megaphone className="h-6 w-6" />}</div>
+                        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gold text-navy">{channel === 'portal' ? <BellRing className="h-6 w-6" /> : channel === 'email' ? <Mail className="h-6 w-6" /> : <Megaphone className="h-6 w-6" />}</div>
                         <DialogHeader>
-                            <DialogTitle className="font-heading text-2xl font-black text-white">{channel === 'portal' ? 'Publicar comunicado' : 'Confirmar comunicado'}</DialogTitle>
-                            <DialogDescription className="text-white/70">{channel === 'portal' ? 'Aparecerá en el Portal Familias y avisará a las cuentas con acceso.' : 'Revisa el alcance antes de iniciar el envío por WhatsApp.'}</DialogDescription>
+                            <DialogTitle className="font-heading text-2xl font-black text-white">{channel === 'portal' ? 'Publicar comunicado' : channel === 'email' ? 'Confirmar envío por email' : 'Confirmar comunicado'}</DialogTitle>
+                            <DialogDescription className="text-white/70">{channel === 'portal' ? 'Aparecerá en el Portal Familias y avisará a las cuentas con acceso.' : channel === 'email' ? 'Revisa el asunto y los destinatarios antes de enviarlo.' : 'Revisa el alcance antes de iniciar el envío por WhatsApp.'}</DialogDescription>
                         </DialogHeader>
                     </div>
                     <div className="space-y-4 px-6 py-5">
@@ -359,10 +390,11 @@ export function ComunicadosClient({ categories, teams, history }: Props) {
                             <p className="text-[10px] font-black uppercase tracking-[0.16em] text-gold">Destinatarios</p>
                             <p className="mt-1 text-lg font-black text-navy">{selectedRecipientRows.length} tutor{selectedRecipientRows.length === 1 ? '' : 'es'}</p>
                             <p className="mt-1 text-sm text-slate-500">{scopeLabel}</p>
+                            {channel === 'email' && <p className="mt-3 border-t border-gold/20 pt-3 text-sm font-bold text-navy">{subject}</p>}
                         </div>
                         <div className="flex gap-3 rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
-                            {channel === 'portal' ? <BellRing className="mt-0.5 h-5 w-5 shrink-0 text-gold" /> : <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-green-600" />}
-                            <p>{channel === 'portal' ? 'Se publicará de inmediato en el apartado Comunicados y cada tutor con acceso recibirá un aviso en la campana.' : 'Los mensajes se envían en bloques de hasta 25 contactos y con una pausa corta entre cada uno.'}</p>
+                            {channel === 'portal' ? <BellRing className="mt-0.5 h-5 w-5 shrink-0 text-gold" /> : <ShieldCheck className={`mt-0.5 h-5 w-5 shrink-0 ${channel === 'email' ? 'text-blue-600' : 'text-green-600'}`} />}
+                            <p>{channel === 'portal' ? 'Se publicará de inmediato en el apartado Comunicados y cada tutor con acceso recibirá un aviso en la campana.' : channel === 'email' ? 'Resend entregará un mensaje individual a cada dirección válida, con respuesta a info@academycostabrava.com.' : 'Los mensajes se envían en bloques de hasta 25 contactos y con una pausa corta entre cada uno.'}</p>
                         </div>
                         <div className="flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
                             <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
@@ -371,8 +403,8 @@ export function ComunicadosClient({ categories, teams, history }: Props) {
                     </div>
                     <DialogFooter className="border-t bg-slate-50 px-6 py-4 sm:justify-between">
                         <Button type="button" variant="outline" onClick={() => setIsConfirmOpen(false)} disabled={isSending}>Cancelar</Button>
-                        <Button type="button" onClick={handleConfirmedSend} disabled={isSending} className={channel === 'portal' ? 'bg-navy font-bold text-white hover:bg-navy/90' : 'bg-green-600 font-bold text-white hover:bg-green-700'}>
-                            {isSending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {sendingProgress || 'Enviando…'}</> : channel === 'portal' ? <><BellRing className="mr-2 h-4 w-4" /> Publicar ahora</> : <><Send className="mr-2 h-4 w-4" /> Enviar ahora</>}
+                        <Button type="button" onClick={handleConfirmedSend} disabled={isSending} className={channel === 'portal' ? 'bg-navy font-bold text-white hover:bg-navy/90' : channel === 'email' ? 'bg-blue-600 font-bold text-white hover:bg-blue-700' : 'bg-green-600 font-bold text-white hover:bg-green-700'}>
+                            {isSending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {sendingProgress || 'Enviando…'}</> : channel === 'portal' ? <><BellRing className="mr-2 h-4 w-4" /> Publicar ahora</> : channel === 'email' ? <><Mail className="mr-2 h-4 w-4" /> Enviar correos</> : <><Send className="mr-2 h-4 w-4" /> Enviar ahora</>}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

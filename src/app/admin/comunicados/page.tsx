@@ -16,7 +16,7 @@ export default async function ComunicadosPage() {
                 <h1 className="text-3xl font-black tracking-tight text-slate-900 flex items-center gap-3">
                     📢 Centro de Comunicados
                 </h1>
-                <p className="text-muted-foreground text-sm">Envía mensajes a padres y tutores por WhatsApp o Email</p>
+                <p className="text-muted-foreground text-sm">Comunícate con las familias por WhatsApp, email o avisos internos del portal.</p>
             </div>
             <ComunicadosClient categories={categories} teams={teams} history={history} />
         </div>

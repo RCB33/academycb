@@ -87,6 +87,7 @@ export type Recipient = {
     childName: string
     guardianName: string
     phone: string
+    email: string
     guardianIds: string[]
     userIds: string[]
     teamName?: string
@@ -127,7 +128,7 @@ export async function getRecipientsByCategory(categoryId: string): Promise<Recip
             id, full_name, category_id,
             category:categories(name),
             team:teams(name),
-            child_guardians(guardian:guardians(id, user_id, full_name, phone))
+            child_guardians(guardian:guardians(id, user_id, full_name, phone, email))
         `)
         .eq('category_id', categoryId)
 
@@ -144,7 +145,7 @@ export async function getRecipientsByTeam(teamId: string): Promise<Recipient[]> 
             id, full_name,
             category:categories(name),
             team:teams(name),
-            child_guardians(guardian:guardians(id, user_id, full_name, phone))
+            child_guardians(guardian:guardians(id, user_id, full_name, phone, email))
         `)
         .eq('team_id', teamId)
 
@@ -156,7 +157,7 @@ export async function getRecipientsAllGuardians(): Promise<Recipient[]> {
     const { data: guardians, error } = await supabase
         .from('guardians')
         .select(`
-            id, user_id, full_name, phone,
+            id, user_id, full_name, phone, email,
             children:child_guardians(
                 child:children(full_name, archived_at, category:categories(name), team:teams(name))
             )
@@ -171,7 +172,8 @@ export async function getRecipientsAllGuardians(): Promise<Recipient[]> {
     const recipients: Recipient[] = []
     for (const guardian of guardians || []) {
         const phone = guardian.phone?.replace(/\D/g, '') || ''
-        if (phone.length < 9 && !guardian.user_id) continue
+        const email = guardian.email?.trim().toLowerCase() || ''
+        if (phone.length < 9 && !guardian.user_id && !email) continue
 
         const activeChildren = ((guardian.children || []) as any[])
             .map((relation) => relation.child)
@@ -185,6 +187,7 @@ export async function getRecipientsAllGuardians(): Promise<Recipient[]> {
             childName: childNames.join(' · ') || 'Tutor sin jugador activo',
             guardianName: guardian.full_name,
             phone,
+            email,
             guardianIds: [guardian.id],
             userIds: guardian.user_id ? [guardian.user_id] : [],
             teamName: teamNames.join(' · '),
@@ -192,7 +195,7 @@ export async function getRecipientsAllGuardians(): Promise<Recipient[]> {
         })
     }
 
-    return dedupeRecipientsByPhone(recipients)
+    return dedupeRecipientsByGuardian(recipients)
 }
 
 function extractRecipients(children: any[]): Recipient[] {
@@ -207,13 +210,15 @@ function extractRecipients(children: any[]): Recipient[] {
             const g = cg.guardian as any
             if (!g?.id) continue
             const cleanPhone = g.phone?.replace(/\D/g, '') || ''
-            if (cleanPhone.length < 9 && !g.user_id) continue
+            const cleanEmail = g.email?.trim().toLowerCase() || ''
+            if (cleanPhone.length < 9 && !g.user_id && !cleanEmail) continue
 
             recipients.push({
                 id: g.id,
                 childName: child.full_name,
                 guardianName: g.full_name,
                 phone: cleanPhone,
+                email: cleanEmail,
                 guardianIds: [g.id],
                 userIds: g.user_id ? [g.user_id] : [],
                 teamName,
@@ -221,17 +226,16 @@ function extractRecipients(children: any[]): Recipient[] {
             })
         }
     }
-    return dedupeRecipientsByPhone(recipients)
+    return dedupeRecipientsByGuardian(recipients)
 }
 
-function dedupeRecipientsByPhone(recipients: Recipient[]): Recipient[] {
-    const byPhone = new Map<string, Recipient>()
+function dedupeRecipientsByGuardian(recipients: Recipient[]): Recipient[] {
+    const byGuardian = new Map<string, Recipient>()
 
     for (const recipient of recipients) {
-        const recipientKey = recipient.phone || recipient.userIds[0] || recipient.id
-        const existing = byPhone.get(recipientKey)
+        const existing = byGuardian.get(recipient.id)
         if (!existing) {
-            byPhone.set(recipientKey, recipient)
+            byGuardian.set(recipient.id, recipient)
             continue
         }
 
@@ -248,7 +252,7 @@ function dedupeRecipientsByPhone(recipients: Recipient[]): Recipient[] {
         existing.userIds = Array.from(new Set([...existing.userIds, ...recipient.userIds]))
     }
 
-    return Array.from(byPhone.values())
+    return Array.from(byGuardian.values())
 }
 
 // ─── SENDING (with rate limiting) ───
@@ -319,6 +323,108 @@ export async function sendToRecipients(phones: string[], message: string, label:
 
     revalidatePath('/admin/comunicados')
     return { success: true, summary: { success: successCount, failed: failCount, total: phones.length } }
+}
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const MAX_EMAIL_RECIPIENTS = 500
+const RESEND_BATCH_SIZE = 100
+
+function escapeHtml(value: string) {
+    return value
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;')
+}
+
+export async function sendEmailToGuardians(
+    guardianIds: string[],
+    subject: string,
+    message: string,
+    label: string,
+    targetScope: 'all' | 'category' | 'team'
+) {
+    const { supabase } = await requireAdmin()
+    const apiKey = process.env.RESEND_API_KEY
+    const cleanSubject = subject.trim()
+    const cleanMessage = message.trim()
+    const ids = Array.from(new Set(guardianIds.filter(Boolean)))
+
+    if (!apiKey) return { success: false, error: 'Resend no está configurado en el servidor.' }
+    if (ids.length === 0) return { success: false, error: 'No hay tutores seleccionados.' }
+    if (ids.length > MAX_EMAIL_RECIPIENTS) return { success: false, error: `Máximo ${MAX_EMAIL_RECIPIENTS} destinatarios por envío.` }
+    if (cleanSubject.length < 3 || cleanSubject.length > 150) return { success: false, error: 'El asunto debe tener entre 3 y 150 caracteres.' }
+    if (cleanMessage.length < 2 || cleanMessage.length > 5000) return { success: false, error: 'El mensaje debe tener entre 2 y 5000 caracteres.' }
+
+    const { data: guardians, error: guardianError } = await supabase
+        .from('guardians')
+        .select('id, email')
+        .in('id', ids)
+    if (guardianError) return { success: false, error: 'No se han podido comprobar los destinatarios.' }
+
+    const emails = Array.from(new Set(
+        (guardians || [])
+            .map((guardian) => guardian.email?.trim().toLowerCase() || '')
+            .filter((email) => EMAIL_PATTERN.test(email))
+    ))
+    if (emails.length === 0) return { success: false, error: 'Los tutores seleccionados no tienen un email válido.' }
+
+    const from = process.env.RESEND_FROM_EMAIL || 'Academy Costa Brava <info@academycostabrava.com>'
+    const replyTo = process.env.RESEND_REPLY_TO || 'info@academycostabrava.com'
+    const logMessage = `${cleanSubject}\n\n${cleanMessage}`
+    const safeMessage = escapeHtml(cleanMessage).replaceAll('\n', '<br>')
+    const html = `<!doctype html><html lang="es"><body style="margin:0;background:#f4f7fb;font-family:Arial,sans-serif;color:#10294a"><div style="max-width:620px;margin:0 auto;padding:32px 16px"><div style="background:#10294a;color:#fff;padding:24px;border-radius:18px 18px 0 0"><div style="color:#e0b62f;font-size:12px;font-weight:700;letter-spacing:1.5px">ACADEMY COSTA BRAVA</div><h1 style="font-size:24px;margin:10px 0 0">${escapeHtml(cleanSubject)}</h1></div><div style="background:#fff;padding:28px;border:1px solid #dfe7f1;border-top:0;border-radius:0 0 18px 18px"><p style="font-size:16px;line-height:1.65;margin:0">${safeMessage}</p><hr style="border:0;border-top:1px solid #e8edf3;margin:28px 0"><p style="font-size:12px;line-height:1.5;color:#64748b;margin:0">Comunicado enviado por Academy Costa Brava. Puedes responder directamente a este correo.</p></div></div></body></html>`
+
+    let sentCount = 0
+    for (let index = 0; index < emails.length; index += RESEND_BATCH_SIZE) {
+        const batch = emails.slice(index, index + RESEND_BATCH_SIZE)
+        const response = await fetch('https://api.resend.com/emails/batch', {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${apiKey}`,
+                'Content-Type': 'application/json',
+                'Idempotency-Key': `academy-broadcast-${crypto.randomUUID()}`,
+            },
+            body: JSON.stringify(batch.map((email) => ({
+                from,
+                to: [email],
+                reply_to: replyTo,
+                subject: cleanSubject,
+                html,
+                text: cleanMessage,
+            }))),
+        })
+
+        if (!response.ok) {
+            const providerError = await response.text()
+            console.error('Resend batch error:', response.status, providerError)
+            const failedCount = emails.length - sentCount
+            await supabase.from('broadcast_logs').insert({
+                category_name: label,
+                message: logMessage,
+                sent_count: sentCount,
+                failed_count: failedCount,
+                channel: 'email',
+                target_scope: targetScope,
+            })
+            revalidatePath('/admin/comunicados')
+            return { success: false, error: 'Resend no ha podido completar el envío. Revisa el dominio y la cuota de correo.' }
+        }
+        sentCount += batch.length
+    }
+
+    await supabase.from('broadcast_logs').insert({
+        category_name: label,
+        message: logMessage,
+        sent_count: sentCount,
+        failed_count: 0,
+        channel: 'email',
+        target_scope: targetScope,
+    })
+
+    revalidatePath('/admin/comunicados')
+    return { success: true, summary: { success: sentCount, failed: 0, total: emails.length } }
 }
 
 export async function publishPortalAnnouncement(userIds: string[], message: string, label: string, targetScope: 'all' | 'category' | 'team') {
