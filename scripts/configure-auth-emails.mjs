@@ -120,33 +120,39 @@ async function configureSupabase() {
     console.log(`Configuradas ${templates.length} plantillas de Academy en Supabase.`)
 }
 
-async function sendPreviews(to) {
+async function sendPreviews(to, requestedTemplateId = '') {
     const apiKey = process.env.RESEND_API_KEY
     if (!apiKey) throw new Error('Falta RESEND_API_KEY para enviar las pruebas.')
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) throw new Error('El email de prueba no es válido.')
+    const selectedTemplates = requestedTemplateId
+        ? templates.filter((template) => template.id === requestedTemplateId)
+        : templates
+    if (selectedTemplates.length === 0) throw new Error(`No existe la plantilla: ${requestedTemplateId}`)
 
     const response = await fetch('https://api.resend.com/emails/batch', {
         method: 'POST',
         headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(templates.map((template, index) => ({
+        body: JSON.stringify(selectedTemplates.map((template, index) => ({
             from: FROM,
             to: [to],
             reply_to: REPLY_TO,
-            subject: `[PRUEBA ${index + 1}/${templates.length}] ${template.subject.replaceAll('{{ .Token }}', '482731')}`,
+            subject: `[PRUEBA ${index + 1}/${selectedTemplates.length}] ${template.subject.replaceAll('{{ .Token }}', '482731')}`,
             html: renderPreview(template.html),
             text: `Vista previa de la plantilla: ${template.id}. Esta prueba no realiza ninguna acción en tu cuenta.`,
         }))),
     })
     if (!response.ok) throw new Error(`Resend rechazó las pruebas (${response.status}): ${await response.text()}`)
-    console.log(`Enviadas ${templates.length} pruebas a ${to}.`)
+    console.log(`Enviadas ${selectedTemplates.length} pruebas a ${to}.`)
 }
 
 const shouldConfigure = process.argv.includes('--configure')
 const previewIndex = process.argv.indexOf('--preview-to')
 const previewTo = previewIndex >= 0 ? process.argv[previewIndex + 1] : ''
+const previewTemplateIndex = process.argv.indexOf('--preview-id')
+const previewTemplateId = previewTemplateIndex >= 0 ? process.argv[previewTemplateIndex + 1] : ''
 
 if (!shouldConfigure && !previewTo) {
     throw new Error('Usa --configure y/o --preview-to correo@ejemplo.com')
 }
 if (shouldConfigure) await configureSupabase()
-if (previewTo) await sendPreviews(previewTo)
+if (previewTo) await sendPreviews(previewTo, previewTemplateId)
