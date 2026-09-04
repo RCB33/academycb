@@ -86,12 +86,14 @@ const templates = [
 ]
 
 function buildAuthConfig() {
-    return templates.reduce((config, template) => {
-        config[template.subjectKey] = template.subject
-        config[template.contentKey] = template.html
-        if (template.notificationKey) config[template.notificationKey] = true
-        return config
+    const config = templates.reduce((currentConfig, template) => {
+        currentConfig[template.subjectKey] = template.subject
+        currentConfig[template.contentKey] = template.html
+        if (template.notificationKey) currentConfig[template.notificationKey] = true
+        return currentConfig
     }, {})
+    config.mailer_otp_exp = 86400
+    return config
 }
 
 function renderPreview(html) {

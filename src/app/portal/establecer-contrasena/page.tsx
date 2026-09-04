@@ -18,6 +18,7 @@ export default function SetPasswordPage() {
     const [checkingLink, setCheckingLink] = useState(true)
     const [sessionReady, setSessionReady] = useState(false)
     const [isWorkerAccess, setIsWorkerAccess] = useState(false)
+    const [linkError, setLinkError] = useState<'expired' | 'invalid' | null>(null)
     const router = useRouter()
     const supabase = useMemo(() => createClient(), [])
 
@@ -27,6 +28,16 @@ export default function SetPasswordPage() {
         const prepareSession = async () => {
             const code = new URLSearchParams(window.location.search).get('code')
             const hash = new URLSearchParams(window.location.hash.slice(1))
+            const errorCode = new URLSearchParams(window.location.search).get('error_code') || hash.get('error_code')
+            const errorDescription = new URLSearchParams(window.location.search).get('error_description') || hash.get('error_description') || ''
+            if (errorCode || errorDescription) {
+                const expired = errorCode === 'otp_expired' || errorDescription.toLowerCase().includes('expired')
+                if (active) {
+                    setLinkError(expired ? 'expired' : 'invalid')
+                    setCheckingLink(false)
+                }
+                return
+            }
             const accessToken = hash.get('access_token')
             const refreshToken = hash.get('refresh_token')
 
@@ -37,7 +48,10 @@ export default function SetPasswordPage() {
                 })
 
                 if (error) {
-                    if (active) setCheckingLink(false)
+                    if (active) {
+                        setLinkError('invalid')
+                        setCheckingLink(false)
+                    }
                     return
                 }
             }
@@ -45,7 +59,10 @@ export default function SetPasswordPage() {
             if (code && !accessToken) {
                 const { error } = await supabase.auth.exchangeCodeForSession(code)
                 if (error) {
-                    if (active) setCheckingLink(false)
+                    if (active) {
+                        setLinkError('invalid')
+                        setCheckingLink(false)
+                    }
                     return
                 }
             }
@@ -121,12 +138,16 @@ export default function SetPasswordPage() {
                 <Card className="w-full max-w-md border-white/10 shadow-2xl">
                     <CardHeader className="text-center">
                         <KeyRound className="mx-auto mb-3 h-10 w-10 text-gold" />
-                        <CardTitle className="text-2xl">El enlace no es válido</CardTitle>
-                        <CardDescription>Puede que haya caducado o ya se haya utilizado. Solicita uno nuevo desde el acceso.</CardDescription>
+                        <CardTitle className="text-2xl">{linkError === 'expired' ? 'El enlace ha caducado' : 'El enlace no es válido'}</CardTitle>
+                        <CardDescription>
+                            {linkError === 'expired'
+                                ? 'Por seguridad, este enlace ya no se puede utilizar. Solicita un correo nuevo para continuar.'
+                                : 'Puede que el enlace ya se haya utilizado. Solicita uno nuevo desde el acceso.'}
+                        </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <Button className="w-full bg-gold text-navy" onClick={() => router.replace('/portal')}>
-                            Volver y solicitar un enlace nuevo
+                            Solicitar un enlace nuevo
                         </Button>
                     </CardContent>
                 </Card>
