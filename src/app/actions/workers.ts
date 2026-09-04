@@ -6,6 +6,7 @@ import { randomUUID } from 'node:crypto'
 import { requireAdmin } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { WorkerAccessRole } from '@/lib/roles'
+import { getAccessActivationStatuses } from '@/lib/auth/access-activation'
 
 type WorkerAccessAuditAction =
     | 'invited'
@@ -54,10 +55,13 @@ export async function getWorkers() {
         }
     }
 
+    const activationStatuses = await getAccessActivationStatuses(userIds)
+
     return (data || []).map((worker) => ({
         ...worker,
         access_role: worker.user_id ? rolesByUser.get(worker.user_id) || 'coach' : 'coach',
         access_enabled: Boolean(worker.user_id && worker.access_enabled),
+        access_activation: worker.user_id ? activationStatuses.get(worker.user_id) || null : null,
     }))
 }
 

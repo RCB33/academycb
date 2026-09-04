@@ -7,6 +7,7 @@ import { GuardianNotesEditor } from './notes-editor'
 import { TutorProfileActions } from './tutor-profile-actions'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { AccessActivationStatus } from '@/components/admin/access-activation-status'
 
 export default async function TutorProfilePage({ params }: { params: Promise<{ id: string }> }) {
     const resolvedParams = await params
@@ -116,6 +117,14 @@ export default async function TutorProfilePage({ params }: { params: Promise<{ i
 
                 {/* Right Column: Meta & Notes */}
                 <div className="space-y-6">
+                    <Card className="border-slate-100 shadow-sm">
+                        <CardHeader className="border-b border-slate-100 pb-3">
+                            <CardTitle className="text-sm font-bold uppercase tracking-widest text-navy">Acceso al portal</CardTitle>
+                        </CardHeader>
+                        <CardContent className="pt-4">
+                            <AccessActivationStatus status={guardian.access_activation} />
+                        </CardContent>
+                    </Card>
                     <Card className="shadow-sm border-slate-100 bg-amber-50/30">
                         <CardHeader className="pb-3 border-b border-amber-100/50">
                             <CardTitle className="text-sm font-bold uppercase tracking-widest text-amber-700">Notas Internas</CardTitle>

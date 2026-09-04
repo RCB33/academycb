@@ -8,6 +8,7 @@ import { WorkerDialog } from "./worker-dialog"
 import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { getRoleLabel } from "@/lib/roles"
+import { AccessActivationStatus } from "@/components/admin/access-activation-status"
 
 export function WorkerCard({ worker }: { worker: any }) {
     const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -66,6 +67,7 @@ export function WorkerCard({ worker }: { worker: any }) {
                                 </Badge>
                                 {worker.user_id && <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{getRoleLabel(worker.access_role)}</span>}
                             </div>
+                            {worker.user_id && <AccessActivationStatus status={worker.access_activation} />}
                             {worker.email && (
                                 <div className="flex items-center gap-3 text-slate-600 text-sm">
                                     <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">

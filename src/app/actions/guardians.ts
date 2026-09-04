@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireAdmin } from '@/lib/auth'
+import { getAccessActivationStatuses } from '@/lib/auth/access-activation'
 
 export async function getGuardians() {
     const { supabase } = await requireAdmin()
@@ -25,7 +26,14 @@ export async function getGuardians() {
         return []
     }
 
-    return guardians
+    const activationStatuses = await getAccessActivationStatuses(
+        (guardians || []).flatMap((guardian) => guardian.user_id ? [guardian.user_id] : [])
+    )
+
+    return (guardians || []).map((guardian) => ({
+        ...guardian,
+        access_activation: guardian.user_id ? activationStatuses.get(guardian.user_id) || null : null,
+    }))
 }
 
 export async function getGuardianById(id: string) {
@@ -54,7 +62,11 @@ export async function getGuardianById(id: string) {
         return null
     }
 
-    return guardian
+    const activationStatuses = await getAccessActivationStatuses(guardian.user_id ? [guardian.user_id] : [])
+    return {
+        ...guardian,
+        access_activation: guardian.user_id ? activationStatuses.get(guardian.user_id) || null : null,
+    }
 }
 
 export async function createGuardian(data: { full_name: string; email: string; phone: string; notes?: string; createPortalAccount?: boolean }) {
@@ -76,7 +88,7 @@ export async function createGuardian(data: { full_name: string; email: string; p
         const { data: authData, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
             data.email.trim(),
             {
-                data: { full_name: data.full_name },
+                data: { full_name: data.full_name, intended_role: 'guardian', password_set: false },
                 redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/portal/establecer-contrasena`
             }
         );

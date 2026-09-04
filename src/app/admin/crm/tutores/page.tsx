@@ -19,6 +19,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { GuardianDialog } from "./components/guardian-dialog"
+import { AccessActivationStatus } from '@/components/admin/access-activation-status'
 
 export default function TutorsMasterListPage() {
     const [guardians, setGuardians] = useState<any[]>([])
@@ -91,14 +92,15 @@ export default function TutorsMasterListPage() {
                                     <th className="h-12 px-6 text-left align-middle font-medium text-muted-foreground">Tutor</th>
                                     <th className="h-12 px-6 text-left align-middle font-medium text-muted-foreground">Contacto</th>
                                     <th className="h-12 px-6 text-left align-middle font-medium text-muted-foreground">Hijos Vinculados</th>
+                                    <th className="h-12 px-6 text-left align-middle font-medium text-muted-foreground">Acceso al portal</th>
                                     <th className="h-12 px-6 text-right align-middle font-medium text-muted-foreground">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody className="[&_tr:last-child]:border-0">
                                 {loading ? (
-                                    <tr><td colSpan={4} className="p-6 text-center text-muted-foreground">Cargando base de datos...</td></tr>
+                                    <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">Cargando base de datos...</td></tr>
                                 ) : filtered.length === 0 ? (
-                                    <tr><td colSpan={4} className="p-6 text-center text-muted-foreground">No se encontraron tutores.</td></tr>
+                                    <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">No se encontraron tutores.</td></tr>
                                 ) : (
                                     filtered.map((guardian) => (
                                         <tr
@@ -139,6 +141,9 @@ export default function TutorsMasterListPage() {
                                                         <span className="text-muted-foreground italic text-xs">Sin vínculos</span>
                                                     )}
                                                 </div>
+                                            </td>
+                                            <td className="p-6">
+                                                <AccessActivationStatus status={guardian.access_activation} compact />
                                             </td>
                                             <td className="p-6 text-right">
                                                 <DropdownMenu>
