@@ -17,6 +17,7 @@ export default function SetPasswordPage() {
     const [loading, setLoading] = useState(false)
     const [checkingLink, setCheckingLink] = useState(true)
     const [sessionReady, setSessionReady] = useState(false)
+    const [isWorkerAccess, setIsWorkerAccess] = useState(false)
     const router = useRouter()
     const supabase = useMemo(() => createClient(), [])
 
@@ -53,6 +54,7 @@ export default function SetPasswordPage() {
             if (!active) return
 
             setSessionReady(Boolean(session))
+            setIsWorkerAccess(Boolean(session?.user.user_metadata?.intended_role))
             setCheckingLink(false)
 
             if (session && (window.location.hash || code)) {
@@ -138,7 +140,11 @@ export default function SetPasswordPage() {
                 <CardHeader className="text-center">
                     <KeyRound className="mx-auto mb-3 h-10 w-10 text-gold" />
                     <CardTitle className="text-2xl">Establece tu contraseña</CardTitle>
-                    <CardDescription>Elige una contraseña exclusiva para acceder al portal de familias.</CardDescription>
+                    <CardDescription>
+                        {isWorkerAccess
+                            ? 'Elige una contraseña exclusiva para acceder a tu espacio profesional de Academy.'
+                            : 'Elige una contraseña exclusiva para acceder al portal de familias.'}
+                    </CardDescription>
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-5">
