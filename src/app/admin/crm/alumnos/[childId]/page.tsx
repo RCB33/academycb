@@ -55,6 +55,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
     const [plans, setPlans] = useState<any[]>([])
     const [studentAchievements, setStudentAchievements] = useState<any[]>([])
     const [signatures, setSignatures] = useState<any[]>([])
+    const [attendanceStats, setAttendanceStats] = useState({ total: 0, present: 0, percentage: "0" })
     const [loading, setLoading] = useState(true)
     const [isSavingMetrics, setIsSavingMetrics] = useState(false)
     const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
@@ -143,6 +144,20 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
                 const sigs = await getGuardiansSignatures(guardianIds)
                 setSignatures(sigs)
             }
+
+            // 7. Fetch real attendance. Never show invented percentages in a student's record.
+            const { data: attendanceRows } = await supabase
+                .from('training_sessions')
+                .select('attendance')
+                .eq('child_id', childId)
+
+            const attendanceTotal = attendanceRows?.length || 0
+            const attendancePresent = attendanceRows?.filter((row) => row.attendance === 'present').length || 0
+            setAttendanceStats({
+                total: attendanceTotal,
+                present: attendancePresent,
+                percentage: attendanceTotal > 0 ? String(Math.round((attendancePresent / attendanceTotal) * 100)) : "0"
+            })
         }
 
         setLoading(false)
@@ -296,7 +311,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
                     <ReportDownloadButton
                         student={student}
                         metrics={metrics}
-                        attendanceStats={{ total: 20, present: 18, percentage: "90" }} // Placeholder until attendance is calculated fully
+                        attendanceStats={attendanceStats}
                         coachNotes={coachNotes.length > 0 ? coachNotes[0].content : "Sin observaciones recientes."}
                     />
                 </div>
@@ -631,13 +646,22 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
                                         <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-500">Asistencia Actual</CardTitle>
                                     </CardHeader>
                                     <CardContent className="pt-6 flex items-center justify-between">
-                                        <div>
-                                            <div className="text-4xl font-black text-slate-900">92%</div>
-                                            <p className="text-xs text-green-600 font-bold mt-1">+4% vs. mes anterior</p>
-                                        </div>
-                                        <div className="h-16 w-16 rounded-full border-4 border-green-500 border-t-slate-100 flex items-center justify-center font-bold text-green-600">
-                                            OK
-                                        </div>
+                                        {attendanceStats.total > 0 ? (
+                                            <>
+                                                <div>
+                                                    <div className="text-4xl font-black text-slate-900">{attendanceStats.percentage}%</div>
+                                                    <p className="text-xs text-slate-500 font-bold mt-1">{attendanceStats.present} de {attendanceStats.total} sesiones</p>
+                                                </div>
+                                                <div className="h-16 w-16 rounded-full border-4 border-yellow-500 border-t-slate-100 flex items-center justify-center font-bold text-slate-900">
+                                                    {attendanceStats.present}/{attendanceStats.total}
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div>
+                                                <div className="text-2xl font-black text-slate-900">Sin registros</div>
+                                                <p className="text-xs text-slate-500 font-bold mt-1">La asistencia aparecerá al pasar lista.</p>
+                                            </div>
+                                        )}
                                     </CardContent>
                                 </Card>
 
@@ -647,8 +671,18 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
                                     </CardHeader>
                                     <CardContent className="pt-6 flex items-center justify-between">
                                         <div>
-                                            <div className="text-4xl font-black text-green-600 uppercase">Al día</div>
-                                            <p className="text-xs text-slate-500 font-bold mt-1">Próximo vencimiento: 01 Mar</p>
+                                            <div className={`text-3xl font-black uppercase ${paymentsData.payments.some((payment: any) => payment.status === 'pending' || payment.status === 'overdue') ? 'text-amber-600' : 'text-green-600'}`}>
+                                                {paymentsData.payments.length === 0
+                                                    ? 'Sin movimientos'
+                                                    : paymentsData.payments.some((payment: any) => payment.status === 'pending' || payment.status === 'overdue')
+                                                        ? 'Pendiente'
+                                                        : 'Al día'}
+                                            </div>
+                                            <p className="text-xs text-slate-500 font-bold mt-1">
+                                                {paymentsData.payments.length === 0
+                                                    ? 'Todavía no hay pagos registrados.'
+                                                    : `${paymentsData.payments.filter((payment: any) => payment.status === 'paid').length} de ${paymentsData.payments.length} pagos completados`}
+                                            </p>
                                         </div>
                                         <Wallet className="h-12 w-12 text-slate-200" />
                                     </CardContent>

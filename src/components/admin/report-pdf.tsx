@@ -231,7 +231,11 @@ export const StudentProgressReport = ({ data }: { data: ReportProps }) => (
                 </View>
                 <View style={styles.row}>
                     <Text style={styles.label}>Asistencia Trimestre:</Text>
-                    <Text style={styles.value}>{data.attendance.present} de {data.attendance.total} sesiones ({data.attendance.percentage}%)</Text>
+                    <Text style={styles.value}>
+                        {data.attendance.total > 0
+                            ? `${data.attendance.present} de ${data.attendance.total} sesiones (${data.attendance.percentage}%)`
+                            : 'Sin asistencias registradas en este periodo'}
+                    </Text>
                 </View>
             </View>
 
