@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { LogOut } from "lucide-react"
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
@@ -59,13 +60,13 @@ export default async function AdminLayout({
                     </div>
                     <div className="flex items-center gap-4">
                         <NotificationBell />
-                        <div className="flex flex-col items-end hidden sm:flex">
+                        <Link href="/cuenta" className="hidden flex-col items-end rounded-lg px-2 py-1 transition hover:bg-slate-100 sm:flex" title="Mi cuenta">
                             <span className="text-sm font-semibold text-slate-900 leading-none">{user.email?.split('@')[0]}</span>
                             <span className="text-[10px] text-slate-500 font-medium">{getRoleLabel(role)}</span>
-                        </div>
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gold text-xs font-black text-navy shadow-sm ring-2 ring-gold/20">
+                        </Link>
+                        <Link href="/cuenta" title="Mi cuenta" aria-label="Mi cuenta" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gold text-xs font-black text-navy shadow-sm ring-2 ring-gold/20 transition hover:scale-105">
                             {user.email?.charAt(0).toUpperCase()}
-                        </div>
+                        </Link>
                         <form action={signOut}>
                             <button title="Cerrar Sesión" className="h-9 w-9 ml-2 rounded-full hover:bg-slate-100 flex items-center justify-center text-red-500 hover:text-red-600 transition-colors">
                                 <LogOut size={18} />

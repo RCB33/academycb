@@ -54,7 +54,7 @@ export function PasswordForm() {
             <CardHeader>
                 <CardTitle>Cambiar Contraseña</CardTitle>
                 <CardDescription>
-                    Actualiza tu contraseña de acceso al portal. Te recomendamos una contraseña segura.
+                    Actualiza tu contraseña de acceso a Academy. Recibirás un aviso por email cuando se complete el cambio.
                 </CardDescription>
             </CardHeader>
             <CardContent>

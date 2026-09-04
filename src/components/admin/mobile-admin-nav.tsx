@@ -7,7 +7,7 @@ import {
     Activity, Briefcase, CalendarDays, ChevronUp, CreditCard, FileText,
     LayoutDashboard, MessageCircle, MessageSquare, MessageSquareHeart,
     MoreHorizontal, Settings, ShoppingBag, Trophy, TrendingUp, UserPlus,
-    Users, Video,
+    UserRound, Users, Video,
 } from 'lucide-react'
 
 type Item = { href: string, label: string, icon: ReactNode }
@@ -38,6 +38,7 @@ export function MobileAdminNav({ isAdmin, isStaff, isFinance, isMarketing }: { i
             : [{ href: '/admin/leads', label: 'Solicitudes', icon: <MessageSquare className="h-5 w-5" /> }]
 
     const groups: Group[] = [
+        { label: 'Cuenta', items: [{ href: '/cuenta', label: 'Mi cuenta y contraseña', icon: <UserRound className="h-5 w-5" /> }] },
         ...(isAdmin || isMarketing ? [{ label: isMarketing ? 'Marketing' : 'Gestión CRM', items: [
             ...(isAdmin ? [
                 { href: '/admin/seguimiento', label: 'Seguimiento', icon: <TrendingUp className="h-5 w-5" /> },

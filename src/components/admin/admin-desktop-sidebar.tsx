@@ -7,7 +7,7 @@ import {
     Activity, Briefcase, CalendarDays, ChevronLeft, ChevronRight, CreditCard,
     FileText, LayoutDashboard, LogOut, MessageCircle, MessageSquare,
     MessageSquareHeart, Settings, ShoppingBag, Trophy, TrendingUp, UserPlus,
-    Users, Video,
+    UserRound, Users, Video,
 } from 'lucide-react'
 
 type Item = { href: string, label: string, icon: ReactNode }
@@ -98,6 +98,9 @@ export function AdminDesktopSidebar({
             </div>)}
         </nav>
         <div className={`shrink-0 border-t border-navy-light bg-navy-dark/30 ${collapsed ? 'p-2' : 'p-4'}`}>
+            <Link href="/cuenta" title="Mi cuenta" className={`mb-1 flex min-h-10 items-center rounded-lg text-sm font-medium text-slate-300 transition-colors hover:bg-white/10 hover:text-white ${collapsed ? 'justify-center px-2' : 'gap-3 px-3'}`}>
+                <UserRound size={18} />{!collapsed && <span>Mi cuenta</span>}
+            </Link>
             <form action={signOut}>
                 <button title="Cerrar sesión" className={`flex min-h-10 items-center rounded-lg text-sm font-medium text-slate-300 transition-colors hover:bg-white/10 hover:text-white ${collapsed ? 'w-full justify-center px-2' : 'w-full gap-3 px-3'}`}>
                     <LogOut size={18} />{!collapsed && <span>Cerrar sesión</span>}

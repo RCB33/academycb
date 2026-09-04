@@ -2,12 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { CalendarDays, Home, LogOut, Trophy } from 'lucide-react'
+import { CalendarDays, Home, LogOut, Trophy, UserRound } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const items = [
     { href: '/coach', label: 'Hoy', icon: Home },
     { href: '/coach/calendario', label: 'Calendario', icon: CalendarDays },
+    { href: '/cuenta', label: 'Mi cuenta', icon: UserRound },
 ]
 
 function activePath(pathname: string, href: string) {
@@ -24,6 +25,6 @@ export function CoachNav({ signOut }: { signOut: () => Promise<void> }) {
                 <form action={signOut}><button type="submit" className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-200 transition hover:bg-white/10 hover:text-white" aria-label="Cerrar sesión"><LogOut className="h-5 w-5" /></button></form>
             </div>
         </header>
-        <nav className="fixed inset-x-0 bottom-0 z-40 grid h-16 grid-cols-2 border-t border-navy/10 bg-white/95 px-3 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(16,42,77,0.12)] backdrop-blur sm:hidden" aria-label="Navegación del entrenador">{items.map((item) => { const Icon = item.icon; const active = activePath(pathname, item.href); return <Link key={item.href} href={item.href} aria-current={active ? 'page' : undefined} className={cn('my-1 flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-bold transition active:scale-95', active ? 'bg-gold text-navy shadow-sm' : 'text-slate-500')}><Icon className="h-5 w-5" />{item.label}</Link> })}</nav>
+        <nav className="fixed inset-x-0 bottom-0 z-40 grid h-16 grid-cols-3 border-t border-navy/10 bg-white/95 px-3 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(16,42,77,0.12)] backdrop-blur sm:hidden" aria-label="Navegación del entrenador">{items.map((item) => { const Icon = item.icon; const active = activePath(pathname, item.href); return <Link key={item.href} href={item.href} aria-current={active ? 'page' : undefined} className={cn('my-1 flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-bold transition active:scale-95', active ? 'bg-gold text-navy shadow-sm' : 'text-slate-500')}><Icon className="h-5 w-5" />{item.label}</Link> })}</nav>
     </>
 }
