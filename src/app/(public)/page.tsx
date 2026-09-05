@@ -1,7 +1,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import { ArrowRight, Star, Shield, Zap, TrendingUp, HeartHandshake } from "lucide-react"
+import { ArrowRight, Star, Shield, Zap, TrendingUp, HeartHandshake, Play } from "lucide-react"
 import LeadWidget from "./components/lead-widget"
 import WhoWeAreSection from "./components/who-we-are-section"
 import { getPublicSettings } from "@/lib/public-settings"
@@ -57,6 +57,50 @@ export default async function LandingPage() {
                 {/* Scroll Indicator */}
                 <div className="absolute bottom-10 left-1/2 -translate-x-1/2 animate-bounce">
                     <div className="w-[1px] h-16 bg-gradient-to-b from-transparent via-gold to-transparent"></div>
+                </div>
+            </section>
+
+            {/* ACADEMY PRESENTATION VIDEO */}
+            <section className="relative overflow-hidden bg-navy py-16 md:py-24">
+                <div className="absolute -left-32 top-1/3 h-72 w-72 rounded-full border border-gold/15" />
+                <div className="absolute -right-24 bottom-0 h-64 w-64 rounded-full bg-gold/5 blur-3xl" />
+
+                <div className="container relative z-10 px-4">
+                    <div className="mx-auto grid max-w-5xl items-center gap-12 lg:grid-cols-[1fr_380px] lg:gap-20">
+                        <div className="text-center lg:text-left">
+                            <span className="mb-5 inline-flex items-center gap-2 rounded-full border border-gold/30 bg-gold/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-gold">
+                                <Play className="h-4 w-4 fill-gold" /> Academy en 90 segundos
+                            </span>
+                            <h2 className="font-heading text-4xl font-bold uppercase leading-tight text-white sm:text-5xl md:text-6xl">
+                                Mucho más que <span className="text-gold">fútbol</span>
+                            </h2>
+                            <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-white/75 lg:mx-0">
+                                Manuel Matías te cuenta quiénes somos, cómo entrenamos y por qué acompañamos a cada jugador dentro y fuera del campo.
+                            </p>
+                            <p className="mt-5 text-sm font-semibold uppercase tracking-[0.16em] text-gold/90">
+                                Entrena · Aprende · Compite · Disfruta
+                            </p>
+                        </div>
+
+                        <div className="mx-auto w-full max-w-[360px]">
+                            <div className="relative overflow-hidden rounded-[2rem] border border-gold/50 bg-black p-1.5 shadow-[0_28px_80px_rgba(0,0,0,0.45)]">
+                                <video
+                                    className="aspect-[9/16] w-full rounded-[1.65rem] bg-black object-cover"
+                                    controls
+                                    playsInline
+                                    preload="metadata"
+                                    poster="/academy-presentacion-poster.jpg"
+                                    aria-label="Presentación de Academy Costa Brava por Manuel Matías"
+                                >
+                                    <source src="/academy-presentacion.mp4" type="video/mp4" />
+                                    Tu navegador no permite reproducir este vídeo.
+                                </video>
+                            </div>
+                            <p className="mt-4 text-center text-sm text-white/55">
+                                Pulsa para conocer nuestra forma de trabajar.
+                            </p>
+                        </div>
+                    </div>
                 </div>
             </section>
 
