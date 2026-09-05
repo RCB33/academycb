@@ -212,6 +212,28 @@ export default function AjustesPage() {
                 </TabsContent>
 
                 <TabsContent value="cobros" className="space-y-5">
+                    <SettingsCard title="Stripe de Academy" description="Los cobros se realizarán en la cuenta Stripe de Academy, vinculada a su propia cuenta bancaria." icon={<CreditCard className="h-5 w-5" />}>
+                        <div className="space-y-5">
+                            <div className="rounded-xl border border-gold/30 bg-gold/5 p-4">
+                                <Badge variant="outline">Pendiente de conexión</Badge>
+                                <p className="mt-3 text-sm leading-relaxed text-slate-600">Crea la cuenta con los datos del negocio y completa la verificación y la cuenta bancaria en Stripe. Después, el equipo técnico conectará la web y comprobará los pagos antes de activar la tarjeta.</p>
+                            </div>
+                            <div className="flex flex-col gap-3 sm:flex-row">
+                                <Button asChild className="min-h-12 bg-gold font-bold text-navy hover:bg-gold/90"><a href="https://dashboard.stripe.com/register" target="_blank" rel="noopener noreferrer">Crear cuenta Stripe <ExternalLink className="ml-2 h-4 w-4" /></a></Button>
+                                <Button asChild variant="outline" className="min-h-12"><a href="https://dashboard.stripe.com/" target="_blank" rel="noopener noreferrer">Abrir mi Stripe <ExternalLink className="ml-2 h-4 w-4" /></a></Button>
+                            </div>
+                            <div className="border-t pt-4">
+                                <p className="font-semibold text-navy">Gestiona tus precios desde Academy</p>
+                                <p className="mt-1 text-sm text-slate-500">Los productos, fotos y precios se crean en Tienda; las cuotas en la pestaña Planes; y cada campus o torneo en su sección. Abrir Stripe no conecta automáticamente los pagos de la web.</p>
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                    <Button asChild variant="outline"><Link href="/admin/tienda">Tienda y productos</Link></Button>
+                                    <Button asChild variant="outline"><Link href="/admin/academia">Academia</Link></Button>
+                                    <Button asChild variant="outline"><Link href="/admin/campus">Campus</Link></Button>
+                                    <Button asChild variant="outline"><Link href="/admin/torneos">Torneos</Link></Button>
+                                </div>
+                            </div>
+                        </div>
+                    </SettingsCard>
                     <form onSubmit={(event) => void saveForm('cobros', event)} className="space-y-5">
                         <SettingsCard title="Métodos de pago" description="Solo los métodos activos aparecerán en nuevas inscripciones e ingresos." icon={<CreditCard className="h-5 w-5" />}>
                             <div className="grid gap-4 md:grid-cols-3">
