@@ -1,6 +1,5 @@
-import Image from "next/image"
 import Link from "next/link"
-import { PlayCircle, Trophy, UsersRound, Zap } from "lucide-react"
+import { Trophy, UsersRound, Zap } from "lucide-react"
 
 const pillars = [
     { title: 'Academia', description: 'Tecnificación y Metodología 360º adaptada a cada etapa.', icon: Zap },
@@ -27,15 +26,19 @@ export default function WhoWeAreSection() {
                         <p>Además, ofrecemos la posibilidad de participar en <strong className="text-white">torneos regionales, nacionales e internacionales</strong>, permitiendo a nuestros jugadores vivir nuevos contextos competitivos y poner en práctica todo lo aprendido durante su proceso de formación.</p>
                     </div>
 
-                    <figure className="relative overflow-hidden rounded-[1.75rem] border border-gold/35 bg-navy-light p-2 shadow-2xl shadow-black/40">
-                        <div className="relative aspect-video overflow-hidden rounded-[1.3rem]">
-                            <Image src="/academy-session.jpg" alt="Entrenamiento de Academy Costa Brava" fill className="object-cover" />
-                            <div className="absolute inset-0 bg-gradient-to-t from-navy via-navy/25 to-transparent" />
-                            <div className="absolute inset-x-0 bottom-0 p-6 md:p-8">
-                                <div className="flex items-center gap-3 text-white"><PlayCircle className="h-10 w-10 text-gold" /><div><p className="font-heading text-2xl font-black uppercase">Vídeo de presentación</p><p className="mt-1 text-sm text-white/75">Academy Costa Brava</p></div></div>
-                            </div>
-                        </div>
-                        <figcaption className="px-3 pb-1 pt-3 text-center text-xs font-medium text-slate-400">Espacio preparado para el vídeo oficial de Academy.</figcaption>
+                    <figure className="relative mx-auto w-full max-w-[360px] overflow-hidden rounded-[1.75rem] border border-gold/35 bg-navy-light p-2 shadow-2xl shadow-black/40">
+                        <video
+                            className="aspect-[9/16] w-full rounded-[1.3rem] bg-black object-contain"
+                            controls
+                            playsInline
+                            preload="metadata"
+                            poster="/academy-presentacion-poster.jpg"
+                            aria-label="Presentación de Academy Costa Brava por Manuel Matías"
+                        >
+                            <source src="/academy-presentacion.mp4" type="video/mp4" />
+                            Tu navegador no permite reproducir este vídeo.
+                        </video>
+                        <figcaption className="px-3 pb-1 pt-3 text-center text-xs font-medium text-slate-300">Conoce Academy Costa Brava con Manuel Matías.</figcaption>
                     </figure>
                 </div>
 
