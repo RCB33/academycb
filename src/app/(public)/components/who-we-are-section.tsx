@@ -19,14 +19,16 @@ export default function WhoWeAreSection() {
                 </div>
 
                 <div className="mt-10 grid items-start gap-10 lg:grid-cols-[1.02fr_.98fr] lg:gap-16">
-                    <div className="space-y-5 text-base leading-relaxed text-slate-200 md:text-lg">
-                        <p><strong className="text-white">Academy Costa Brava es una academia de fútbol orientada al desarrollo integral del futbolista</strong>, acompañando a cada jugador en su crecimiento deportivo y personal.</p>
+                    <div className="contents text-base leading-relaxed text-slate-200 md:text-lg lg:block lg:space-y-5">
+                        <p className="order-1"><strong className="text-white">Academy Costa Brava es una academia de fútbol orientada al desarrollo integral del futbolista</strong>, acompañando a cada jugador en su crecimiento deportivo y personal.</p>
+                        <div className="order-3 space-y-5">
                         <p>Nuestra base es la <strong className="text-gold">tecnificación y nuestra Metodología 360º</strong>, con la que trabajamos de forma adaptada a la edad, nivel y etapa de desarrollo de cada jugador. Nuestro objetivo va más allá de perfeccionar la técnica: buscamos formar futbolistas capaces de <strong className="text-white">comprender el juego, tomar mejores decisiones y competir con confianza</strong>.</p>
                         <p>Nuestra formación se complementa con <strong className="text-white">campus y actividades durante diferentes periodos del año</strong>, donde combinamos fútbol, aprendizaje, convivencia y experiencias que contribuyen al desarrollo del jugador dentro y fuera del campo.</p>
                         <p>Además, ofrecemos la posibilidad de participar en <strong className="text-white">torneos regionales, nacionales e internacionales</strong>, permitiendo a nuestros jugadores vivir nuevos contextos competitivos y poner en práctica todo lo aprendido durante su proceso de formación.</p>
+                        </div>
                     </div>
 
-                    <figure className="relative mx-auto w-full max-w-[360px] overflow-hidden rounded-[1.75rem] border border-gold/35 bg-navy-light p-2 shadow-2xl shadow-black/40">
+                    <figure className="relative order-2 mx-auto w-full max-w-[360px] overflow-hidden rounded-[1.75rem] border border-gold/35 bg-navy-light p-2 shadow-2xl shadow-black/40">
                         <video
                             className="aspect-[9/16] w-full rounded-[1.3rem] bg-black object-contain"
                             controls

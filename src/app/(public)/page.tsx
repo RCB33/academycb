@@ -61,18 +61,18 @@ export default async function LandingPage() {
             </section>
 
             {/* PRINCIPLES STRIP */}
-            <section className="py-12 bg-navy border-b border-white/5">
+            <section className="py-5 md:py-12 bg-navy border-b border-white/5">
                 <div className="container">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+                    <div className="grid grid-cols-4 gap-2 md:gap-8">
                         {[
                             { label: "TÉCNICA", icon: Zap },
                             { label: "TÁCTICA", icon: TrendingUp },
                             { label: "EQUIPO", icon: Shield },
                             { label: "VALORES", icon: HeartHandshake },
                         ].map((stat, i) => (
-                            <div key={i} className="flex flex-col items-center justify-center p-4">
-                                <stat.icon className="h-8 w-8 text-secondary mb-3 opacity-80" />
-                                <span className="text-xs font-bold tracking-widest text-gray-400 uppercase">{stat.label}</span>
+                            <div key={i} className="flex flex-col items-center justify-center py-2 md:p-4">
+                                <stat.icon className="h-6 w-6 md:h-8 md:w-8 text-secondary mb-2 md:mb-3 opacity-80" />
+                                <span className="text-[10px] md:text-xs font-bold tracking-wide md:tracking-widest text-gray-400 uppercase">{stat.label}</span>
                             </div>
                         ))}
                     </div>
