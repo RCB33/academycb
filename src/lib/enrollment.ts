@@ -27,6 +27,9 @@ export const enrollmentSchema = z.object({
 })
 
 export type EnrollmentPayload = z.input<typeof enrollmentSchema>
+const familyEnrollmentSchema = enrollmentSchema.omit({ service: true, activity_id: true, child_name: true, birth_date: true }).extend({
+    children: z.array(enrollmentSchema.pick({ service: true, activity_id: true, child_name: true, birth_date: true })).min(1).max(6, 'Puedes enviar hasta 6 jugadores a la vez.'),
+})
 export type EnrollmentResult = { success: true; message: string } | { success: false; error: string }
 
 type PublicActivity = { id: string; name: string }
@@ -59,29 +62,39 @@ async function resolveActivity(service: z.infer<typeof serviceSchema>, activityI
 }
 
 export async function createEnrollmentRequest(payload: unknown): Promise<EnrollmentResult> {
-    const parsed = enrollmentSchema.safeParse(payload)
+    const input = payload && typeof payload === 'object' && 'children' in payload
+        ? payload
+        : payload && typeof payload === 'object' ? { ...payload, children: [payload] } : payload
+    const parsed = familyEnrollmentSchema.safeParse(input)
     if (!parsed.success) {
         return { success: false, error: parsed.error.issues[0]?.message || 'Revisa los datos de la solicitud.' }
     }
 
-    const activity = await resolveActivity(parsed.data.service, parsed.data.activity_id || undefined)
-    if (!activity) {
-        return { success: false, error: 'La actividad seleccionada ya no está disponible. Elige otra opción.' }
+    const rows = []
+    const seen = new Set<string>()
+    for (const child of parsed.data.children) {
+        const identity = `${child.child_name.toLocaleLowerCase()}|${child.birth_date}`
+        if (seen.has(identity)) return { success: false, error: `Has añadido dos veces a ${child.child_name}. Revisa los jugadores.` }
+        seen.add(identity)
+        const activity = await resolveActivity(child.service, child.activity_id || undefined)
+        if (!activity) return { success: false, error: `La actividad de ${child.child_name} ya no está disponible. Elige otra opción.` }
+        rows.push({
+            service: child.service,
+            activity_id: activity.id || null,
+            activity_name: activity.name,
+            child_name: child.child_name,
+            birth_date: child.birth_date,
+            guardian_name: parsed.data.guardian_name,
+            email: parsed.data.email.toLowerCase(),
+            phone: parsed.data.phone,
+            notes: parsed.data.notes || null,
+            status: 'new',
+        })
     }
 
     const supabase = await createClient()
-    const { error } = await supabase.from('enrollment_requests').insert({
-        service: parsed.data.service,
-        activity_id: activity.id || null,
-        activity_name: activity.name,
-        child_name: parsed.data.child_name,
-        birth_date: parsed.data.birth_date,
-        guardian_name: parsed.data.guardian_name,
-        email: parsed.data.email,
-        phone: parsed.data.phone,
-        notes: parsed.data.notes || null,
-        status: 'new',
-    })
+    // One insert is atomic: either every child's request is saved or none is.
+    const { error } = await supabase.from('enrollment_requests').insert(rows)
 
     if (error) {
         console.error('Enrollment request error:', error)
@@ -90,6 +103,8 @@ export async function createEnrollmentRequest(payload: unknown): Promise<Enrollm
 
     return {
         success: true,
-        message: 'Solicitud recibida. Secretaría revisará la plaza y contactará contigo para confirmar los siguientes pasos.',
+        message: rows.length > 1
+            ? `Hemos recibido las solicitudes de tus ${rows.length} jugadores. Secretaría revisará cada plaza y contactará contigo para confirmar los siguientes pasos.`
+            : 'Solicitud recibida. Secretaría revisará la plaza y contactará contigo para confirmar los siguientes pasos.',
     }
 }
