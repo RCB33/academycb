@@ -11,9 +11,6 @@ export type EnrollmentState = {
     message?: string
 }
 
-const initialState: EnrollmentState = {}
-export { initialState as enrollmentInitialState }
-
 export async function submitEnrollment(_previousState: EnrollmentState, formData: FormData): Promise<EnrollmentState> {
     return createEnrollmentRequest({
         service: formData.get('service'),
