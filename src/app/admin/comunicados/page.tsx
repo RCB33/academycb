@@ -1,4 +1,5 @@
-import { createClient } from '@/lib/supabase/server'
+import { Megaphone } from 'lucide-react'
+import { PortalPageHeader } from '@/components/portal/portal-page-header'
 import { ComunicadosClient } from './comunicados-client'
 import { getBroadcastHistory, getCategoriesWithTeams } from '@/app/actions/whatsapp'
 
@@ -12,12 +13,7 @@ export default async function ComunicadosPage() {
 
     return (
         <div className="max-w-5xl mx-auto space-y-6">
-            <div>
-                <h1 className="text-3xl font-black tracking-tight text-slate-900 flex items-center gap-3">
-                    📢 Centro de Comunicados
-                </h1>
-                <p className="text-muted-foreground text-sm">Comunícate con las familias por WhatsApp, email o avisos internos del portal.</p>
-            </div>
+            <PortalPageHeader icon={<Megaphone className="h-6 w-6" />} title="Comunicados" description="Un mensaje. Los canales que tú elijas." />
             <ComunicadosClient categories={categories} teams={teams} history={history} />
         </div>
     )

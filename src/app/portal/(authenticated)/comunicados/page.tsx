@@ -25,32 +25,11 @@ export default async function ComunicadosWallPage() {
         )
     }
 
-    // Get children to know which categories to filter
-    const { data: relations } = await supabase
-        .from('child_guardians')
-        .select('child:children(category:categories(name), team:teams(name))')
-        .eq('guardian_id', guardian.id)
-
-    // Collect relevant labels (category names, team names, or 'Todos')
-    const labels = new Set<string>()
-    labels.add('Todos') // Always allow general messages
-    labels.add('Academia') // Another common default name if nothing selected
-    
-    relations?.forEach(r => {
-        const c = r.child as any
-        if (c?.category?.name) labels.add(c.category.name)
-        if (c?.team?.name) labels.add(c.team.name)
-    })
-
-    const allowedLabels = Array.from(labels)
-
-    // Only internal Portal Familias messages live here. WhatsApp and email
-    // deliveries have their own channels and never leak into the portal feed.
+    // RLS checks the exact recipients, with compatibility for legacy messages.
     const { data: messages } = await supabase
         .from('broadcast_logs')
         .select('*')
         .eq('channel', 'portal')
-        .in('category_name', allowedLabels)
         .order('created_at', { ascending: false })
         .limit(30) // Last 30 messages
 

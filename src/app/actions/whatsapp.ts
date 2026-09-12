@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { requireAdmin } from '@/lib/auth'
+import { renderCommunicationEmail } from '@/lib/communication-email'
 
 // ─── SETTINGS ───
 
@@ -329,15 +330,6 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const MAX_EMAIL_RECIPIENTS = 500
 const RESEND_BATCH_SIZE = 100
 
-function escapeHtml(value: string) {
-    return value
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#039;')
-}
-
 export async function sendEmailToGuardians(
     guardianIds: string[],
     subject: string,
@@ -373,8 +365,7 @@ export async function sendEmailToGuardians(
     const from = process.env.RESEND_FROM_EMAIL || 'Academy Costa Brava <info@academycostabrava.com>'
     const replyTo = process.env.RESEND_REPLY_TO || 'info@academycostabrava.com'
     const logMessage = `${cleanSubject}\n\n${cleanMessage}`
-    const safeMessage = escapeHtml(cleanMessage).replaceAll('\n', '<br>')
-    const html = `<!doctype html><html lang="es"><body style="margin:0;background:#f4f7fb;font-family:Arial,sans-serif;color:#10294a"><div style="max-width:620px;margin:0 auto;padding:32px 16px"><div style="background:#10294a;color:#fff;padding:24px;border-radius:18px 18px 0 0"><div style="color:#e0b62f;font-size:12px;font-weight:700;letter-spacing:1.5px">ACADEMY COSTA BRAVA</div><h1 style="font-size:24px;margin:10px 0 0">${escapeHtml(cleanSubject)}</h1></div><div style="background:#fff;padding:28px;border:1px solid #dfe7f1;border-top:0;border-radius:0 0 18px 18px"><p style="font-size:16px;line-height:1.65;margin:0">${safeMessage}</p><hr style="border:0;border-top:1px solid #e8edf3;margin:28px 0"><p style="font-size:12px;line-height:1.5;color:#64748b;margin:0">Comunicado enviado por Academy Costa Brava. Puedes responder directamente a este correo.</p></div></div></body></html>`
+    const html = renderCommunicationEmail(cleanSubject, cleanMessage)
 
     let sentCount = 0
     for (let index = 0; index < emails.length; index += RESEND_BATCH_SIZE) {
@@ -409,7 +400,7 @@ export async function sendEmailToGuardians(
                 target_scope: targetScope,
             })
             revalidatePath('/admin/comunicados')
-            return { success: false, error: 'Resend no ha podido completar el envío. Revisa el dominio y la cuota de correo.' }
+            return { success: false, error: 'Resend no ha podido completar el envío. Revisa el dominio y la cuota de correo.', summary: { success: sentCount, failed: failedCount } }
         }
         sentCount += batch.length
     }
@@ -446,6 +437,7 @@ export async function publishPortalAnnouncement(userIds: string[], message: stri
         failed_count: 0,
         channel: 'portal',
         target_scope: targetScope,
+        recipient_user_ids: recipients,
     })
     if (logError) return { success: false, error: logError.message }
 
@@ -460,7 +452,7 @@ export async function publishPortalAnnouncement(userIds: string[], message: stri
     )
     if (notificationError) {
         console.error('Portal announcement notification error:', notificationError)
-        return { success: false, error: 'El comunicado se publicó, pero no se pudieron crear sus notificaciones.' }
+        return { success: false, error: 'El comunicado se publicó, pero no se pudieron crear sus notificaciones.', summary: { published: recipients.length } }
     }
 
     revalidatePath('/admin/comunicados')

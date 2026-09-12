@@ -1,460 +1,116 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import {
-    getRecipientsAllGuardians, getRecipientsByCategory, getRecipientsByTeam, publishPortalAnnouncement, sendEmailToGuardians, sendToRecipients,
-    type Recipient
-} from '@/app/actions/whatsapp'
-import { toast } from 'sonner'
-import {
-    Loader2, Send, MessageSquare, Clock, CheckCircle, XCircle,
-    Users, Phone, Search, Check, X, AlertTriangle, Mail, Timer, Megaphone, ShieldCheck, BellRing
-} from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
+import { BellRing, Mail, MessageSquare, Check, Loader2, Send } from 'lucide-react'
+import { getRecipientsAllGuardians, getRecipientsByCategory, getRecipientsByTeam, publishPortalAnnouncement, sendEmailToGuardians, sendToRecipients, type Recipient } from '@/app/actions/whatsapp'
+import { deliverChannels, normalizedPhone, type Channel, type DeliveryResult } from '@/lib/communication-delivery'
 
-interface Props {
-    categories: { id: string, name: string }[]
-    teams: { id: string, name: string, category_id: string, category_name: string }[]
-    history: any[]
-}
+const channels = [{ id: 'portal' as const, label: 'App · Familias', icon: BellRing }, { id: 'email' as const, label: 'Email', icon: Mail }, { id: 'whatsapp' as const, label: 'WhatsApp', icon: MessageSquare }]
+type HistoryItem = { id: string; channel: string; category_name: string; message: string; created_at: string; sent_count: number; failed_count: number }
+interface Props { categories: { id: string; name: string }[]; teams: { id: string; name: string; category_name: string }[]; history: HistoryItem[] }
+const emailIsValid = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 
 export function ComunicadosClient({ categories, teams, history }: Props) {
-    const [channel, setChannel] = useState<'whatsapp' | 'email' | 'portal'>('whatsapp')
+    const router = useRouter()
+    const [selectedChannels, setSelectedChannels] = useState<Channel[]>(['portal'])
     const [scope, setScope] = useState<'all' | 'category' | 'team'>('category')
     const [selectedId, setSelectedId] = useState('')
     const [recipients, setRecipients] = useState<Recipient[]>([])
-    const [selectedRecipients, setSelectedRecipients] = useState<Set<string>>(new Set())
-    const [loadingRecipients, setLoadingRecipients] = useState(false)
+    const [selected, setSelected] = useState<Set<string>>(new Set())
+    const [loading, setLoading] = useState(false)
+    const [error, setError] = useState('')
+    const [search, setSearch] = useState('')
     const [subject, setSubject] = useState('')
     const [message, setMessage] = useState('')
-    const [isSending, setIsSending] = useState(false)
-    const [isConfirmOpen, setIsConfirmOpen] = useState(false)
-    const [sendingProgress, setSendingProgress] = useState<string | null>(null)
-    const [search, setSearch] = useState('')
+    const [confirm, setConfirm] = useState(false)
+    const [sending, setSending] = useState(false)
+    const [progress, setProgress] = useState('')
+    const [results, setResults] = useState<DeliveryResult[] | null>(null)
+    const sendingRef = useRef(false)
+    const locked = sending || results !== null
 
-    const getRecipientKey = (recipient: Recipient) => channel === 'portal'
-        ? recipient.userIds.join('|')
-        : channel === 'email'
-            ? recipient.email.toLowerCase()
-            : recipient.phone
-    const eligibleRecipients = recipients.filter((recipient) => channel === 'portal'
-        ? recipient.userIds.length > 0
-        : channel === 'email'
-            ? /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient.email)
-            : recipient.phone.length >= 9)
-    const selectedRecipientRows = eligibleRecipients.filter((recipient) => selectedRecipients.has(getRecipientKey(recipient)))
-
-    // Fetch recipients when selection changes
     useEffect(() => {
-        if (!selectedId) { setRecipients([]); setSelectedRecipients(new Set()); return }
-        async function fetch() {
-            setLoadingRecipients(true)
-            const r = scope === 'all'
-                ? await getRecipientsAllGuardians()
-                : scope === 'category'
-                    ? await getRecipientsByCategory(selectedId)
-                    : await getRecipientsByTeam(selectedId)
-            const eligible = r.filter((recipient) => channel === 'portal'
-                ? recipient.userIds.length > 0
-                : channel === 'email'
-                    ? /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient.email)
-                    : recipient.phone.length >= 9)
-            setRecipients(r)
-            setSelectedRecipients(new Set(eligible.map(getRecipientKey)))
-            setLoadingRecipients(false)
-        }
-        fetch()
-    }, [selectedId, scope, channel])
+        let cancelled = false
+        setRecipients([]); setSelected(new Set()); setError('')
+        if (scope !== 'all' && !selectedId) { setLoading(false); return }
+        setLoading(true)
+        const request = scope === 'all' ? getRecipientsAllGuardians() : scope === 'category' ? getRecipientsByCategory(selectedId) : getRecipientsByTeam(selectedId)
+        request.then(rows => { if (!cancelled) { setRecipients(rows); setSelected(new Set(rows.map(r => r.id))) } })
+            .catch(() => { if (!cancelled) setError('No se pudieron cargar los tutores. Vuelve a seleccionar el grupo.') })
+            .finally(() => { if (!cancelled) setLoading(false) })
+        return () => { cancelled = true }
+    }, [scope, selectedId])
 
-    const toggleRecipient = (recipient: Recipient) => {
-        const key = getRecipientKey(recipient)
-        const next = new Set(selectedRecipients)
-        if (next.has(key)) next.delete(key)
-        else next.add(key)
-        setSelectedRecipients(next)
+    const rows = recipients.filter(r => selected.has(r.id))
+    const destinations = {
+        portal: [...new Set(rows.flatMap(r => r.userIds))],
+        email: [...new Set(rows.map(r => r.email.trim().toLowerCase()).filter(emailIsValid))],
+        whatsapp: [...new Set(rows.map(r => normalizedPhone(r.phone)).filter(p => p.length >= 9))],
     }
+    const scopeLabel = scope === 'all' ? 'Todos los tutores' : (scope === 'category' ? categories : teams).find(r => r.id === selectedId)?.name || ''
+    const label = scope === 'all' ? 'Todos' : scopeLabel
+    const fullMessage = `${subject.trim()}\n\n${message.trim()}`
+    const maxMessage = selectedChannels.some(c => c !== 'email') ? Math.max(0, 2000 - subject.trim().length - 2) : 5000
+    const valid = !loading && !locked && rows.length > 0 && selectedChannels.length > 0 && subject.trim().length >= 3 && message.trim().length >= 2 && message.trim().length <= maxMessage && selectedChannels.some(c => destinations[c].length > 0) && (!selectedChannels.includes('email') || rows.flatMap(r => r.guardianIds).length <= 500)
 
-    const selectAll = () => setSelectedRecipients(new Set(eligibleRecipients.map(getRecipientKey)))
-    const deselectAll = () => setSelectedRecipients(new Set())
-
-    const filtered = recipients.filter(r =>
-        !search || r.childName.toLowerCase().includes(search.toLowerCase()) ||
-        r.guardianName.toLowerCase().includes(search.toLowerCase()) ||
-        r.email.toLowerCase().includes(search.toLowerCase()) ||
-        r.phone.includes(search)
-    )
-
-    const handleSend = () => {
-        if (selectedRecipientRows.length === 0) { toast.error("Selecciona al menos un destinatario."); return }
-        if (channel === 'email' && subject.trim().length < 3) { toast.error("Escribe un asunto para el correo."); return }
-        if (!message.trim()) { toast.error("Escribe un mensaje."); return }
-
-        setIsConfirmOpen(true)
-    }
-
-    const handleConfirmedSend = async () => {
-        if (selectedRecipientRows.length === 0 || !message.trim()) return
-
-        setIsSending(true)
-        setSendingProgress(null)
-        try {
-            const label = scope === 'all'
-                ? 'Todos'
-                : scope === 'category'
-                    ? categories.find(c => c.id === selectedId)?.name || 'Categoría'
-                    : teams.find(t => t.id === selectedId)?.name || 'Equipo'
-            if (channel === 'portal') {
-                setSendingProgress('Publicando en Portal Familias…')
-                const userIds = Array.from(new Set(selectedRecipientRows.flatMap((recipient) => recipient.userIds)))
-                const result = await publishPortalAnnouncement(userIds, message, label, scope)
-                if (!result.success) throw new Error(result.error || 'No se ha podido publicar el comunicado.')
-                toast.success(`Comunicado publicado para ${result.summary?.published || userIds.length} tutor${userIds.length === 1 ? '' : 'es'}.`)
-            } else if (channel === 'email') {
-                setSendingProgress('Enviando correos con Resend…')
-                const guardianIds = Array.from(new Set(selectedRecipientRows.flatMap((recipient) => recipient.guardianIds)))
-                const result = await sendEmailToGuardians(guardianIds, subject, message, label, scope)
-                if (!result.success) throw new Error(result.error || 'No se ha podido completar el envío por email.')
-                toast.success(`Correo enviado a ${result.summary?.success || guardianIds.length} tutor${guardianIds.length === 1 ? '' : 'es'}.`)
-            } else {
-                const phones = selectedRecipientRows.map((recipient) => recipient.phone)
-                const batches = Array.from({ length: Math.ceil(phones.length / 25) }, (_, index) => phones.slice(index * 25, index * 25 + 25))
-                let successCount = 0
-                let failedCount = 0
-
-                for (let index = 0; index < batches.length; index++) {
-                    setSendingProgress(batches.length > 1 ? `Enviando bloque ${index + 1} de ${batches.length}…` : 'Enviando comunicado…')
-                    const result = await sendToRecipients(batches[index], message, label)
-                    if (!result.success) throw new Error(result.error || 'No se ha podido completar el envío.')
-                    successCount += result.summary?.success || 0
-                    failedCount += result.summary?.failed || 0
-                }
-
-                toast.success(`Comunicado enviado: ${successCount} entregados${failedCount ? `, ${failedCount} con error` : ''}.`)
+    async function send() {
+        if (!valid || sendingRef.current) return
+        sendingRef.current = true; setSending(true)
+        const outcome = await deliverChannels(selectedChannels, async channel => {
+            setProgress(`Enviando por ${channels.find(c => c.id === channel)?.label}…`)
+            if (!destinations[channel].length) return null
+            if (channel === 'portal') return publishPortalAnnouncement(destinations.portal, fullMessage, label, scope)
+            if (channel === 'email') return sendEmailToGuardians([...new Set(rows.filter(r => emailIsValid(r.email)).flatMap(r => r.guardianIds))], subject, message, label, scope)
+            let sent = 0, failed = 0
+            for (let i = 0; i < destinations.whatsapp.length; i += 25) {
+                const result = await sendToRecipients(destinations.whatsapp.slice(i, i + 25), fullMessage, label)
+                sent += result.summary?.success || 0; failed += result.summary?.failed || 0
+                if (!result.success) return { success: false, error: result.error, summary: { success: sent, failed } }
             }
-            if (channel === 'email') setSubject('')
-            setMessage('')
-            setIsConfirmOpen(false)
-        } catch (e: any) {
-            toast.error(e.message || "Error inesperado.")
-            console.error(e)
-        } finally {
-            setIsSending(false)
-            setSendingProgress(null)
-        }
+            return { success: true, summary: { success: sent, failed } }
+        })
+        setResults(outcome); setSending(false); sendingRef.current = false; setConfirm(false); setProgress(''); router.refresh()
     }
 
-    const scopeLabel = scope === 'all'
-        ? 'Todos los tutores'
-        : scope === 'category'
-            ? categories.find((category) => category.id === selectedId)?.name || 'Categoría'
-            : teams.find((team) => team.id === selectedId)?.name || 'Equipo'
-    const estimatedSeconds = Math.max(1, Math.ceil(Math.max(0, selectedRecipientRows.length - 1) * 0.75))
-    const estimatedTime = estimatedSeconds < 60 ? `unos ${estimatedSeconds} segundos` : `unos ${Math.ceil(estimatedSeconds / 60)} minutos`
-
-    return (
-        <div className="space-y-6">
-            {/* Channel Selector */}
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                <button onClick={() => setChannel('whatsapp')}
-                    className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold transition-all
-                        ${channel === 'whatsapp' ? 'bg-green-600 text-white shadow-lg shadow-green-600/20' : 'bg-white border text-slate-500 hover:border-green-300'}`}>
-                    <MessageSquare className="h-4 w-4" /> WhatsApp
-                </button>
-                <button onClick={() => setChannel('email')}
-                    className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold transition-all
-                        ${channel === 'email' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'bg-white border text-slate-500 hover:border-blue-300'}`}>
-                    <Mail className="h-4 w-4" /> Email (Resend)
-                </button>
-                <button onClick={() => setChannel('portal')}
-                    className={`flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-bold transition-all
-                        ${channel === 'portal' ? 'bg-navy text-white shadow-lg shadow-navy/20' : 'bg-white border text-slate-500 hover:border-navy/30'}`}>
-                    <BellRing className="h-4 w-4" /> Portal Familias
-                </button>
+    return <div className="space-y-5">
+        <fieldset disabled={locked} className="min-w-0 space-y-5">
+            <section className="rounded-2xl border bg-white p-5 sm:p-6">
+                <h2 className="font-heading text-xl font-bold text-navy">1. Elige dónde enviarlo</h2>
+                <p className="mt-1 text-sm text-slate-500">Selecciona uno, dos o los tres canales.</p>
+                <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">{channels.map(c => <label key={c.id} className={`flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 font-semibold ${selectedChannels.includes(c.id) ? 'border-gold bg-gold/10 text-navy' : 'border-slate-200 text-slate-500'}`}>
+                    <input type="checkbox" checked={selectedChannels.includes(c.id)} onChange={() => setSelectedChannels(current => current.includes(c.id) ? current.filter(v => v !== c.id) : [...current, c.id])} className="h-5 w-5 accent-gold" /><c.icon className="h-5 w-5" />{c.label}
+                </label>)}</div>
+            </section>
+            <div className="grid gap-5 lg:grid-cols-2">
+                <section className="min-w-0 rounded-2xl border bg-white p-5 sm:p-6">
+                    <h2 className="font-heading text-xl font-bold text-navy">2. Destinatarios</h2>
+                    <div className="mt-4 grid grid-cols-3 gap-2">{(['category', 'team', 'all'] as const).map(s => <button key={s} type="button" aria-pressed={scope === s} onClick={() => { setScope(s); setSelectedId('') }} className={`min-h-11 rounded-xl border px-2 text-sm font-semibold ${scope === s ? 'border-gold bg-gold text-navy' : 'text-slate-500'}`}>{s === 'category' ? 'Categoría' : s === 'team' ? 'Equipo' : 'Todos'}</button>)}</div>
+                    {scope !== 'all' && <select aria-label={scope === 'category' ? 'Categoría' : 'Equipo'} value={selectedId} onChange={e => setSelectedId(e.target.value)} className="mt-3 min-h-12 w-full rounded-xl border bg-white px-3 text-base"><option value="">Selecciona {scope === 'category' ? 'una categoría' : 'un equipo'}</option>{(scope === 'category' ? categories : teams).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}</select>}
+                    {loading ? <p className="py-8 text-center text-sm text-slate-500">Cargando tutores…</p> : <>
+                        {recipients.length > 0 && <><Input aria-label="Buscar tutor o jugador" placeholder="Buscar tutor o jugador" value={search} onChange={e => setSearch(e.target.value)} className="mt-4 h-11 text-base" /><div className="my-2 flex items-center justify-between text-sm"><span>{rows.length} tutores seleccionados</span><button type="button" className="min-h-11 px-2 font-semibold text-navy" onClick={() => setSelected(selected.size === recipients.length ? new Set() : new Set(recipients.map(r => r.id)))}>{selected.size === recipients.length ? 'Quitar todos' : 'Seleccionar todos'}</button></div></>}
+                        <div className="max-h-72 space-y-2 overflow-y-auto">{recipients.filter(r => `${r.guardianName} ${r.childName} ${r.email}`.toLowerCase().includes(search.toLowerCase())).map(r => <label key={r.id} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 ${selected.has(r.id) ? 'border-gold/40 bg-gold/5' : 'border-slate-200'}`}><input type="checkbox" aria-label={`Seleccionar ${r.guardianName}`} checked={selected.has(r.id)} onChange={() => setSelected(current => { const next = new Set(current); if (next.has(r.id)) next.delete(r.id); else next.add(r.id); return next })} className="mt-1 h-5 w-5 shrink-0 accent-gold" /><span className="min-w-0"><span className="block font-semibold text-navy">{r.guardianName}</span><span className="block break-words text-xs text-slate-500">{r.childName}</span><span className="mt-1 block text-xs text-slate-500">{[r.userIds.length ? 'App' : '', emailIsValid(r.email) ? 'Email' : '', r.phone.length >= 9 ? 'WhatsApp' : ''].filter(Boolean).join(' · ') || 'Sin canal disponible'}</span></span></label>)}</div>
+                        {!recipients.length && <p className="py-6 text-sm text-slate-500">{selectedId || scope === 'all' ? 'No hay tutores disponibles en esta selección.' : 'Elige un grupo para ver sus tutores.'}</p>}
+                    </>}
+                    {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
+                </section>
+                <section className="min-w-0 rounded-2xl border bg-white p-5 sm:p-6">
+                    <h2 className="font-heading text-xl font-bold text-navy">3. Escribe el comunicado</h2>
+                    <label htmlFor="broadcast-subject" className="mt-4 block text-sm font-semibold text-navy">Asunto / título</label>
+                    <Input id="broadcast-subject" value={subject} onChange={e => setSubject(e.target.value)} maxLength={150} placeholder="Por ejemplo: horario del próximo entrenamiento" className="mt-2 min-h-12 text-base" />
+                    <label htmlFor="broadcast-message" className="mt-4 block text-sm font-semibold text-navy">Mensaje</label>
+                    <Textarea id="broadcast-message" value={message} onChange={e => setMessage(e.target.value)} rows={7} placeholder="Escribe aquí la información para las familias…" className="mt-2 min-h-44 text-base" />
+                    <p className={`mt-2 text-right text-xs ${message.trim().length > maxMessage ? 'text-red-700' : 'text-slate-500'}`}>{message.trim().length} / {maxMessage} caracteres</p>
+                    {selectedChannels.includes('email') && <div className="mt-4 rounded-xl bg-navy/5 p-4 text-sm text-slate-600"><p className="font-semibold text-navy">Diseño Academy incluido</p><p className="mt-1">El email incorpora automáticamente el logo, la cabecera azul y dorada y el pie de Academy. Cada familia recibe su correo de forma privada.</p></div>}
+                </section>
             </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                    {/* LEFT: Compose */}
-                    <div className="lg:col-span-3 space-y-4">
-                        <Card className="border-none shadow-lg overflow-hidden">
-                            <div className={`h-1.5 ${channel === 'portal' ? 'bg-gold' : channel === 'email' ? 'bg-blue-600' : 'bg-green-600'}`} />
-                            <CardHeader className="pb-3">
-                                <CardTitle className="flex items-center gap-2 text-base">
-                                    {channel === 'portal' ? <BellRing className="h-5 w-5 text-gold" /> : channel === 'email' ? <Mail className="h-5 w-5 text-blue-600" /> : <MessageSquare className="h-5 w-5 text-green-600" />}
-                                    {channel === 'portal' ? 'Publicar en Portal Familias' : channel === 'email' ? 'Componer correo' : 'Componer mensaje'}
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                {/* Scope toggle */}
-                                <div className="space-y-2">
-                                    <Label className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Buscar por</Label>
-                                    <div className="flex gap-2">
-                                        <button onClick={() => { setScope('category'); setSelectedId(''); setRecipients([]) }}
-                                            className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all
-                                                ${scope === 'category' ? 'bg-yellow-500 text-black' : 'bg-slate-50 text-slate-500 border'}`}>
-                                            📁 Categoría
-                                        </button>
-                                        <button onClick={() => { setScope('team'); setSelectedId(''); setRecipients([]) }}
-                                            className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all
-                                                ${scope === 'team' ? 'bg-yellow-500 text-black' : 'bg-slate-50 text-slate-500 border'}`}>
-                                            ⚽ Equipo
-                                        </button>
-                                        <button onClick={() => { setScope('all'); setSelectedId('all'); setRecipients([]) }}
-                                            className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all
-                                                ${scope === 'all' ? 'bg-navy text-white shadow-lg shadow-navy/20' : 'bg-slate-50 text-slate-500 border'}`}>
-                                            <Megaphone className="mr-1 inline h-3.5 w-3.5" /> Todos
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {/* Select dropdown */}
-                                {scope === 'all' ? (
-                                    <div className="rounded-xl border border-navy/15 bg-navy/[0.03] p-3 text-sm text-navy">
-                                        <p className="flex items-center gap-2 font-bold"><Users className="h-4 w-4 text-gold" /> Comunicado general a todos los tutores</p>
-                                        <p className="mt-1 text-xs leading-relaxed text-slate-500">Cada tutor se incluirá una sola vez, aunque tenga varios jugadores.</p>
-                                    </div>
-                                ) : <div className="space-y-2">
-                                    <Label className="font-bold text-[10px] uppercase tracking-wider text-slate-400">
-                                        {scope === 'category' ? 'Categoría' : 'Equipo'}
-                                    </Label>
-                                    <Select value={selectedId} onValueChange={setSelectedId}>
-                                        <SelectTrigger className="bg-white"><SelectValue placeholder={`Selecciona ${scope === 'category' ? 'categoría' : 'equipo'}...`} /></SelectTrigger>
-                                        <SelectContent>
-                                            {scope === 'category'
-                                                ? categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)
-                                                : teams.map(t => <SelectItem key={t.id} value={t.id}>{t.name} <span className="text-slate-400 text-xs">({t.category_name})</span></SelectItem>)
-                                            }
-                                        </SelectContent>
-                                    </Select>
-                                </div>}
-
-                                {channel === 'email' && (
-                                    <div className="space-y-2">
-                                        <Label htmlFor="email-subject" className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Asunto</Label>
-                                        <Input
-                                            id="email-subject"
-                                            value={subject}
-                                            onChange={(event) => setSubject(event.target.value)}
-                                            maxLength={150}
-                                            placeholder="Ej.: Información importante de Academy"
-                                            className="bg-white"
-                                        />
-                                    </div>
-                                )}
-
-                                {/* Message */}
-                                <div className="space-y-2">
-                                    <Label className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Mensaje</Label>
-                                    <Textarea
-                                        value={message}
-                                        onChange={(e) => setMessage(e.target.value)}
-                                        placeholder="📍 Atención: Se suspende el entrenamiento de hoy por lluvia..."
-                                        rows={5}
-                                        className="bg-white resize-none"
-                                    />
-                                    <p className="text-xs text-muted-foreground text-right">{message.length} caracteres</p>
-                                </div>
-
-                                {selectedRecipientRows.length > 0 && channel === 'email' && (
-                                    <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 p-3">
-                                        <ShieldCheck className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600" />
-                                        <div>
-                                            <p className="text-xs font-bold text-blue-800">Envío privado con Resend</p>
-                                            <p className="mt-0.5 text-[11px] text-blue-700">Cada tutor recibirá un correo individual desde info@academycostabrava.com. Las direcciones nunca se muestran entre familias.</p>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Rate limiting info */}
-                                {selectedRecipientRows.length > 0 && channel === 'whatsapp' && (
-                                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-3">
-                                        <Timer className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
-                                        <div>
-                                            <p className="text-xs font-bold text-amber-700">Envío seguro anti-bloqueo</p>
-                                            <p className="text-[11px] text-amber-600 mt-0.5">
-                                                El envío se realiza de forma escalonada para cuidar la cuenta de WhatsApp.
-                                                Tiempo estimado: {estimatedTime} para {selectedRecipientRows.length} destinatario(s).
-                                            </p>
-                                        </div>
-                                    </div>
-                                )}
-                            </CardContent>
-                            <CardFooter className="bg-slate-50 border-t justify-between">
-                                <p className="text-xs text-slate-400">
-                                    {selectedRecipientRows.length} de {eligibleRecipients.length} seleccionados
-                                </p>
-                                <Button
-                                    onClick={handleSend}
-                                    disabled={isSending || selectedRecipientRows.length === 0 || !message.trim() || (channel === 'email' && subject.trim().length < 3)}
-                                    className={channel === 'portal' ? 'bg-navy font-bold text-white hover:bg-navy/90' : channel === 'email' ? 'bg-blue-600 font-bold text-white hover:bg-blue-700' : 'bg-green-600 font-bold text-white hover:bg-green-700'}
-                                >
-                                    {isSending ? (
-                                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {sendingProgress || 'Enviando…'}</>
-                                    ) : (
-                                        <>{channel === 'portal' ? <BellRing className="mr-2 h-4 w-4" /> : channel === 'email' ? <Mail className="mr-2 h-4 w-4" /> : <Send className="mr-2 h-4 w-4" />}{channel === 'portal' ? ` Publicar (${selectedRecipientRows.length})` : ` Enviar (${selectedRecipientRows.length})`}</>
-                                    )}
-                                </Button>
-                            </CardFooter>
-                        </Card>
-                    </div>
-
-                    {/* RIGHT: Recipients */}
-                    <div className="lg:col-span-2 space-y-4">
-                        <Card className="border-none shadow-lg overflow-hidden">
-                            <div className="h-1.5 bg-yellow-500" />
-                            <CardHeader className="pb-2">
-                                <div className="flex items-center justify-between">
-                                    <CardTitle className="text-base flex items-center gap-2">
-                                        <Users className="h-5 w-5 text-yellow-500" />
-                                        Destinatarios
-                                    </CardTitle>
-                                    {eligibleRecipients.length > 0 && (
-                                        <div className="flex gap-1">
-                                            <button onClick={selectAll} className="text-[10px] font-bold text-green-600 hover:underline">Todos</button>
-                                            <span className="text-slate-300">|</span>
-                                            <button onClick={deselectAll} className="text-[10px] font-bold text-red-500 hover:underline">Ninguno</button>
-                                        </div>
-                                    )}
-                                </div>
-                            </CardHeader>
-                            <CardContent className="p-3 pt-0">
-                                {eligibleRecipients.length > 0 && (
-                                    <div className="relative mb-2">
-                                        <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
-                                        <Input
-                                            placeholder={channel === 'portal' ? 'Buscar por tutor o jugador...' : channel === 'email' ? 'Buscar por nombre o email...' : 'Buscar por nombre o teléfono...'}
-                                            value={search}
-                                            onChange={e => setSearch(e.target.value)}
-                                            className="pl-9 h-8 text-xs bg-white"
-                                        />
-                                    </div>
-                                )}
-
-                                {loadingRecipients ? (
-                                    <div className="py-8 text-center"><Loader2 className="h-6 w-6 animate-spin text-yellow-500 mx-auto" /><p className="text-xs text-slate-400 mt-2">Cargando...</p></div>
-                                ) : !selectedId ? (
-                                    <div className="py-8 text-center text-sm text-slate-400">
-                                        ← Selecciona una categoría o equipo
-                                    </div>
-                                ) : eligibleRecipients.length === 0 ? (
-                                    <div className="py-8 text-center text-sm text-slate-400">{channel === 'portal' ? 'No hay tutores con acceso activo al Portal Familias' : channel === 'email' ? 'No se encontraron tutores con email válido' : 'No se encontraron tutores con teléfono'}</div>
-                                ) : (
-                                    <div className="max-h-[420px] overflow-y-auto space-y-1">
-                                        {filtered.filter((recipient) => eligibleRecipients.includes(recipient)).map(r => {
-                                            const isSelected = selectedRecipients.has(getRecipientKey(r))
-                                            return (
-                                                <button key={r.id} onClick={() => toggleRecipient(r)}
-                                                    className={`w-full flex items-center gap-2.5 p-2.5 rounded-lg text-left transition-all text-xs
-                                                        ${isSelected ? channel === 'email' ? 'border border-blue-200 bg-blue-50' : 'bg-green-50 border border-green-200' : 'bg-white border border-slate-100 opacity-50'}`}>
-                                                    <div className={`h-5 w-5 rounded flex items-center justify-center flex-shrink-0 transition-colors
-                                                        ${isSelected ? channel === 'email' ? 'bg-blue-600 text-white' : 'bg-green-600 text-white' : 'bg-slate-100'}`}>
-                                                        {isSelected && <Check className="h-3 w-3" />}
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="font-bold text-slate-900 truncate">{r.childName}</p>
-                                                        <p className="text-[10px] text-slate-400 truncate">
-                                                            {r.guardianName}
-                                                            {r.teamName && <span className="ml-1">· {r.teamName}</span>}
-                                                        </p>
-                                                    </div>
-                                                    <div className="flex items-center gap-1 text-[10px] text-slate-400 flex-shrink-0">
-                                                        {channel === 'portal' ? <><BellRing className="h-3 w-3 text-gold" /> Portal</> : channel === 'email' ? <><Mail className="h-3 w-3 text-blue-600" /><span className="max-w-28 truncate">{r.email}</span></> : <><Phone className="h-3 w-3" />{r.phone.length > 9 ? `+${r.phone}` : r.phone}</>}
-                                                    </div>
-                                                </button>
-                                            )
-                                        })}
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-                    </div>
-            </div>
-
-            <Dialog open={isConfirmOpen} onOpenChange={(open) => !isSending && setIsConfirmOpen(open)}>
-                <DialogContent className="max-w-md overflow-hidden rounded-3xl border-0 p-0 shadow-2xl">
-                    <div className="bg-gradient-to-br from-navy to-navy/90 px-6 pb-5 pt-7 text-white">
-                        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gold text-navy">{channel === 'portal' ? <BellRing className="h-6 w-6" /> : channel === 'email' ? <Mail className="h-6 w-6" /> : <Megaphone className="h-6 w-6" />}</div>
-                        <DialogHeader>
-                            <DialogTitle className="font-heading text-2xl font-black text-white">{channel === 'portal' ? 'Publicar comunicado' : channel === 'email' ? 'Confirmar envío por email' : 'Confirmar comunicado'}</DialogTitle>
-                            <DialogDescription className="text-white/70">{channel === 'portal' ? 'Aparecerá en el Portal Familias y avisará a las cuentas con acceso.' : channel === 'email' ? 'Revisa el asunto y los destinatarios antes de enviarlo.' : 'Revisa el alcance antes de iniciar el envío por WhatsApp.'}</DialogDescription>
-                        </DialogHeader>
-                    </div>
-                    <div className="space-y-4 px-6 py-5">
-                        <div className="rounded-2xl border border-gold/30 bg-gold/10 p-4">
-                            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-gold">Destinatarios</p>
-                            <p className="mt-1 text-lg font-black text-navy">{selectedRecipientRows.length} tutor{selectedRecipientRows.length === 1 ? '' : 'es'}</p>
-                            <p className="mt-1 text-sm text-slate-500">{scopeLabel}</p>
-                            {channel === 'email' && <p className="mt-3 border-t border-gold/20 pt-3 text-sm font-bold text-navy">{subject}</p>}
-                        </div>
-                        <div className="flex gap-3 rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
-                            {channel === 'portal' ? <BellRing className="mt-0.5 h-5 w-5 shrink-0 text-gold" /> : <ShieldCheck className={`mt-0.5 h-5 w-5 shrink-0 ${channel === 'email' ? 'text-blue-600' : 'text-green-600'}`} />}
-                            <p>{channel === 'portal' ? 'Se publicará de inmediato en el apartado Comunicados y cada tutor con acceso recibirá un aviso en la campana.' : channel === 'email' ? 'Resend entregará un mensaje individual a cada dirección válida, con respuesta a info@academycostabrava.com.' : 'Los mensajes se envían en bloques de hasta 25 contactos y con una pausa corta entre cada uno.'}</p>
-                        </div>
-                        <div className="flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-                            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
-                            <p>{channel === 'portal' ? 'Una vez publicado, seguirá visible para ese grupo en el Portal Familias.' : 'Una vez iniciado, el comunicado no se puede deshacer.'}</p>
-                        </div>
-                    </div>
-                    <DialogFooter className="border-t bg-slate-50 px-6 py-4 sm:justify-between">
-                        <Button type="button" variant="outline" onClick={() => setIsConfirmOpen(false)} disabled={isSending}>Cancelar</Button>
-                        <Button type="button" onClick={handleConfirmedSend} disabled={isSending} className={channel === 'portal' ? 'bg-navy font-bold text-white hover:bg-navy/90' : channel === 'email' ? 'bg-blue-600 font-bold text-white hover:bg-blue-700' : 'bg-green-600 font-bold text-white hover:bg-green-700'}>
-                            {isSending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {sendingProgress || 'Enviando…'}</> : channel === 'portal' ? <><BellRing className="mr-2 h-4 w-4" /> Publicar ahora</> : channel === 'email' ? <><Mail className="mr-2 h-4 w-4" /> Enviar correos</> : <><Send className="mr-2 h-4 w-4" /> Enviar ahora</>}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            {/* HISTORY */}
-            {history.length > 0 && (
-                <Card className="border-none shadow-md mt-6">
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-base flex items-center gap-2">
-                            <Clock className="h-5 w-5 text-slate-400" />
-                            Historial de Envíos
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                        <div className="divide-y divide-slate-50">
-                            {history.map((log: any) => (
-                                <div key={log.id} className="p-4 hover:bg-slate-50/50 transition-colors">
-                                    <div className="flex items-start justify-between gap-4">
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <Badge className="bg-yellow-100 text-yellow-700 border-none text-[10px] font-bold">
-                                                    {log.category_name}
-                                                </Badge>
-                                                <Badge className={log.channel === 'portal' ? 'border-none bg-navy/10 text-navy text-[10px] font-bold' : log.channel === 'email' ? 'border-none bg-blue-100 text-blue-700 text-[10px] font-bold' : 'border-none bg-green-100 text-green-700 text-[10px] font-bold'}>
-                                                    {log.channel === 'portal' ? 'PORTAL' : log.channel === 'email' ? 'EMAIL' : 'WHATSAPP'}
-                                                </Badge>
-                                                <span className="text-[10px] text-slate-400">
-                                                    {new Date(log.created_at).toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                                </span>
-                                            </div>
-                                            <p className="text-sm text-slate-600 line-clamp-2">{log.message}</p>
-                                        </div>
-                                        <div className="flex items-center gap-3 flex-shrink-0">
-                                            <div className="flex items-center gap-1 text-xs font-bold text-green-600">
-                                                <CheckCircle className="h-3.5 w-3.5" /> {log.sent_count}
-                                            </div>
-                                            {log.failed_count > 0 && (
-                                                <div className="flex items-center gap-1 text-xs font-bold text-red-500">
-                                                    <XCircle className="h-3.5 w-3.5" /> {log.failed_count}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
-        </div>
-    )
+        </fieldset>
+        {results ? <section className="rounded-2xl border bg-white p-5" aria-live="polite"><h2 className="text-lg font-bold text-navy">Resultado por canal</h2><div className="mt-3 space-y-3">{results.map(r => <div key={r.channel} className="rounded-xl bg-slate-50 p-3 text-sm"><p className="font-semibold">{channels.find(c => c.id === r.channel)?.label}: {r.status === 'sent' ? `${r.sent} envíos realizados` : r.status === 'partial' ? `Envío parcial: ${r.sent} realizados, ${r.failed} con error` : r.status === 'skipped' ? 'Sin destinatarios' : 'No completado'}</p>{r.detail && <p className="mt-1 text-slate-600">{r.detail}</p>}</div>)}</div><p className="mt-4 text-sm text-slate-500">Revisa los resultados antes de repetir un envío. Los canales completados ya han enviado el mensaje.</p><Button className="mt-4 bg-navy text-white" onClick={() => { setResults(null); setSubject(''); setMessage('') }}>Nuevo comunicado</Button></section> : <section className="rounded-2xl border bg-white p-5"><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold text-navy">Alcance del envío</p><p className="mt-1 text-sm text-slate-500">{selectedChannels.map(c => `${channels.find(v => v.id === c)?.label}: ${destinations[c].length}`).join(' · ') || 'Elige al menos un canal'}</p><p className="mt-1 text-xs text-slate-500">Cada canal usa solo los contactos disponibles, sin repetir email, teléfono o cuenta.</p></div><Button disabled={!valid} onClick={() => setConfirm(true)} className="min-h-12 bg-gold font-bold text-navy hover:bg-gold/90"><Send className="mr-2 h-4 w-4" />Revisar y enviar</Button></div></section>}
+        <Dialog open={confirm} onOpenChange={open => { if (!sending) setConfirm(open) }}><DialogContent className="max-h-[90dvh] overflow-y-auto rounded-2xl"><DialogHeader><DialogTitle>Confirmar comunicado</DialogTitle><DialogDescription>{scopeLabel}. Comprueba los canales y el mensaje antes de enviar.</DialogDescription></DialogHeader><p className="font-bold text-navy">{subject}</p><p className="max-h-40 overflow-y-auto whitespace-pre-wrap break-words text-sm text-slate-600">{message}</p><div className="space-y-2">{selectedChannels.map(c => <p key={c} className="flex items-center gap-2 text-sm"><Check className="h-4 w-4 text-gold" />{channels.find(v => v.id === c)?.label}: {destinations[c].length} destinatarios{!destinations[c].length ? ' (se omitirá)' : ''}</p>)}</div><p className="text-xs text-slate-500">Los envíos se procesan por canal. Mantén esta ventana abierta hasta ver el resultado.</p><DialogFooter><Button variant="outline" disabled={sending} onClick={() => setConfirm(false)}>Volver</Button><Button disabled={sending || !valid} onClick={() => void send()} className="min-h-12 bg-gold text-navy">{sending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{progress}</> : 'Enviar ahora'}</Button></DialogFooter></DialogContent></Dialog>
+        <details className="rounded-2xl border bg-white p-5"><summary className="cursor-pointer font-bold text-navy">Historial de envíos ({history.length})</summary><div className="mt-4 divide-y">{history.map(log => <article key={log.id} className="py-3 text-sm"><div className="flex flex-wrap gap-2 font-semibold text-navy"><span>{channels.find(c => c.id === log.channel)?.label || log.channel}</span><span>· {log.category_name}</span></div><p className="mt-1 line-clamp-2 whitespace-pre-wrap text-slate-600">{log.message}</p><p className="mt-1 text-xs text-slate-500">{new Date(log.created_at).toLocaleString('es-ES')} · {log.sent_count} enviados{log.failed_count ? ` · ${log.failed_count} con error` : ''}</p></article>)}{!history.length && <p className="text-sm text-slate-500">Todavía no hay envíos.</p>}</div></details>
+    </div>
 }

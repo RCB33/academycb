@@ -1,0 +1,7 @@
+function escapeHtml(value: string) {
+    return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;')
+}
+
+export function renderCommunicationEmail(subject: string, message: string) {
+    return `<!doctype html><html lang="es"><body style="margin:0;background:#f4f7fb;font-family:Arial,sans-serif;color:#10294a"><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center" style="padding:24px 12px"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px"><tr><td style="background:#10294a;padding:28px;border-radius:18px 18px 0 0"><img src="https://www.academycostabrava.com/email-logo.png" width="80" height="80" alt="Academy Costa Brava" style="display:block;margin-bottom:16px;object-fit:contain"><div style="color:#d4af37;font-size:13px;font-weight:bold;letter-spacing:1.5px">ACADEMY COSTA BRAVA</div><h1 style="color:#fff;font-size:24px;line-height:1.3;margin:14px 0 0">${escapeHtml(subject)}</h1></td></tr><tr><td style="background:#fff;padding:28px;border-bottom:4px solid #d4af37"><div style="font-size:16px;line-height:1.7;overflow-wrap:anywhere">${escapeHtml(message).replaceAll('\n', '<br>')}</div><hr style="border:0;border-top:1px solid #e8edf3;margin:28px 0"><p style="font-size:12px;line-height:1.6;color:#64748b;margin:0">Comunicado de Academy Costa Brava.<br>Puedes responder directamente a este correo.</p></td></tr></table></td></tr></table></body></html>`
+}
