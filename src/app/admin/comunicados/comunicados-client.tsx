@@ -9,13 +9,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { BellRing, Mail, MessageSquare, Check, Loader2, Send } from 'lucide-react'
 import { getRecipientsAllGuardians, getRecipientsByCategory, getRecipientsByTeam, publishPortalAnnouncement, sendEmailToGuardians, sendToRecipients, type Recipient } from '@/app/actions/whatsapp'
 import { deliverChannels, normalizedPhone, type Channel, type DeliveryResult } from '@/lib/communication-delivery'
+import { renderCommunicationEmail } from '@/lib/communication-email'
 
 const channels = [{ id: 'portal' as const, label: 'App · Familias', icon: BellRing }, { id: 'email' as const, label: 'Email', icon: Mail }, { id: 'whatsapp' as const, label: 'WhatsApp', icon: MessageSquare }]
 type HistoryItem = { id: string; channel: string; category_name: string; message: string; created_at: string; sent_count: number; failed_count: number }
-interface Props { categories: { id: string; name: string }[]; teams: { id: string; name: string; category_name: string }[]; history: HistoryItem[] }
+interface Props { userId: string; categories: { id: string; name: string }[]; teams: { id: string; name: string; category_name: string }[]; history: HistoryItem[] }
 const emailIsValid = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 
-export function ComunicadosClient({ categories, teams, history }: Props) {
+export function ComunicadosClient({ userId, categories, teams, history }: Props) {
     const router = useRouter()
     const [selectedChannels, setSelectedChannels] = useState<Channel[]>(['portal'])
     const [scope, setScope] = useState<'all' | 'category' | 'team'>('category')
@@ -33,6 +34,35 @@ export function ComunicadosClient({ categories, teams, history }: Props) {
     const [results, setResults] = useState<DeliveryResult[] | null>(null)
     const sendingRef = useRef(false)
     const locked = sending || results !== null
+    const [preview, setPreview] = useState(false)
+    const [draftReady, setDraftReady] = useState(false)
+    const [draftStatus, setDraftStatus] = useState('')
+    const draftKey = `academy-comunicado-v1:${userId}`
+
+    useEffect(() => {
+        try {
+            const raw = localStorage.getItem(draftKey)
+            if (raw) {
+                const draft = JSON.parse(raw)
+                if (typeof draft.savedAt === 'number' && Date.now() - draft.savedAt < 7 * 86400000 && typeof draft.subject === 'string' && typeof draft.message === 'string') {
+                    setSubject(draft.subject.slice(0, 150)); setMessage(draft.message.slice(0, 5000))
+                    if (Array.isArray(draft.channels)) setSelectedChannels(channels.filter(c => draft.channels.includes(c.id)).map(c => c.id))
+                    setDraftStatus('Borrador recuperado. Revisa los destinatarios antes de enviar.')
+                } else localStorage.removeItem(draftKey)
+            }
+        } catch { setDraftStatus('El navegador no permite guardar el borrador.') }
+        setDraftReady(true)
+    }, [draftKey])
+
+    useEffect(() => {
+        if (!draftReady || locked) return
+        try {
+            if (subject || message) {
+                localStorage.setItem(draftKey, JSON.stringify({ subject, message, channels: selectedChannels, savedAt: Date.now() }))
+                setDraftStatus('Borrador guardado en este navegador durante 7 días. Vuelve a elegir los destinatarios al recuperarlo.')
+            } else { localStorage.removeItem(draftKey); setDraftStatus('') }
+        } catch { setDraftStatus('No se pudo guardar el borrador. No cierres esta página.') }
+    }, [draftKey, draftReady, subject, message, selectedChannels, locked])
 
     useEffect(() => {
         let cancelled = false
@@ -47,6 +77,11 @@ export function ComunicadosClient({ categories, teams, history }: Props) {
     }, [scope, selectedId])
 
     const rows = recipients.filter(r => selected.has(r.id))
+    const unavailable = {
+        portal: rows.filter(r => !r.userIds.length),
+        email: rows.filter(r => !emailIsValid(r.email.trim())),
+        whatsapp: rows.filter(r => normalizedPhone(r.phone).length < 9),
+    }
     const destinations = {
         portal: [...new Set(rows.flatMap(r => r.userIds))],
         email: [...new Set(rows.map(r => r.email.trim().toLowerCase()).filter(emailIsValid))],
@@ -61,6 +96,7 @@ export function ComunicadosClient({ categories, teams, history }: Props) {
     async function send() {
         if (!valid || sendingRef.current) return
         sendingRef.current = true; setSending(true)
+        try { localStorage.removeItem(draftKey) } catch { /* Sending must not depend on browser storage. */ }
         const outcome = await deliverChannels(selectedChannels, async channel => {
             setProgress(`Enviando por ${channels.find(c => c.id === channel)?.label}…`)
             if (!destinations[channel].length) return null
@@ -78,6 +114,9 @@ export function ComunicadosClient({ categories, teams, history }: Props) {
     }
 
     return <div className="space-y-5">
+        {draftStatus && !locked && <p role="status" className="rounded-xl bg-navy/5 px-4 py-3 text-xs text-slate-600">{draftStatus}</p>}
+        <Dialog open={preview} onOpenChange={setPreview}><DialogContent className="max-h-[92dvh] max-w-2xl overflow-y-auto rounded-2xl"><DialogHeader><DialogTitle>Vista previa del email</DialogTitle><DialogDescription>Diseño Academy. Algunos gestores de correo pueden mostrar pequeñas diferencias.</DialogDescription></DialogHeader><iframe title="Vista previa del comunicado" sandbox="" srcDoc={renderCommunicationEmail(subject || 'Asunto del comunicado', message || 'Aquí aparecerá tu mensaje para las familias.')} className="h-[60dvh] w-full rounded-xl border bg-slate-50" /><Button variant="outline" onClick={() => setPreview(false)}>Cerrar vista previa</Button></DialogContent></Dialog>
+        {selectedChannels.some(c => unavailable[c].length > 0) && <section className="rounded-2xl border border-amber-300 bg-amber-50 p-4"><h2 className="font-semibold text-navy">Algunos tutores no recibirán este canal</h2><p className="mt-1 text-xs text-slate-600">Sí recibirán los otros canales seleccionados para los que tengan datos disponibles.</p>{selectedChannels.filter(c => unavailable[c].length > 0).map(c => <details key={c} className="mt-3 text-sm"><summary className="cursor-pointer font-medium">{channels.find(v => v.id === c)?.label}: {unavailable[c].length} sin {c === 'portal' ? 'cuenta vinculada' : c === 'email' ? 'email válido' : 'teléfono válido'}</summary><ul className="mt-2 max-h-32 list-inside list-disc overflow-y-auto text-slate-600">{unavailable[c].map(r => <li key={r.id}>{r.guardianName}</li>)}</ul></details>)}</section>}
         <fieldset disabled={locked} className="min-w-0 space-y-5">
             <section className="rounded-2xl border bg-white p-5 sm:p-6">
                 <h2 className="font-heading text-xl font-bold text-navy">1. Elige dónde enviarlo</h2>
@@ -100,6 +139,7 @@ export function ComunicadosClient({ categories, teams, history }: Props) {
                 </section>
                 <section className="min-w-0 rounded-2xl border bg-white p-5 sm:p-6">
                     <h2 className="font-heading text-xl font-bold text-navy">3. Escribe el comunicado</h2>
+                    {selectedChannels.includes('email') && <Button type="button" variant="outline" className="mt-3 min-h-11" onClick={() => setPreview(true)}><Mail className="mr-2 h-4 w-4" />Vista previa del email</Button>}
                     <label htmlFor="broadcast-subject" className="mt-4 block text-sm font-semibold text-navy">Asunto / título</label>
                     <Input id="broadcast-subject" value={subject} onChange={e => setSubject(e.target.value)} maxLength={150} placeholder="Por ejemplo: horario del próximo entrenamiento" className="mt-2 min-h-12 text-base" />
                     <label htmlFor="broadcast-message" className="mt-4 block text-sm font-semibold text-navy">Mensaje</label>
