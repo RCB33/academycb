@@ -18,9 +18,9 @@ Estado: en desarrollo, no activar cobros reales. Rama feat/stripe-preview-valida
 | Área | Acción | Condición |
 | --- | --- | --- |
 | Tienda | Revisar pedido → Pagar con tarjeta | Precio calculado en servidor, stock reservado y caducidad |
-| Academia | Pagar cuota / autorizar suscripción | Modalidad pendiente de confirmar con cliente |
+| Academia | Pago completo o mensualidades autorizadas | Precio completo, cuota y duración configurables; sin renovación automática |
 | Campus | Solicitar plaza → aprobación → Pagar inscripción | Mantener el flujo de aprobación; no cobrar solicitudes sin plaza |
-| Torneos | Convocatoria aprobada → Pagar participación | Unidad de precio pendiente: jugador/equipo/configurable |
+| Torneos | Convocatoria aprobada → Pagar participación | Precio por jugador |
 | Familias / Pagos | Pagar, ver estado y justificante | Solo operaciones propias; indicar hijo, concepto, vencimiento |
 | Administración | Estado, referencia Stripe, conciliación | Nunca confundir matrícula confirmada con dinero recibido |
 
@@ -46,8 +46,21 @@ Estado: en desarrollo, no activar cobros reales. Rama feat/stripe-preview-valida
 8. Configurar STRIPE_WEBHOOK_SECRET en Preview tras disponer de endpoint estable y acceso para Stripe. No desactivar globalmente la protección de Preview.
 9. Validación final por el negocio antes de configurar claves reales y habilitar producción.
 
-## Decisiones necesarias
+## Decisiones confirmadas por el propietario
 
-- Cuotas: pago de cada recibo o cargo recurrente autorizado.
-- Torneos: precio por jugador, por equipo o configurable.
+- Academia: pago completo y/o mensualidad recurrente, con opciones, importes y duración de 1 a 60 meses configurables por el dueño. Sin renovación automática.
+- El pago completo puede tener descuento frente a la suma de cuotas. Matrícula una sola vez, añadida al primer pago.
+- Guardar precio, duración, modalidad y matrícula como snapshot del contrato. Editar el plan no modifica contratos ya aceptados.
+- Torneos: precio por jugador.
 - Mantener aprobación previa de nuevas solicitudes. No se cambia a matrícula automática sin autorización explícita.
+
+## Avance de configuración de planes
+
+- Nuevas opciones en Ajustes → Planes, sin sustituir la configuración manual anterior.
+- Opciones online desactivadas por defecto: no inferir precios ni activar planes existentes.
+- Validación de importes y duración en servidor y restricciones adicionales en base de datos.
+- `academyPriceSnapshot` prepara un snapshot inmutable y calcula matrícula inicial y total; pendiente persistirlo en contratos y conectarlo a Stripe.
+- `node scripts/test-academy-pricing.cjs` prueba límites, importes, matrícula única y cambio de precio sin modificar un snapshot anterior.
+- Referencia para limitar la suscripción: https://docs.stripe.com/billing/subscriptions/subscription-schedules (`end_behavior=cancel`). Esta programación aún no está conectada.
+- Migración aplicada y reconciliada con historial remoto: `20260913172823_configurable_academy_checkout_prices.sql`. Prueba SQL en transacción revertida: guardado válido y rechazo de decimales, precio ausente y duración excesiva.
+- Asesor de seguridad: no se añaden tablas ni permisos. Persisten avisos anteriores sobre funciones SECURITY DEFINER públicas, OTP superior a una hora y protección de contraseñas filtradas desactivada; revisar antes de entrega. Referencias: https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable y https://supabase.com/docs/guides/platform/going-into-prod#security . No se cambian invitaciones ni permisos ajenos a estos planes.

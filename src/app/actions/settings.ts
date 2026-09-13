@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { requireAdmin, requireFinanceAccess } from '@/lib/auth'
+import { AcademyCheckoutSchema } from '@/lib/academy-pricing'
 
 const optionalText = (max = 500) => z.string().trim().max(max)
 const optionalUrl = z.string().trim().max(500).refine(
@@ -114,7 +115,7 @@ const PlanSchema = z.object({
     frequency: z.enum(['mensual', 'trimestral', 'anual']),
     is_active: z.boolean().default(true),
     sort_order: z.number().int().min(0).max(999).default(0),
-})
+}).and(AcademyCheckoutSchema)
 
 const CategorySchema = z.object({
     name: z.string().trim().min(2, 'El nombre es obligatorio').max(80),
@@ -136,6 +137,10 @@ export type MembershipPlan = {
     price: number
     enrollment_fee: number
     frequency: 'mensual' | 'trimestral' | 'anual'
+    full_payment_enabled: boolean
+    full_payment_price: number | null
+    monthly_payment_enabled: boolean
+    monthly_payment_price: number | null
     is_active: boolean
     sort_order: number
     created_at: string
@@ -242,7 +247,7 @@ export async function getPlans(includeInactive = false): Promise<MembershipPlan[
     const { supabase } = await requireAdmin()
     let query = supabase
         .from('membership_plans')
-        .select('id, name, description, duration_months, price, enrollment_fee, frequency, is_active, sort_order, created_at, updated_at')
+        .select('id, name, description, duration_months, price, enrollment_fee, frequency, is_active, sort_order, created_at, updated_at, full_payment_enabled, full_payment_price, monthly_payment_enabled, monthly_payment_price')
         .order('sort_order')
         .order('name')
     if (!includeInactive) query = query.eq('is_active', true)
@@ -258,6 +263,8 @@ export async function getPlans(includeInactive = false): Promise<MembershipPlan[
         ...plan,
         price: Number(plan.price || 0),
         enrollment_fee: Number(plan.enrollment_fee || 0),
+        full_payment_price: plan.full_payment_price === null ? null : Number(plan.full_payment_price),
+        monthly_payment_price: plan.monthly_payment_price === null ? null : Number(plan.monthly_payment_price),
         membership_count: (memberships || []).filter((item) => item.plan_id === plan.id).length,
         active_membership_count: (memberships || []).filter((item) => item.plan_id === plan.id && item.status === 'active').length,
     })) as MembershipPlan[]

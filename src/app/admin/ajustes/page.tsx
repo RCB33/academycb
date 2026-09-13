@@ -175,6 +175,11 @@ export default function AjustesPage() {
                                             {Boolean(plan.active_membership_count) && <Badge variant="outline">{plan.active_membership_count} altas activas</Badge>}
                                         </div>
                                         <p className="mt-1 text-xs text-slate-500">{plan.description || 'Sin descripción'} · {plan.duration_months} meses · {frequencyLabel(plan.frequency)}</p>
+                                        <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                                            {plan.full_payment_enabled && <Badge variant="outline">Completo: {money(plan.full_payment_price ?? 0)}</Badge>}
+                                            {plan.monthly_payment_enabled && <Badge variant="outline">{plan.duration_months} cuotas de {money(plan.monthly_payment_price ?? 0)}</Badge>}
+                                            {!plan.full_payment_enabled && !plan.monthly_payment_enabled && <span className="text-slate-500">Modalidades online sin configurar</span>}
+                                        </div>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <div className="mr-3 text-right"><p className="text-xl font-black text-yellow-600">{money(plan.price)}</p>{plan.enrollment_fee > 0 && <p className="text-[10px] text-slate-400">+ {money(plan.enrollment_fee)} matrícula</p>}</div>
@@ -355,13 +360,45 @@ function PlanDialog({ open, plan, onClose, onSaved }: { open: boolean; plan: Mem
             frequency: String(fd.get('frequency')) as MembershipPlan['frequency'],
             duration_months: Number(fd.get('duration_months')), sort_order: Number(fd.get('sort_order')),
             is_active: fd.get('is_active') === 'true',
+            full_payment_enabled: fd.get('full_payment_enabled') === 'on',
+            full_payment_price: String(fd.get('full_payment_price') || '').trim() ? Number(fd.get('full_payment_price')) : null,
+            monthly_payment_enabled: fd.get('monthly_payment_enabled') === 'on',
+            monthly_payment_price: String(fd.get('monthly_payment_price') || '').trim() ? Number(fd.get('monthly_payment_price')) : null,
         }
         const result = plan ? await updatePlan(plan.id, payload) : await createPlan(payload)
         setSaving(false)
         if (!result.success) return toast.error(result.error)
         toast.success(plan ? 'Plan actualizado' : 'Plan creado'); await onSaved(); onClose()
     }
-    return <Dialog open={open} onOpenChange={(value) => !value && onClose()}><DialogContent className="max-w-lg p-0"><div className="bg-yellow-500 p-5 text-center"><ReceiptText className="mx-auto h-7 w-7" /><DialogTitle className="mt-2 font-black uppercase">{plan ? 'Editar plan' : 'Nuevo plan'}</DialogTitle></div><form onSubmit={submit} className="space-y-4 p-5"><Field label="Nombre" name="name" value={plan?.name} required /><TextField label="Descripción" name="description" value={plan?.description} /><div className="grid grid-cols-2 gap-3"><Field label="Precio por periodo" name="price" value={String(plan?.price ?? '')} type="number" min="0" step="0.01" required /><Field label="Matrícula" name="enrollment_fee" value={String(plan?.enrollment_fee ?? 0)} type="number" min="0" step="0.01" /></div><div className="grid grid-cols-2 gap-3"><SelectField label="Frecuencia" name="frequency" value={plan?.frequency || 'mensual'} options={[['mensual', 'Mensual'], ['trimestral', 'Trimestral'], ['anual', 'Anual']]} /><Field label="Duración (meses)" name="duration_months" value={String(plan?.duration_months ?? 1)} type="number" min="1" max="60" /></div><div className="grid grid-cols-2 gap-3"><SelectField label="Estado" name="is_active" value={String(plan?.is_active ?? true)} options={[['true', 'Activo'], ['false', 'Archivado']]} /><Field label="Orden" name="sort_order" value={String(plan?.sort_order ?? 0)} type="number" min="0" max="999" /></div><div className="flex justify-end gap-2 border-t pt-4"><Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button><Button type="submit" disabled={saving} className="bg-yellow-500 font-bold text-black hover:bg-yellow-600">{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Guardar</Button></div></form></DialogContent></Dialog>
+    return <Dialog open={open} onOpenChange={(value) => !value && onClose()}>
+        <DialogContent className="max-h-[90dvh] max-w-lg overflow-y-auto p-0">
+            <div className="bg-yellow-500 p-5 text-center"><ReceiptText className="mx-auto h-7 w-7" /><DialogTitle className="mt-2 font-black uppercase">{plan ? 'Editar plan' : 'Nuevo plan'}</DialogTitle></div>
+            <form onSubmit={submit} className="space-y-4 p-5">
+                <Field label="Nombre" name="name" value={plan?.name} required />
+                <TextField label="Descripción" name="description" value={plan?.description} />
+                <div className="grid grid-cols-2 gap-3">
+                    <Field label="Duración (meses)" name="duration_months" value={String(plan?.duration_months ?? 1)} type="number" min="1" max="60" required />
+                    <Field label="Matrícula única (€)" name="enrollment_fee" value={String(plan?.enrollment_fee ?? 0)} type="number" min="0" step="0.01" />
+                </div>
+                <fieldset className="space-y-3 rounded-xl border border-yellow-300 bg-yellow-50/50 p-4">
+                    <legend className="px-1 text-sm font-bold">Opciones de pago online</legend>
+                    <p className="text-xs text-slate-600">Configura una opción o ambas. La matrícula se añade una sola vez al primer pago. Preparación en pruebas: esto no activa cobros reales.</p>
+                    <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-semibold"><input type="checkbox" name="full_payment_enabled" defaultChecked={plan?.full_payment_enabled ?? false} className="h-5 w-5 accent-yellow-600" /> Permitir pago completo</label>
+                    <Field label="Precio completo, sin matrícula (€)" name="full_payment_price" value={String(plan?.full_payment_price ?? '')} type="number" min="0.50" max="1000000" step="0.01" />
+                    <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-semibold"><input type="checkbox" name="monthly_payment_enabled" defaultChecked={plan?.monthly_payment_enabled ?? false} className="h-5 w-5 accent-yellow-600" /> Permitir mensualidades</label>
+                    <Field label="Importe de cada mes (€)" name="monthly_payment_price" value={String(plan?.monthly_payment_price ?? '')} type="number" min="0.50" max="1000000" step="0.01" />
+                    <p className="text-xs text-slate-600">Una cuota al mes durante la duración indicada, sin renovación automática. El precio completo puede ser diferente de la suma de las cuotas.</p>
+                </fieldset>
+                <details className="rounded-xl border p-3">
+                    <summary className="cursor-pointer text-sm font-semibold">Cuotas manuales / configuración anterior</summary>
+                    <div className="mt-3 grid grid-cols-2 gap-3"><Field label="Precio por periodo (€)" name="price" value={String(plan?.price ?? 0)} type="number" min="0" step="0.01" required /><SelectField label="Frecuencia" name="frequency" value={plan?.frequency || 'mensual'} options={[["mensual", "Mensual"], ["trimestral", "Trimestral"], ["anual", "Anual"]]} /></div>
+                    <p className="mt-2 text-xs text-slate-500">Se conserva para las altas y recibos manuales existentes.</p>
+                </details>
+                <div className="grid grid-cols-2 gap-3"><SelectField label="Estado" name="is_active" value={String(plan?.is_active ?? true)} options={[["true", "Activo"], ["false", "Archivado"]]} /><Field label="Orden" name="sort_order" value={String(plan?.sort_order ?? 0)} type="number" min="0" max="999" /></div>
+                <div className="flex justify-end gap-2 border-t pt-4"><Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button><Button type="submit" disabled={saving} className="bg-yellow-500 font-bold text-black hover:bg-yellow-600">{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Guardar</Button></div>
+            </form>
+        </DialogContent>
+    </Dialog>
 }
 
 function CategoryDialog({ open, category, onClose, onSaved }: { open: boolean; category: AcademyCategory | null; onClose: () => void; onSaved: () => Promise<void> }) {
