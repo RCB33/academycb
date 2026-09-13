@@ -2,6 +2,19 @@
 
 Estado: en desarrollo, no activar cobros reales. Rama feat/stripe-preview-validation.
 
+## Confirmación automática de pruebas (13 de septiembre)
+
+- `/api/stripe/webhook` implementado, solo test; devuelve 503 sin secreto o para live. No es todavía un adaptador para pedidos/recibos reales.
+- Verifica firma sobre cuerpo original, límite de 1 MB, modo, propósito y vínculo exacto sesión/intento/importe/moneda. No guarda datos de tarjeta ni payloads completos.
+- Ledger aislado `stripe_test_attempts` + `stripe_test_events`. Escrituras y RPC exclusivas de service_role; el administrador solo puede leer sus intentos con su sesión normal.
+- Una sesión activa por administrador y clave de idempotencia persistente por intento. Los avisos duplicados no repiten la confirmación y un aviso de expiración tardío no revierte un pago.
+- La pantalla `/admin/stripe` diferencia consulta directa a Stripe de confirmación automática guardada. La URL de retorno no marca nada como pagado.
+- Pruebas: `node scripts/test-stripe-webhook.cjs` (firma, límites, reintentos y entorno) y `scripts/test-stripe-ledger.sql` (transacción revertida, duplicados y permisos). Ambas pasan. Asesor de seguridad sin nuevos avisos para estos objetos.
+- Pendiente externo: registrar destino snapshot de pruebas en Stripe y guardar `STRIPE_WEBHOOK_SECRET` en Preview; asegurar acceso de Stripe a ese endpoint sin desproteger globalmente Preview. Eventos: checkout.session.completed, checkout.session.async_payment_succeeded, checkout.session.async_payment_failed, checkout.session.expired.
+- No se ha completado todavía una entrega real Stripe → webhook ni un ciclo de mensualidades. No activar ventas. Documentación: https://docs.stripe.com/webhooks
+- Preview desplegada: https://academycb-fjdocxnjh-roques-projects-bd4f7acb.vercel.app . POST externo sin autorización devuelve 302 (protección Vercel); `vercel curl` autorizado alcanza el handler y devuelve `Webhook not configured`, como se esperaba sin secreto.
+- Stripe Workbench abierto en la cuenta Costabravacup2024 / test, sin destinos existentes. No se ha creado ninguno. Pendiente autorización para credencial Automation Bypass del proyecto, que permite acceder a despliegues protegidos de ese proyecto, y guardarla únicamente en el destino de Stripe test. No desactivar protección global. Referencia: https://vercel.com/docs/deployment-protection/methods-to-bypass-deployment-protection/protection-bypass-automation
+
 ## Hallazgos comprobados
 
 - La clave de pruebas funciona en Preview para lectura de Checkout. No se ha verificado todavía una compra completa.
