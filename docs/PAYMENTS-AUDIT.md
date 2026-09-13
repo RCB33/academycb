@@ -10,10 +10,11 @@ Estado: en desarrollo, no activar cobros reales. Rama feat/stripe-preview-valida
 - Una sesión activa por administrador y clave de idempotencia persistente por intento. Los avisos duplicados no repiten la confirmación y un aviso de expiración tardío no revierte un pago.
 - La pantalla `/admin/stripe` diferencia consulta directa a Stripe de confirmación automática guardada. La URL de retorno no marca nada como pagado.
 - Pruebas: `node scripts/test-stripe-webhook.cjs` (firma, límites, reintentos y entorno) y `scripts/test-stripe-ledger.sql` (transacción revertida, duplicados y permisos). Ambas pasan. Asesor de seguridad sin nuevos avisos para estos objetos.
-- Pendiente externo: registrar destino snapshot de pruebas en Stripe y guardar `STRIPE_WEBHOOK_SECRET` en Preview; asegurar acceso de Stripe a ese endpoint sin desproteger globalmente Preview. Eventos: checkout.session.completed, checkout.session.async_payment_succeeded, checkout.session.async_payment_failed, checkout.session.expired.
+- Destino snapshot TEST `Academy TEST — Checkout` creado (`we_1UFJ0wGk8vSBcmVd6SsPNwY3`), API 2024-11-20.acacia, cuenta propia. Eventos: checkout.session.completed, checkout.session.async_payment_succeeded, checkout.session.async_payment_failed, checkout.session.expired. `STRIPE_WEBHOOK_SECRET` guardado como Secret exclusivamente en Preview.
 - No se ha completado todavía una entrega real Stripe → webhook ni un ciclo de mensualidades. No activar ventas. Documentación: https://docs.stripe.com/webhooks
-- Preview desplegada: https://academycb-fjdocxnjh-roques-projects-bd4f7acb.vercel.app . POST externo sin autorización devuelve 302 (protección Vercel); `vercel curl` autorizado alcanza el handler y devuelve `Webhook not configured`, como se esperaba sin secreto.
-- Stripe Workbench abierto en la cuenta Costabravacup2024 / test, sin destinos existentes. No se ha creado ninguno. Pendiente autorización para credencial Automation Bypass del proyecto, que permite acceder a despliegues protegidos de ese proyecto, y guardarla únicamente en el destino de Stripe test. No desactivar protección global. Referencia: https://vercel.com/docs/deployment-protection/methods-to-bypass-deployment-protection/protection-bypass-automation
+- Preview desplegada con la firma: https://academycb-e4kedwtvo-roques-projects-bd4f7acb.vercel.app . Build correcto; POST con `vercel curl` autorizado devuelve `Missing signature`, confirmando que el handler carga la configuración y rechaza peticiones sin firma. Esto NO acredita aún una entrega firmada desde Stripe.
+- Alias de la rama actualizado: https://academycb-git-feat-stripe-previ-bc1b74-roques-projects-bd4f7acb.vercel.app . El destino Stripe usa este alias y `/api/stripe/webhook`, con credencial Automation Bypass independiente autorizada por el usuario. La protección global y la credencial anterior permanecen sin cambios. No documentar el valor ni la URL con su query secreta. Mantener este alias actualizado al desplegar por CLI. Revocar el bypass al finalizar las pruebas. Referencia: https://vercel.com/docs/deployment-protection/methods-to-bypass-deployment-protection/protection-bypass-automation
+- Workbench ofrece generar eventos mediante Stripe CLI; no se ha enviado aún un evento ni completado el Checkout técnico. Próxima validación: completar sesión de prueba desde `/admin/stripe`, comprobar entrega 2xx en Stripe y estado persistido `paid` del intento, sin modificar recibos reales.
 
 ## Hallazgos comprobados
 
@@ -24,7 +25,7 @@ Estado: en desarrollo, no activar cobros reales. Rama feat/stripe-preview-valida
 - Los triggers financieros convierten campus confirmado y equipo de torneo confirmado en pagado. Confirmación deportiva y cobro deben separarse.
 - Torneos tiene jugadores y equipos; el trigger financiero actual factura `tournament_teams`, no `tournament_players`. Hace falta definir unidad de precio.
 - El portal muestra cuotas por hijo y pedidos por email; el nuevo pago debe comprobar relación real tutor-hijo o propietario del pedido en servidor, no confiar en IDs recibidos del cliente.
-- No existe webhook operativo ni registro persistente de intentos de Checkout. El regreso a la web no debe marcar un pago como abonado.
+- El webhook y ledger técnico TEST ya existen; todavía falta conectarlos a las obligaciones de pago de cada módulo. El regreso a la web no debe marcar un pago como abonado.
 
 ## Experiencia prevista
 
@@ -56,7 +57,7 @@ Estado: en desarrollo, no activar cobros reales. Rama feat/stripe-preview-valida
 5. Separar estado deportivo/logístico de estado financiero y conservar historial al cancelar/reembolsar.
 6. Botones, estados y conciliación en cada módulo, sin duplicar ingresos de pedidos y ledger.
 7. Pruebas: éxito, tarjeta rechazada, abandono, doble clic, importe manipulado, tutor ajeno, sin stock, última plaza, firma falsa, evento duplicado, cambio de precio, pago tardío y reembolso.
-8. Configurar STRIPE_WEBHOOK_SECRET en Preview tras disponer de endpoint estable y acceso para Stripe. No desactivar globalmente la protección de Preview.
+8. Validar entrega firmada Stripe → Preview → ledger técnico; configuración de firma, destino y alias ya realizada. No desactivar globalmente la protección de Preview.
 9. Validación final por el negocio antes de configurar claves reales y habilitar producción.
 
 ## Decisiones confirmadas por el propietario
