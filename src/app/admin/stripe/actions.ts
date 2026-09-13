@@ -3,15 +3,16 @@
 import { requireAdmin } from '@/lib/auth'
 import { stripeTestRequest, stripeTestKey } from '@/lib/stripe-test'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { headers } from 'next/headers'
+import { stripeReturnBase } from '@/lib/stripe-return-origin'
 
 export async function createStripeTestCheckout() {
     const { user } = await requireAdmin()
     try {
         stripeTestKey()
-        const host = process.env.VERCEL_URL
-        if (!host || !/^[a-z0-9.-]+\.vercel\.app$/.test(host)) return { error: 'No se reconoce la URL de Preview.' }
+        const returnBase = stripeReturnBase((await headers()).get('origin'), process.env.VERCEL_URL)
         const admin = createAdminClient()
-        const { data: attempt, error } = await admin.rpc('reserve_stripe_connection_test', { owner_input: user.id, return_base_input: `https://${host}/admin/stripe` })
+        const { data: attempt, error } = await admin.rpc('reserve_stripe_connection_test', { owner_input: user.id, return_base_input: returnBase })
         if (error || !attempt) return { error: 'No se pudo registrar el intento. No se ha iniciado ningún cobro.' }
         if (attempt.checkout_url && attempt.state === 'open') {
             if (new Date(attempt.expires_at).getTime() <= Date.now()) {
@@ -22,6 +23,9 @@ export async function createStripeTestCheckout() {
                 }
                 return { error: 'La sesión anterior sigue pendiente de conciliación. Comprueba la confirmación automática antes de repetir.' }
             }
+            // Existing Checkout URLs retain their original return address. Do not reuse
+            // one across domains or create a second charge while it remains active.
+            if (attempt.return_base !== returnBase) return { error: 'Hay una prueba pendiente creada desde otro dominio. Complétala desde su página original o espera a que caduque antes de crear otra.' }
             if (!attempt.checkout_url.startsWith('https://checkout.stripe.com/')) return { error: 'URL de prueba inválida.' }
             return { url: attempt.checkout_url }
         }
