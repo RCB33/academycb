@@ -44,7 +44,7 @@ export default async function PagosPage() {
             amount: p.amount,
             status: p.status,
             date: p.created_at,
-            method: p.method || 'transferencia',
+            method: p.method || 'Sin asignar',
             items: null,
             isStore: false
         })),
@@ -55,7 +55,7 @@ export default async function PagosPage() {
             amount: o.total_amount,
             status: o.status,
             date: o.created_at,
-            method: 'tarjeta',
+            method: o.payment_method || 'Sin asignar',
             items: o.order_items,
             isStore: true
         }))
@@ -99,7 +99,7 @@ export default async function PagosPage() {
                                             <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
                                                 {tx.title}
                                                 <span className={`text-[10px] uppercase font-black px-2 py-0.5 rounded-full tracking-wider ${tx.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                                                    {tx.status === 'paid' ? 'Pagado' : 'Pendiente'}
+                                                    {({ paid: 'Pagado', pending: 'Pendiente', failed: 'Fallido', cancelled: 'Cancelado', refunded: 'Reembolsado', shipped: 'Enviado', completed: 'Completado', overdue: 'Vencido' } as Record<string, string>)[tx.status] || 'Por revisar'}
                                                 </span>
                                             </h3>
                                             <div className="flex flex-wrap items-center text-sm font-medium text-slate-500 mt-1 gap-x-4 gap-y-2">
@@ -125,15 +125,15 @@ export default async function PagosPage() {
                                     </div>
                                     
                                     <div className="mt-6 sm:mt-0 pt-4 sm:pt-0 border-t sm:border-t-0 sm:border-l border-slate-100 sm:pl-6 flex flex-col items-end sm:items-center justify-center w-full sm:w-auto shrink-0 min-w-[140px]">
-                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 w-full text-right sm:text-center">Total abonado</p>
-                                        <div className="text-3xl font-black text-slate-900 tracking-tight w-full text-right sm:text-center">{tx.amount?.toFixed(2)} €</div>
+                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 w-full text-right sm:text-center">{tx.status === 'paid' ? 'Total abonado' : tx.status === 'refunded' ? 'Importe reembolsado' : 'Importe'}</p>
+                                        <div className="text-3xl font-black text-slate-900 tracking-tight w-full text-right sm:text-center">{Number(tx.amount || 0).toFixed(2)} €</div>
                                         
                                         {tx.isStore && (
                                             <a href="/portal/tienda" className="mt-3 flex w-full items-center justify-center rounded-md bg-gold/10 py-2 text-xs font-bold text-navy transition-colors hover:bg-gold/20">
                                                 Volver a Tienda
                                             </a>
                                         )}
-                                        {!tx.isStore && tx.status !== 'paid' && (
+                                        {!tx.isStore && ['pending', 'overdue', 'failed'].includes(tx.status) && (
                                             <div className="mt-3 flex w-full items-center justify-center rounded-md bg-amber-50 py-2 text-xs font-bold text-amber-700">
                                                 Pendiente de gestión
                                             </div>
