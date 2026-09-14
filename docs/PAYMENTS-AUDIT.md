@@ -2,6 +2,15 @@
 
 Estado: en desarrollo, no activar cobros reales. Rama feat/stripe-preview-validation.
 
+## Correcciones verificadas (14 de septiembre)
+
+- Migración `20260914163603_separate_booking_from_payment.sql` aplicada: confirmar campus/equipo o enviar un pedido ya no implica cobro. Se mantiene la acción explícita de marcar un pedido pagado y la gestión financiera manual.
+- El trigger no recalcula importes ni métodos de recibos existentes al editar una inscripción. Conserva pagos, fallos y reembolsos; borrar el origen conserva el recibo sin referencia. No se reescribe el histórico.
+- Prueba aislada PostgreSQL 17: `scripts/test-booking-payment-separation.sql`, siempre contra una base local vacía; rollback final. Verifica confirmación, cambio de tarifa, cancelación, devolución, envío y permisos del trigger.
+- Acceso «Conexión Stripe» en menús de administración de escritorio y móvil. Tras volver de Checkout, la página espera el webhook y actualiza el estado sin crear otra sesión. La evidencia de confirmación proviene del ledger, no de la URL.
+- `npm run test:payments` agrupa las cuatro suites de reglas, tarifas, retorno y firma del webhook. ESLint vuelve a ejecutar los scripts CommonJS sin errores de configuración.
+- Siguen pendientes los adaptadores comerciales y sus pruebas completas indicados abajo. Esta entrega no habilita ventas ni demuestra todavía una suscripción mensual completa.
+
 ## Confirmación automática de pruebas (13 de septiembre)
 
 - `/api/stripe/webhook` implementado, solo test; devuelve 503 sin secreto o para live. No es todavía un adaptador para pedidos/recibos reales.
@@ -22,7 +31,7 @@ Estado: en desarrollo, no activar cobros reales. Rama feat/stripe-preview-valida
 - `place_store_order` calcula precios en base de datos y bloquea productos, pero descuenta stock antes del pago. No hay liberación automática por abandono. Además, validar cada línea antes de descontar permite que varias líneas del mismo producto superen juntas el stock; agrupar cantidades por producto antes de validar, bloquear siempre por ID.
 - El portal Pagos muestra pedidos como tarjeta aunque su método sea manual, llama “Total abonado” a importes pendientes y reduce cancelados/reembolsados/fallidos a “Pendiente”.
 - Campus tiene comprobación de capacidad separada de la inserción: dos altas simultáneas pueden superar el límite.
-- Los triggers financieros convierten campus confirmado y equipo de torneo confirmado en pagado. Confirmación deportiva y cobro deben separarse.
+- Corregido el 14/09: los triggers ya no convierten campus/equipo confirmado en pagado; no se reclasificó retrospectivamente el histórico.
 - Torneos tiene jugadores y equipos; el trigger financiero actual factura `tournament_teams`, no `tournament_players`. Hace falta definir unidad de precio.
 - El portal muestra cuotas por hijo y pedidos por email; el nuevo pago debe comprobar relación real tutor-hijo o propietario del pedido en servidor, no confiar en IDs recibidos del cliente.
 - El webhook y ledger técnico TEST ya existen; todavía falta conectarlos a las obligaciones de pago de cada módulo. El regreso a la web no debe marcar un pago como abonado.
@@ -54,10 +63,10 @@ Estado: en desarrollo, no activar cobros reales. Rama feat/stripe-preview-valida
 2. Separación de pagos de pruebas: nunca actualizar recibos reales ni contabilidad real con un evento test.
 3. Reservas atómicas de stock/plazas y liberación idempotente al caducar; cancelación visual no equivale a sesión expirada.
 4. Webhook firmado con confirmación transaccional; duplicados, concurrencia, eventos fuera de orden y fallo temporal de base de datos.
-5. Separar estado deportivo/logístico de estado financiero y conservar historial al cancelar/reembolsar.
+5. Verificado el 14/09: separación de confirmación deportiva/envío y cobro, y conservación de historial. Pendiente extender el modelo a obligaciones Stripe por jugador.
 6. Botones, estados y conciliación en cada módulo, sin duplicar ingresos de pedidos y ledger.
 7. Pruebas: éxito, tarjeta rechazada, abandono, doble clic, importe manipulado, tutor ajeno, sin stock, última plaza, firma falsa, evento duplicado, cambio de precio, pago tardío y reembolso.
-8. Validar entrega firmada Stripe → Preview → ledger técnico; configuración de firma, destino y alias ya realizada. No desactivar globalmente la protección de Preview.
+8. Entrega firmada Stripe → Preview → ledger técnico verificada el 13/09. Falta repetir el retorno visual y probar los futuros adaptadores comerciales. No desactivar globalmente la protección de Preview.
 9. Validación final por el negocio antes de configurar claves reales y habilitar producción.
 
 ## Decisiones confirmadas por el propietario

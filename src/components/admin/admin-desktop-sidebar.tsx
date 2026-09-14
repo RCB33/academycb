@@ -73,6 +73,7 @@ export function AdminDesktopSidebar({
         ] }] : []),
         ...(isAdmin || isFinance ? [{ label: isFinance ? 'Finanzas' : 'Sistema', items: [
             { href: '/admin/finanzas', label: 'Finanzas', icon: <CreditCard size={19} /> },
+            ...(isAdmin ? [{ href: '/admin/stripe', label: 'Conexión Stripe', icon: <CreditCard size={19} /> }] : []),
             ...(isAdmin ? [{ href: '/admin/ajustes', label: 'Ajustes', icon: <Settings size={19} /> }] : []),
         ] }] : []),
     ]

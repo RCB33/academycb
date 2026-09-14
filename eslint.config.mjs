@@ -5,10 +5,15 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  {
+    files: ["scripts/**/*.cjs"],
+    rules: { "@typescript-eslint/no-require-imports": "off" },
+  },
   // El proyecto heredado todavía contiene tipado gradual y patrones anteriores
   // a las reglas estrictas de React 19. Se mantienen visibles como warnings para
   // que el CI sea accionable sin ocultar la deuda técnica existente.
   {
+    files: ["**/*.{js,jsx,mjs,ts,tsx}"],
     rules: {
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/ban-ts-comment": "warn",

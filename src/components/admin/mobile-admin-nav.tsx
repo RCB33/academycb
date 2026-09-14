@@ -60,6 +60,7 @@ export function MobileAdminNav({ isAdmin, isStaff, isFinance, isMarketing }: { i
         ] }] : []),
         ...(isAdmin || isFinance ? [{ label: 'Gestión', items: [
             { href: '/admin/finanzas', label: 'Finanzas', icon: <CreditCard className="h-5 w-5" /> },
+            ...(isAdmin ? [{ href: '/admin/stripe', label: 'Conexión Stripe', icon: <CreditCard className="h-5 w-5" /> }] : []),
             ...(isAdmin ? [{ href: '/admin/ajustes', label: 'Ajustes', icon: <Settings className="h-5 w-5" /> }] : []),
         ] }] : []),
     ]
