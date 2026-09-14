@@ -3,21 +3,34 @@ import { Receipt, Calendar, CreditCard, ShoppingBag, GraduationCap, Tent, Trophy
 import { Card, CardContent } from '@/components/ui/card'
 import { redirect } from 'next/navigation'
 import { PortalPageHeader } from '@/components/portal/portal-page-header'
+import { PayReceiptButton } from './pay-button'
+import { validatePaymentEnvironment } from '@/lib/payment-rules'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { ConfirmationRefresh } from '@/app/admin/stripe/confirmation-refresh'
+import { AcademyOption } from './academy-option'
+import { CancelCheckout } from './cancel-checkout'
 
-export default async function PagosPage() {
+export default async function PagosPage({ searchParams }: { searchParams: Promise<{ attempt?: string; contract?: string; cancelled?: string }> }) {
+    const params = await searchParams
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) redirect('/portal')
+    let checkoutMode: 'test' | 'live' | null = null
+    try { checkoutMode = validatePaymentEnvironment({ key: process.env.STRIPE_SECRET_KEY, deployment: process.env.VERCEL_ENV, liveEnabled: process.env.STRIPE_LIVE_PAYMENTS_ENABLED, webhookSecret: process.env.STRIPE_WEBHOOK_SECRET }) } catch { /* No online button until configured. */ }
+    const { data: attempts } = await supabase.from('receipt_checkout_attempts').select('id,payment_id,state,mode').eq('owner_id', user.id).order('created_at', { ascending: false }).limit(100)
+    const returnedAttempt = attempts?.find(a => a.id === params.attempt)
 
     // 1. Get guardian and children ids
-    const { data: guardian } = await supabase
+    const { data: guardians } = await supabase
         .from('guardians')
         .select('id, child_guardians(child_id)')
         .eq('user_id', user.id)
-        .single()
         
-    const childIds = guardian?.child_guardians?.map((cg: any) => cg.child_id) || []
+    const childIds = [...new Set(guardians?.flatMap(g => g.child_guardians?.map((cg: any) => cg.child_id) || []) || [])]
+    const { data: memberships } = childIds.length ? await supabase.from('academy_memberships').select('id,child_id,plan:membership_plans(name,is_active,full_payment_enabled,full_payment_price,monthly_payment_enabled,monthly_payment_price,duration_months,enrollment_fee)').in('child_id', childIds).eq('status','active') : { data: [] }
+    const { data: contracts } = await supabase.from('academy_checkout_contracts').select('id,membership_id,state,mode,choice,months,unit_cents,fee_cents,total_cents,billing_status,academy_contract_collections(id,amount_cents)').eq('owner_id',user.id).eq('mode',checkoutMode || 'test').not('state','in','(expired,cancelled)')
+    const returnedContract = contracts?.find(c=>c.id===params.contract)
 
     // 2. Fetch payments for those children (Admin assigned payments/fees)
     let academyPayments: any[] = []
@@ -35,6 +48,11 @@ export default async function PagosPage() {
         .select(`*, order_items (*)`)
         .eq('customer_email', user.email)
 
+    // These order IDs already passed the caller's RLS and email filter. Only
+    // resolve the receipt IDs here; the payment RPC independently checks ownership.
+    const orderIds = (orders || []).map(o => o.id)
+    const { data: orderReceipts } = orderIds.length ? await createAdminClient().from('payments').select('id,ref_id,status,method').eq('type', 'shop').in('ref_id', orderIds) : { data: [] }
+
     // 4. Combine and sort
     const allTransactions = [
         ...academyPayments.map(p => ({
@@ -47,17 +65,20 @@ export default async function PagosPage() {
             method: p.method || 'Sin asignar',
             items: null,
             isStore: false
+            ,paymentId: p.id
+            ,membershipId: p.type === 'academy' ? p.ref_id : null
         })),
         ...(orders || []).map(o => ({
             id: o.id,
             type: 'shop',
             title: `Pedido Tienda #${o.id.slice(0,8).toUpperCase()}`,
             amount: o.total_amount,
-            status: o.status,
+            status: orderReceipts?.find(p => p.ref_id === o.id)?.status || o.status,
             date: o.created_at,
-            method: o.payment_method || 'Sin asignar',
+            method: orderReceipts?.find(p => p.ref_id === o.id)?.method || o.payment_method || 'Sin asignar',
             items: o.order_items,
             isStore: true
+            ,paymentId: orderReceipts?.find(p => p.ref_id === o.id)?.id
         }))
     ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
@@ -84,6 +105,27 @@ export default async function PagosPage() {
     return (
         <div className="space-y-6">
             <PortalPageHeader icon={<Receipt className="h-6 w-6" />} title="Pagos" description="Consulta cuotas, inscripciones y compras asociadas a tu familia." />
+            {checkoutMode === 'test' && <div className="rounded-xl border border-gold/40 bg-gold/10 p-4 text-sm"><strong>Entorno de pruebas.</strong> Usa únicamente tarjetas de prueba de Stripe. No se cobra dinero ni se modifican los recibos reales.</div>}
+            {returnedAttempt?.state === 'paid' && <p role="status" className="rounded-xl bg-green-50 p-4 text-green-800">{returnedAttempt.mode === 'test' ? 'Prueba confirmada correctamente. Tu recibo real sigue sin cambios.' : 'Pago confirmado. El recibo se ha actualizado correctamente.'}</p>}
+            {returnedAttempt && <ConfirmationRefresh pending={['creating','open'].includes(returnedAttempt.state) && !params.cancelled} />}
+            {params.cancelled && <p className="rounded-xl border p-4 text-sm">Has vuelto sin finalizar el pago. No se ha marcado como abonado por regresar a esta página.</p>}
+            {returnedContract && <><p role="status" className="rounded-xl border p-4 text-sm">{returnedContract.state === 'completed' ? 'Contrato pagado por completo.' : returnedContract.state === 'active' ? 'Mensualidades activadas. Los cobros terminarán automáticamente al finalizar el periodo contratado.' : 'Estamos confirmando tu contrato con Stripe.'}{checkoutMode === 'test' ? ' Simulación: no se ha cobrado dinero real.' : ''}</p><ConfirmationRefresh pending={['creating','open'].includes(returnedContract.state) && !params.cancelled} /></>}
+            {checkoutMode && (memberships || []).map((m: any)=>{
+                const plan = m.plan
+                const contract = contracts?.find(c=>c.membership_id===m.id)
+                if(contract) return <section key={m.id} className="space-y-3 rounded-2xl border bg-white p-5">
+                    <h2 className="font-bold text-navy">{plan?.name || 'Academia'} · Plan de pago</h2>
+                    <p>{contract.choice === 'monthly' ? `${contract.months} mensualidades de ${(Number(contract.unit_cents)/100).toFixed(2)} €` : 'Pago completo'} · Total {(Number(contract.total_cents)/100).toFixed(2)} €</p>
+                    <p className="text-sm text-slate-600">{({creating:'Preparando',open:'Pendiente de autorización',active:'Activado',completed:'Pagado por completo'} as Record<string,string>)[contract.state] || contract.state}{checkoutMode === 'test' ? ' · Solo pruebas' : ''}</p>
+                    <p className="text-sm">Cobros confirmados: {contract.academy_contract_collections?.length || 0} de {contract.choice==='monthly' ? contract.months : 1}.</p>
+                    {contract.billing_status==='attention' && <p role="alert" className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">Hay una cuota pendiente o una autorización bancaria por completar. Contacta con Academy para revisar el pago. No contrates otro plan.</p>}
+                    {contract.billing_status==='ended' && <p className="text-sm">La programación de cobros ha finalizado.{contract.state!=='completed' ? ' Quedan importes por revisar con Academy.' : ''}</p>}
+                    {['creating','open'].includes(contract.state) && <AcademyOption membershipId={m.id} choice={contract.choice} amount={Number(contract.unit_cents)/100} fee={Number(contract.fee_cents)/100} months={contract.months} test={checkoutMode==='test'} />}
+                    {contract.state==='open' && <CancelCheckout kind="academy" id={contract.id} />}
+                </section>
+                if(!plan?.is_active || (!plan.full_payment_enabled && !plan.monthly_payment_enabled) || academyPayments.some(p=>p.ref_id===m.id && ['paid','refunded'].includes(p.status))) return null
+                return <section key={m.id} className="space-y-4 rounded-2xl border bg-white p-5"><h2 className="text-xl font-bold text-navy">{plan.name} · Elige cómo pagar</h2><div className="grid gap-4 sm:grid-cols-2">{plan.full_payment_enabled && <AcademyOption membershipId={m.id} choice="full" amount={Number(plan.full_payment_price)} fee={Number(plan.enrollment_fee || 0)} months={plan.duration_months} test={checkoutMode==='test'} />}{plan.monthly_payment_enabled && <AcademyOption membershipId={m.id} choice="monthly" amount={Number(plan.monthly_payment_price)} fee={Number(plan.enrollment_fee || 0)} months={plan.duration_months} test={checkoutMode==='test'} />}</div></section>
+            })}
             
             <div className="space-y-4">
                 {allTransactions && allTransactions.length > 0 ? (
@@ -95,8 +137,8 @@ export default async function PagosPage() {
                                         <div className={`p-3 rounded-full shrink-0 shadow-sm border ${getColor(tx.type)}`}>
                                             {getIcon(tx.type)}
                                         </div>
-                                        <div className="flex-1 w-full">
-                                            <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
+                                        <div className="min-w-0 flex-1 w-full">
+                                            <h3 className="font-bold text-slate-800 text-lg flex flex-wrap items-center gap-2 break-words">
                                                 {tx.title}
                                                 <span className={`text-[10px] uppercase font-black px-2 py-0.5 rounded-full tracking-wider ${tx.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
                                                     {({ paid: 'Pagado', pending: 'Pendiente', failed: 'Fallido', cancelled: 'Cancelado', refunded: 'Reembolsado', shipped: 'Enviado', completed: 'Completado', overdue: 'Vencido' } as Record<string, string>)[tx.status] || 'Por revisar'}
@@ -133,11 +175,17 @@ export default async function PagosPage() {
                                                 Volver a Tienda
                                             </a>
                                         )}
-                                        {!tx.isStore && ['pending', 'overdue', 'failed'].includes(tx.status) && (
+                                        {checkoutMode && tx.paymentId && !contracts?.some(c=>c.membership_id===tx.membershipId) && !(memberships || []).some((m:any)=>m.id===tx.membershipId && m.plan?.is_active && (m.plan.full_payment_enabled || m.plan.monthly_payment_enabled) && !academyPayments.some(p=>p.ref_id===m.id && ['paid','refunded'].includes(p.status))) && ['pending', 'failed'].includes(tx.status) && (
+                                            attempts?.some(a => a.payment_id === tx.paymentId && a.mode === checkoutMode && a.state === 'paid')
+                                                ? <p className="mt-3 text-sm text-green-700">{checkoutMode === 'test' ? 'Prueba completada' : 'Pago confirmado'}</p>
+                                                : <PayReceiptButton paymentId={tx.paymentId} test={checkoutMode === 'test'} />
+                                        )}
+                                        {!checkoutMode && !tx.isStore && ['pending', 'overdue', 'failed'].includes(tx.status) && (
                                             <div className="mt-3 flex w-full items-center justify-center rounded-md bg-amber-50 py-2 text-xs font-bold text-amber-700">
                                                 Pendiente de gestión
                                             </div>
                                         )}
+                                        {attempts?.filter(a=>a.payment_id===tx.paymentId && a.mode===checkoutMode && a.state==='open').map(a=><CancelCheckout key={a.id} kind="receipt" id={a.id} />)}
                                     </div>
                                 </div>
                             </CardContent>

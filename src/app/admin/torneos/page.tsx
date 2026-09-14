@@ -556,7 +556,7 @@ function TournamentDialog({ open, onOpenChange, tournament }: { open: boolean, o
                     </div>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div className="space-y-2">
-                            <Label className="text-slate-700 font-bold uppercase text-xs tracking-wider">Precio por plaza (€)</Label>
+                            <Label className="text-slate-700 font-bold uppercase text-xs tracking-wider">Precio por jugador (€)</Label>
                             <Input name="price" type="number" step="0.01" defaultValue={tournament?.price || ''} placeholder="150" className="bg-white" />
                         </div>
                         <div className="space-y-2">

@@ -3,12 +3,12 @@ const fs = require('node:fs')
 const path = require('node:path')
 const ts = require('typescript')
 const Stripe = require('stripe')
-let calls = 0, databaseFails = false
+let calls = 0, databaseFails = false, databaseCode = null
 function load(file) {
     const result = { exports: {} }
     function localRequire(name) {
         if (name === 'server-only') return {}
-        if (name === '@/lib/supabase/admin') return { createAdminClient: () => ({ rpc: async () => { calls++; return { error: databaseFails ? { message: 'test failure' } : null } } }) }
+        if (name === '@/lib/supabase/admin') return { createAdminClient: () => ({ rpc: async () => { calls++; return { error: databaseFails ? { message: 'test failure',code:databaseCode } : null } } }) }
         if (name.startsWith('@/')) return load(path.resolve('src', name.slice(2) + '.ts'))
         if (name.startsWith('.')) return load(path.resolve(path.dirname(file), name + '.ts'))
         return require(name)
@@ -34,6 +34,10 @@ function request(value, signed = true) {
     assert.equal(calls,1)
     databaseFails=true
     assert.equal((await POST(request(event))).status,500)
+    databaseCode='P0002'
+    assert.equal((await POST(request(event))).status,500,'A missing paid record must still retry')
+    assert.equal((await POST(request({...event,type:'checkout.session.expired'}))).status,200,'An expired deleted fixture has no financial action')
+    databaseCode=null
     databaseFails=false
     assert.equal((await POST(request(event))).status,200)
     const before=calls

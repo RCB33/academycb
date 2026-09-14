@@ -17,7 +17,8 @@ export async function createReceiptCheckout(input: { attemptId: string; amountCe
     const session = await stripe.checkout.sessions.create({
         mode: 'payment', locale: 'es', payment_method_types: ['card'],
         line_items: [{ quantity: 1, price_data: { currency: 'eur', unit_amount: input.amountCents, product_data: { name: input.description.slice(0, 200) } } }],
-        metadata: { academy_attempt_id: input.attemptId },
+        metadata: { purpose: 'academy_receipt', academy_attempt_id: input.attemptId },
+        payment_intent_data: { metadata: { purpose: 'academy_receipt', academy_attempt_id: input.attemptId } },
         success_url: `${origin.origin}/portal/pagos?attempt=${input.attemptId}`,
         cancel_url: `${origin.origin}/portal/pagos?attempt=${input.attemptId}&cancelled=1`,
         expires_at: input.expiresAt,

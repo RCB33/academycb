@@ -2,6 +2,53 @@
 
 Estado: en desarrollo, no activar cobros reales. Rama feat/stripe-preview-validation.
 
+## Estado actual — integración comercial del 14 de septiembre
+
+Esta sección sustituye las listas pendientes del archivo histórico que figura debajo.
+
+Implementado:
+
+- Portal Familias → Pagos: botón de Stripe para recibos propios de campus aprobado, participación de torneo, tienda y otros recibos. Importe y propiedad resueltos en servidor. Retorno al mismo dominio y confirmación exclusivamente por webhook.
+- Academia: pago completo o autorización de tarjeta seguida de una programación mensual finita, `end_behavior=cancel`, de 1–60 meses según el plan del dueño. La matrícula se añade una sola vez. El precio/duración queda congelado en el contrato y se compara con la oferta que aceptó la familia para rechazar cambios durante la compra.
+- Una autorización no se registra como pago. Cada `invoice.paid` registra una cuota; facturas duplicadas no duplican ingresos. Eventos de fallo/autorización pendiente y cambios/bajas de suscripción actualizan un estado separado consultando Stripe para tolerar eventos fuera de orden.
+- Familias y administración ven contratos y número de cobros confirmados. Un contrato iniciado se puede retomar sin abrir otro. Si hay un contrato activo no se ofrece pagar de nuevo los recibos antiguos.
+- Se puede cancelar un intento abierto: primero se caduca la sesión en Stripe y después se libera en la web. Volver atrás o cerrar una pestaña no se interpreta como cancelación ni como pago.
+- Confirmar un jugador en un torneo genera su recibo individual al precio vigente; los recibos anteriores por equipo se conservan para conciliación, sin reescribir el histórico.
+- Stock agregado por producto (incluidas líneas repetidas), bloqueos ordenados, devolución del stock una sola vez al cancelar un pedido no pagado. Capacidad de campus validada bajo bloqueo en base de datos.
+- Ledger TEST separado: ninguna confirmación test marca recibos reales pagados. Claves solo servidor y cobros LIVE bloqueados salvo activación explícita en producción.
+- Migraciones aplicadas: `20260914193102_receipt_checkout_ledger`, `20260914193103_academy_checkout_contracts`, `20260914193104_tournament_player_receipts`, `20260914193109_store_order_stock_safety`.
+
+Verificado:
+
+- `npm run test:payments`: cinco suites, incluyendo contrato Stripe con SDK simulado, matrícula única, fin de programación, firmas, modo, idempotencia y fallos. No son pagos reales ni sustituyen una prueba end-to-end de Stripe.
+- PostgreSQL 17 local vacío, pruebas con rollback: `scripts/test-commercial-checkout.sql` y `scripts/test-commercial-sources.sql`. Incluyen propiedad, RLS real de authenticated, duplicados, conservación del histórico, precio inmutable, duración, stock y plazas. Nunca ejecutar estos fixtures en producción.
+- TypeScript, ESLint de archivos modificados y build Next.js correctos.
+- Prueba de integración `scripts/test-preview-checkouts.cjs`: familia temporal autenticada, plan no publicado, recibo TEST y contratos privados. Apertura real de Checkout de recibo, pago completo y modo setup mensual; segundo clic reutiliza sesión, cancelación real en Stripe y recibo original pendiente. Perfiles/plan/recibos temporales eliminados. NO se proporcionó tarjeta ni se confirmó una factura: esta prueba no acredita el ciclo mensual completo.
+- Lectura de Checkout, precios, clientes, suscripciones y programaciones comprobada en Preview. El webhook TEST existente conserva su URL y firma y ahora escucha nueve eventos: los cuatro de Checkout, `invoice.paid`, `invoice.payment_failed`, `invoice.payment_action_required`, `customer.subscription.updated` y `customer.subscription.deleted`.
+- Asesor Supabase: no nuevas funciones de cobro expuestas a clientes. `receipt_checkout_events` no tiene políticas de cliente deliberadamente: solo service_role. Persisten avisos anteriores de RPC públicas y Auth; no se alteraron invitaciones ni accesos de trabajadores.
+
+Pendiente antes de habilitar ventas:
+
+1. Prueba real en entorno TEST del checkout comercial de cada módulo, incluyendo retorno autenticado, rechazo, abandono y confirmación.
+2. Prueba de mensualidades con tarjeta TEST y Test Clock: primera factura, cuota siguiente, cuota fallida y finalización sin cobro extra. Verificar permisos de ESCRITURA de la clave restringida; que una consulta de lectura funcione no demuestra escritura.
+3. Resolver incidencias de tarjeta y cambios de medio de pago desde Stripe; todavía no hay autoservicio de cambio de tarjeta en el portal. Reembolsos, ajustes y cancelaciones deben conciliarlos administración: no se ha implementado el flujo completo de devolución automática en cada módulo.
+4. Tienda mantiene reserva de stock al crear el pedido. La cancelación impagada lo libera, pero no existe aún caducidad automática de pedidos abandonados. Los pedidos públicos requieren acceso del comprador al portal para pagar; no hay checkout público inmediato anónimo.
+5. Revisar avisos Auth previos (caducidad OTP y protección de contraseñas filtradas) antes de entregar: [seguridad de producción](https://supabase.com/docs/guides/platform/going-into-prod#security). La tienda pública conserva una RPC intencionalmente anónima; endurecer anti-abuso antes de una campaña pública: [revisión SECURITY DEFINER](https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable).
+6. El dueño valida precios, duración, condiciones y políticas comerciales. Solo después: claves y webhook LIVE independientes, despliegue de producción y activación explícita. No se han habilitado ni hecho cobros reales.
+
+### Operativa para el dueño
+
+- Ajustes → Planes: habilitar pago completo y/o mensualidades, precio de cada opción, matrícula y duración. Las opciones online existentes siguen desactivadas hasta decisión del dueño; no se han inventado tarifas.
+- Academia: asignar jugador a su grupo y plan. La familia revisa y acepta una modalidad en Pagos. No cambiar manualmente recibos de una membresía con contrato Stripe activo.
+- Campus: aprobar la plaza; la familia paga el recibo desde Pagos. Aprobar no registra dinero recibido.
+- Torneos: configurar precio por jugador y confirmar convocados. Los recibos históricos por equipo no se convierten automáticamente a individuales; revisarlos antes de emitir otra obligación.
+- Tienda: se crea pedido/recibo pendiente; familias registradas lo pagan desde Pagos. Los pedidos impagados cancelados liberan stock; envío y pago son estados distintos.
+- Conexión Stripe: diagnóstico y seguimiento de contratos, cobros confirmados e incidencias. Cobros LIVE todavía bloqueados.
+
+## Archivo histórico — diagnóstico y avances anteriores
+
+Las menciones a “pendiente” en las secciones siguientes reflejan su fecha, no sustituyen el estado actual de arriba.
+
 ## Correcciones verificadas (14 de septiembre)
 
 - Migración `20260914163603_separate_booking_from_payment.sql` aplicada: confirmar campus/equipo o enviar un pedido ya no implica cobro. Se mantiene la acción explícita de marcar un pedido pagado y la gestión financiera manual.
