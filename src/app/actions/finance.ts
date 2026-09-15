@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { requireFinanceAccess } from '@/lib/auth'
+import { requireAdmin, requireFinanceAccess } from '@/lib/auth'
 
 const FinanceMonthSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/)
 const PaymentStatusSchema = z.enum(['paid', 'pending'])
@@ -39,6 +39,7 @@ export type FinanceTransaction = {
     date: string
     method?: string | null
     paymentId?: string
+    manualManageable?: boolean
 }
 
 export type FinanceKPIs = {
@@ -95,6 +96,8 @@ type PaymentRecord = {
     description: string | null
     created_at: string
     child?: { full_name: string } | null
+    stripe_payment_intent_id?: string | null
+    stripe_invoice_id?: string | null
 }
 
 type CampusEnrollmentRecord = {
@@ -215,11 +218,11 @@ export async function getFinanceOverview(monthInput: string): Promise<{
     expenses: Expense[]
     students: FinanceStudentOption[]
 }> {
-    const { supabase } = await requireFinanceAccess()
+    const { supabase, role } = await requireFinanceAccess()
     const range = getMonthRange(monthInput)
 
     const [paymentsResult, membershipsResult, campusResult, tournamentResult, ordersResult, expensesResult, studentsResult, graceResult] = await Promise.all([
-        supabase.from('payments').select('id, type, ref_id, child_id, amount, status, method, paid_at, due_date, description, created_at, child:children(full_name)'),
+        supabase.from('payments').select('id, type, ref_id, child_id, amount, status, method, paid_at, due_date, description, created_at, stripe_payment_intent_id, stripe_invoice_id, child:children(full_name)'),
         supabase.from('academy_memberships').select('id, child_id, status').eq('status', 'active'),
         supabase.from('campus_enrollments').select('id, status, created_at, child:children(full_name), campus:campuses(name, price)'),
         supabase.from('tournament_teams').select('id, status, team_name, created_at, tournament:tournaments_internal(title, price)'),
@@ -282,6 +285,7 @@ export async function getFinanceOverview(monthInput: string): Promise<{
                 date: financialDate,
                 method: payment.method,
                 paymentId: payment.id,
+                manualManageable: role === 'admin' && !payment.ref_id && !payment.stripe_payment_intent_id && !payment.stripe_invoice_id && ['cash', 'efectivo', 'transfer', 'transferencia'].includes(payment.method || ''),
             })
         }
     }
@@ -480,11 +484,14 @@ export async function setPaymentStatus(paymentId: string, statusInput: 'paid' | 
     const { supabase } = await requireFinanceAccess()
     const { data: payment, error: readError } = await supabase
         .from('payments')
-        .select('id, type, ref_id')
+        .select('id, type, ref_id, status, method, stripe_payment_intent_id, stripe_invoice_id')
         .eq('id', parsedId.data)
         .single()
 
     if (readError || !payment) return { success: false, error: 'No se encontró el cobro' }
+    if (['cancelled', 'refunded'].includes(payment.status) || payment.method === 'stripe' || payment.stripe_payment_intent_id || payment.stripe_invoice_id) {
+        return { success: false, error: 'No se puede reabrir un cobro anulado, reembolsado o gestionado por Stripe' }
+    }
 
     const { error } = await supabase
         .from('payments')
@@ -500,6 +507,40 @@ export async function setPaymentStatus(paymentId: string, statusInput: 'paid' | 
 
     revalidatePath('/admin/finanzas')
     revalidatePath('/admin/crm/alumnos')
+    return { success: true }
+}
+
+export async function getManualPaymentDetails(id: string) {
+    const { supabase } = await requireAdmin()
+    if (!z.string().uuid().safeParse(id).success) throw new Error('Cobro no válido')
+    const { data: payment, error } = await supabase.from('payments').select('id, amount, description, method, due_date, paid_at, updated_at, status').eq('id', id).single()
+    if (error || !payment) throw new Error('No se pudo cargar el cobro')
+    const { data: history, error: historyError } = await supabase.from('manual_payment_history').select('id, actor_id, changed_at, reason, before_value, after_value').eq('payment_id', id).order('changed_at', { ascending: false })
+    if (historyError) throw new Error('No se pudo cargar el historial')
+    return { payment, history: history || [] }
+}
+
+export async function correctManualPayment(input: {
+    id: string; version: string; action: 'edit' | 'cancel'; reason: string
+    amount?: number; description?: string; date?: string; method?: string
+}) {
+    const { supabase } = await requireAdmin()
+    const parsed = z.object({
+        id: z.string().uuid(), version: z.string().datetime({ offset: true }), action: z.enum(['edit', 'cancel']),
+        reason: z.string().trim().min(5).max(500), amount: z.number().finite().positive().max(1000000).optional(),
+        description: z.string().trim().min(3).max(240).optional(), date: z.string().date().optional(),
+        method: z.enum(['cash', 'efectivo', 'transfer', 'transferencia']).optional(),
+    }).safeParse(input)
+    if (!parsed.success) return { success: false, error: 'Revisa los datos y escribe el motivo (mínimo 5 caracteres)' }
+    const p = parsed.data
+    const { error } = await supabase.rpc('correct_manual_payment', {
+        payment_input: p.id, version_input: p.version, action_input: p.action, reason_input: p.reason,
+        amount_input: p.amount ?? null, description_input: p.description ?? null,
+        date_input: p.date ?? null, method_input: p.method ?? null,
+    })
+    if (error) return { success: false, error: error.code === 'P0001' ? error.message : 'No se pudo guardar. Puede haber un cobro online en curso; cancélalo antes de corregir el recibo.' }
+    revalidatePath('/admin/finanzas')
+    revalidatePath('/portal/pagos')
     return { success: true }
 }
 
