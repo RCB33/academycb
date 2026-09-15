@@ -30,6 +30,7 @@ import {
     type MonthlyPaymentRow,
 } from "@/app/actions/finance"
 import { toast } from "sonner"
+import { ManualPaymentEditor } from '@/components/admin/manual-payment-editor'
 import { getPaymentConfiguration, type PaymentMethodOption } from '@/app/actions/settings'
 
 const TYPE_CFG: Record<string, { label: string, icon: React.ReactNode, color: string }> = {
@@ -44,7 +45,7 @@ const TYPE_CFG: Record<string, { label: string, icon: React.ReactNode, color: st
 const STATUS_CFG: Record<string, { label: string, color: string }> = {
     'paid': { label: 'Cobrado', color: 'bg-green-100 text-green-700' },
     'pending': { label: 'Pendiente', color: 'bg-amber-100 text-amber-700' },
-    'cancelled': { label: 'Cancelado', color: 'bg-red-100 text-red-700' },
+    'cancelled': { label: 'Anulado', color: 'bg-red-100 text-red-700' },
     'overdue': { label: 'Vencido', color: 'bg-red-100 text-red-700' },
     'refunded': { label: 'Reembolsado', color: 'bg-slate-100 text-slate-600' },
     'failed': { label: 'Fallido', color: 'bg-red-100 text-red-700' },
@@ -441,6 +442,7 @@ export default function FinancePage() {
                                                             <RotateCcw className="h-3 w-3 mr-1" /> Deshacer
                                                         </Button>
                                                     ) : <span className="text-slate-300">—</span>}
+                                                    {tx.paymentId && tx.manualManageable && <ManualPaymentEditor paymentId={tx.paymentId} onSaved={async () => { await Promise.all([fetchAll(), fetchPaymentGrid()]) }} />}
                                                 </TableCell>
                                             </TableRow>
                                         )
