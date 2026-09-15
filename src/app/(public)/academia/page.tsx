@@ -19,7 +19,7 @@ const weeklySchedule = [
     { day: 'Martes', slots: ['17:30 - 19:00 · Benjamines', '19:00 - 20:30 · Infantiles'] },
     { day: 'Miércoles', slots: ['17:30 - 19:00 · Benjamines', '19:00 - 20:30 · Infantiles / Cadetes'] },
     { day: 'Jueves', slots: ['17:30 - 19:00 · Alevines'] },
-    { day: 'Viernes', slots: ['17:00 - 18:30 · Escoleta / Prebenjamines'] },
+    { day: 'Viernes', slots: ['17:30 - 19:00 · Escoleta / Prebenjamines'] },
 ]
 
 const methodologyDimensions = [
