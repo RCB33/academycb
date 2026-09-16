@@ -31,6 +31,7 @@ import {
 } from "@/app/actions/finance"
 import { toast } from "sonner"
 import { ManualPaymentEditor } from '@/components/admin/manual-payment-editor'
+import { CollectReceiptDialog } from '@/components/admin/collect-receipt-dialog'
 import { getPaymentConfiguration, type PaymentMethodOption } from '@/app/actions/settings'
 
 const TYPE_CFG: Record<string, { label: string, icon: React.ReactNode, color: string }> = {
@@ -138,6 +139,7 @@ export default function FinancePage() {
     const gridPaidPct = gridTotalAmount > 0 ? Math.round((gridPaidTotal / gridTotalAmount) * 100) : 0
 
     async function handlePaymentStatus(paymentId: string, status: 'paid' | 'pending') {
+        if (status === 'pending' && !confirm('¿Reabrir este recibo como pendiente? Esto NO anula un duplicado. Para un duplicado usa Gestionar / historial.')) return
         setMarkingId(paymentId)
         const res = await setPaymentStatus(paymentId, status)
         if (res.success) {
@@ -181,6 +183,7 @@ export default function FinancePage() {
             method: fd.get('method') as string,
             description: fd.get('description') as string,
             date: fd.get('date') as string,
+            independent_income: fd.get('independent_income') === 'on',
         })
         setSavingManual(false)
         if (res.success) {
@@ -236,8 +239,9 @@ export default function FinancePage() {
                     </p>
                 </div>
                 <div className="flex gap-2">
-                    <Button onClick={() => setManualPaymentOpen(true)} className="bg-green-600 hover:bg-green-700 text-white font-bold shadow-md">
-                        <Plus className="mr-2 h-4 w-4" /> 💰 Registrar Ingreso
+                    <CollectReceiptDialog onSaved={async () => { await Promise.all([fetchAll(), fetchPaymentGrid()]) }} />
+                    <Button onClick={() => setManualPaymentOpen(true)} variant="outline">
+                        <Plus className="mr-2 h-4 w-4" /> Otro ingreso
                     </Button>
                     <Button onClick={() => { setEditingExpense(null); setExpenseDialogOpen(true) }} className="bg-red-500 hover:bg-red-600 text-white font-bold shadow-md">
                         <Plus className="mr-2 h-4 w-4" /> 📝 Registrar Gasto
@@ -420,6 +424,7 @@ export default function FinancePage() {
                                                         </div>
                                                         <div>
                                                             <div className="font-bold text-sm text-slate-900 max-w-[250px] truncate">{tx.concept}</div>
+                                                            {tx.childName && <div className="text-xs font-medium text-slate-600">{tx.childName}</div>}
                                                             <div className="text-[10px] text-slate-400">{tx.id.slice(0, 8)}</div>
                                                         </div>
                                                     </div>
@@ -434,12 +439,10 @@ export default function FinancePage() {
                                                 </TableCell>
                                                 <TableCell className="text-right pr-6">
                                                     {tx.paymentId && ['pending', 'overdue', 'failed'].includes(tx.status) ? (
-                                                        <Button size="sm" className="h-8 bg-green-500 hover:bg-green-600 text-white text-xs font-bold" disabled={markingId === tx.paymentId} onClick={() => handlePaymentStatus(tx.paymentId!, 'paid')}>
-                                                            {markingId === tx.paymentId ? <Loader2 className="h-3 w-3 animate-spin" /> : '✓ Cobrar'}
-                                                        </Button>
+                                                        <CollectReceiptDialog paymentId={tx.paymentId} onSaved={async () => { await Promise.all([fetchAll(), fetchPaymentGrid()]) }} />
                                                     ) : tx.paymentId && tx.status === 'paid' ? (
                                                         <Button size="sm" variant="ghost" className="h-8 text-[10px] text-slate-400 hover:text-amber-600" disabled={markingId === tx.paymentId} onClick={() => handlePaymentStatus(tx.paymentId!, 'pending')}>
-                                                            <RotateCcw className="h-3 w-3 mr-1" /> Deshacer
+                                                            <RotateCcw className="h-3 w-3 mr-1" /> Reabrir recibo
                                                         </Button>
                                                     ) : <span className="text-slate-300">—</span>}
                                                     {tx.paymentId && tx.manualManageable && <ManualPaymentEditor paymentId={tx.paymentId} onSaved={async () => { await Promise.all([fetchAll(), fetchPaymentGrid()]) }} />}
@@ -462,9 +465,7 @@ export default function FinancePage() {
                                 <p className="text-lg font-black text-slate-900 capitalize">Cobros de {monthLabel}</p>
                                 <p className="text-xs text-slate-500">Solo aparecen recibos con vencimiento en este periodo.</p>
                             </div>
-                            <Button onClick={() => setManualPaymentOpen(true)} className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold">
-                                <Plus className="mr-2 h-4 w-4" /> Registrar Pago Manual
-                            </Button>
+                            <CollectReceiptDialog onSaved={async () => { await Promise.all([fetchAll(), fetchPaymentGrid()]) }} />
                         </div>
 
                         {/* Collection Progress */}
@@ -578,21 +579,16 @@ export default function FinancePage() {
                                                         <Badge className="bg-red-100 text-red-700 border-none text-[10px]"><AlertCircle className="h-3 w-3 mr-1" /> Vencido</Badge>
                                                     ) : row.status === 'failed' ? (
                                                         <Badge className="bg-red-100 text-red-700 border-none text-[10px]"><AlertCircle className="h-3 w-3 mr-1" /> Fallido</Badge>
+                                                    ) : row.status === 'cancelled' || row.status === 'refunded' ? (
+                                                        <Badge variant="outline">{row.status === 'cancelled' ? 'Anulado' : 'Reembolsado'}</Badge>
                                                     ) : (
                                                         <Badge className="bg-amber-100 text-amber-700 border-none text-[10px]"><AlertCircle className="h-3 w-3 mr-1" /> Pendiente</Badge>
                                                     )}
                                                 </TableCell>
                                                 <TableCell className="text-right pr-6">
-                                                    {row.status !== 'paid' ? (
-                                                        <Button
-                                                            size="sm"
-                                                            className="text-xs bg-green-500 hover:bg-green-600 text-white font-bold h-8"
-                                                            disabled={markingId === row.paymentId}
-                                                            onClick={() => handlePaymentStatus(row.paymentId, 'paid')}
-                                                        >
-                                                            {markingId === row.paymentId ? <Loader2 className="h-3 w-3 animate-spin" /> : <>✓ Cobrar</>}
-                                                        </Button>
-                                                    ) : (
+                                                    {['pending', 'overdue', 'failed'].includes(row.status) ? (
+                                                        <CollectReceiptDialog paymentId={row.paymentId} onSaved={async () => { await Promise.all([fetchAll(), fetchPaymentGrid()]) }} />
+                                                    ) : row.status === 'paid' ? (
                                                         <div className="flex items-center justify-end gap-2">
                                                             <span className="text-[10px] text-green-500">{row.paidAt ? new Date(row.paidAt).toLocaleDateString('es-ES') : 'Cobrado'}</span>
                                                             <Button
@@ -602,10 +598,10 @@ export default function FinancePage() {
                                                                 disabled={markingId === row.paymentId}
                                                                 onClick={() => handlePaymentStatus(row.paymentId, 'pending')}
                                                             >
-                                                                <RotateCcw className="h-3 w-3 mr-1" /> Deshacer
+                                                                <RotateCcw className="h-3 w-3 mr-1" /> Reabrir recibo
                                                             </Button>
                                                         </div>
-                                                    )}
+                                                    ) : <span className="text-slate-400">Sin cobro pendiente</span>}
                                                 </TableCell>
                                             </TableRow>
                                         ))}
@@ -687,7 +683,7 @@ export default function FinancePage() {
                             <CreditCard className="h-6 w-6 text-black" />
                         </div>
                         <DialogTitle className="text-lg font-black text-black tracking-tight uppercase">
-                            Registrar Ingreso
+                            Registrar otro ingreso
                         </DialogTitle>
                     </div>
                     <form onSubmit={handleManualPayment} className="p-5 space-y-4">
@@ -730,7 +726,8 @@ export default function FinancePage() {
                                 {paymentMethods.map((method) => <option key={method.value} value={method.value}>{method.label}</option>)}
                             </select>
                         </div>
-                        <p className="text-[10px] text-slate-400">Para cobrar una cuota existente usa el botón “Cobrar”; este formulario registra ingresos extraordinarios sin duplicar recibos.</p>
+                        <p className="text-sm text-amber-800">Para mensualidades, campus o torneos pendientes utiliza «Registrar cobro». Este formulario crea un ingreso nuevo y no liquida recibos existentes.</p>
+                        <label className="flex gap-2 text-sm"><input name="independent_income" type="checkbox" required />Confirmo que es un ingreso independiente, no el pago de un recibo ya creado.</label>
                         <div className="pt-3 flex justify-end gap-3 border-t">
                             <Button type="button" variant="ghost" onClick={() => setManualPaymentOpen(false)}>Cancelar</Button>
                             <Button type="submit" disabled={savingManual} className="bg-green-600 hover:bg-green-700 text-white font-bold px-6">

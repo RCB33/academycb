@@ -25,6 +25,7 @@ const ManualPaymentSchema = z.object({
     method: PaymentMethodSchema,
     description: z.string().trim().min(3).max(240),
     date: z.string().date(),
+    independent_income: z.boolean().default(false),
 })
 
 export type FinanceTransactionStatus = 'paid' | 'pending' | 'overdue' | 'cancelled' | 'refunded' | 'failed'
@@ -40,6 +41,7 @@ export type FinanceTransaction = {
     method?: string | null
     paymentId?: string
     manualManageable?: boolean
+    childName?: string
 }
 
 export type FinanceKPIs = {
@@ -285,6 +287,7 @@ export async function getFinanceOverview(monthInput: string): Promise<{
                 date: financialDate,
                 method: payment.method,
                 paymentId: payment.id,
+                childName: child?.full_name,
                 manualManageable: role === 'admin' && !payment.ref_id && !payment.stripe_payment_intent_id && !payment.stripe_invoice_id && ['cash', 'efectivo', 'transfer', 'transferencia'].includes(payment.method || ''),
             })
         }
@@ -406,8 +409,7 @@ export async function getMonthlyPaymentGrid(monthInput: string): Promise<Monthly
     const [{ data: memberships, error: membershipError }, { data: graceSetting }] = await Promise.all([
         supabase
         .from('academy_memberships')
-        .select('id, child_id, payment_method, status, child:children(id, full_name, category:categories(name)), plan:membership_plans(name)')
-        .eq('status', 'active'),
+        .select('id, child_id, payment_method, status, child:children(id, full_name, category:categories(name)), plan:membership_plans(name)'),
         supabase.from('academy_settings').select('value').eq('key', 'billing_grace_days').maybeSingle(),
     ])
 
@@ -467,9 +469,10 @@ async function syncAcademyMembership(supabase: SupabaseClient, membershipId: str
     if (!receipts?.length) return
 
     const cutoff = overdueCutoff(Number(graceSetting?.value || 0))
-    const paymentStatus = receipts.every((receipt) => receipt.status === 'paid')
+    const outstanding = receipts.filter(receipt => !['cancelled', 'refunded'].includes(receipt.status))
+    const paymentStatus = outstanding.length > 0 && outstanding.every((receipt) => receipt.status === 'paid')
         ? 'paid'
-        : receipts.some((receipt) => receipt.status === 'pending' && receipt.due_date && receipt.due_date < cutoff)
+        : outstanding.some((receipt) => ['pending', 'failed'].includes(receipt.status) && receipt.due_date && receipt.due_date < cutoff)
             ? 'overdue'
             : 'pending'
 
@@ -480,11 +483,12 @@ export async function setPaymentStatus(paymentId: string, statusInput: 'paid' | 
     const parsedId = z.string().uuid().safeParse(paymentId)
     const parsedStatus = PaymentStatusSchema.safeParse(statusInput)
     if (!parsedId.success || !parsedStatus.success) return { success: false, error: 'Cobro no válido' }
+    if (statusInput === 'paid') return { success: false, error: 'Usa Registrar cobro para indicar la fecha y el método de pago' }
 
     const { supabase } = await requireFinanceAccess()
     const { data: payment, error: readError } = await supabase
         .from('payments')
-        .select('id, type, ref_id, status, method, stripe_payment_intent_id, stripe_invoice_id')
+        .select('id, type, ref_id, status, method, stripe_payment_intent_id, stripe_invoice_id, updated_at')
         .eq('id', parsedId.data)
         .single()
 
@@ -493,7 +497,7 @@ export async function setPaymentStatus(paymentId: string, statusInput: 'paid' | 
         return { success: false, error: 'No se puede reabrir un cobro anulado, reembolsado o gestionado por Stripe' }
     }
 
-    const { error } = await supabase
+    const { data: changed, error } = await supabase
         .from('payments')
         .update({
             status: parsedStatus.data,
@@ -501,12 +505,45 @@ export async function setPaymentStatus(paymentId: string, statusInput: 'paid' | 
             updated_at: new Date().toISOString(),
         })
         .eq('id', parsedId.data)
+        .eq('updated_at', payment.updated_at)
+        .eq('status', 'paid')
+        .select('id')
 
-    if (error) return { success: false, error: 'No se pudo actualizar el cobro' }
+    if (error || !changed?.length) return { success: false, error: 'No se pudo actualizar: recarga los datos del cobro' }
     if (payment.type === 'academy' && payment.ref_id) await syncAcademyMembership(supabase, payment.ref_id)
 
     revalidatePath('/admin/finanzas')
     revalidatePath('/admin/crm/alumnos')
+    return { success: true }
+}
+
+export async function getReceiptsToCollect() {
+    const { supabase } = await requireFinanceAccess()
+    const { data, error } = await supabase.from('payments')
+        .select('id, child_id, description, type, amount, due_date, updated_at, child:children(full_name)')
+        .in('status', ['pending', 'failed']).is('stripe_payment_intent_id', null).is('stripe_invoice_id', null)
+        .order('due_date', { ascending: true })
+    if (error) throw new Error('No se pudieron cargar los recibos')
+    return (data || []).map(p => ({ ...p, childName: (p.child as unknown as { full_name: string } | null)?.full_name || 'Sin jugador vinculado' }))
+}
+
+export async function collectExistingReceipt(input: { id: string; version: string; date: string; method: string }) {
+    const { supabase } = await requireFinanceAccess()
+    const parsed = z.object({ id: z.string().uuid(), version: z.string().datetime({ offset: true }), date: z.string().date(), method: z.enum(['cash', 'transfer']) }).safeParse(input)
+    if (!parsed.success) return { success: false, error: 'Revisa el recibo, fecha y método' }
+    const p = parsed.data
+    const { data: config, error: configError } = await supabase.from('academy_settings').select('value').eq('key', p.method === 'cash' ? 'payment_cash_enabled' : 'payment_transfer_enabled').maybeSingle()
+    if (configError || config?.value === 'false') return { success: false, error: 'Este método de pago no está disponible' }
+    // Atomic compare-and-swap: no insert, no amount/due-date changes, no double collection.
+    // Existing DB guards reject an active Stripe checkout or subscription contract.
+    const { data, error } = await supabase.from('payments').update({ status: 'paid', method: p.method, paid_at: `${p.date}T12:00:00.000Z`, updated_at: new Date().toISOString() })
+        .eq('id', p.id).eq('updated_at', p.version).in('status', ['pending', 'failed'])
+        .is('stripe_payment_intent_id', null).is('stripe_invoice_id', null).select('id')
+    if (error) return { success: false, error: 'No se pudo registrar. Si hay un cobro de Stripe en curso, cancélalo antes de cobrar manualmente.' }
+    if (!data?.length) return { success: false, error: 'El recibo ya está cobrado o ha cambiado. Vuelve a abrir el listado.' }
+    revalidatePath('/admin/finanzas')
+    revalidatePath('/admin/crm/alumnos')
+    revalidatePath('/portal/pagos')
     return { success: true }
 }
 
@@ -551,11 +588,13 @@ export async function recordManualPayment(input: {
     method: string
     description: string
     date: string
+    independent_income?: boolean
 }) {
     const parsed = ManualPaymentSchema.safeParse(input)
     if (!parsed.success) return { success: false, error: 'Revisa la fecha, el importe y la descripción' }
 
     const { supabase } = await requireFinanceAccess()
+    if (!parsed.data.independent_income) return { success: false, error: 'Confirma que es un ingreso independiente. Para mensualidades usa Registrar cobro y selecciona el recibo.' }
     const methodSetting = ['cash', 'efectivo'].includes(parsed.data.method)
         ? 'payment_cash_enabled'
         : ['transfer', 'transferencia'].includes(parsed.data.method)
