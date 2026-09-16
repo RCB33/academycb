@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { correctManualPayment, getManualPaymentDetails } from '@/app/actions/finance'
+import { correctManualPayment, getManualPaymentDetails, reassignManualPayment } from '@/app/actions/finance'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -14,7 +14,7 @@ export function ManualPaymentEditor({ paymentId, onSaved }: { paymentId: string;
     const [open, setOpen] = useState(false)
     const [details, setDetails] = useState<Details | null>(null)
     const [busy, setBusy] = useState(false)
-    const [action, setAction] = useState<'edit' | 'cancel'>('edit')
+    const [action, setAction] = useState<'edit' | 'cancel' | 'reassign'>('edit')
 
     async function load() {
         setOpen(true)
@@ -30,7 +30,7 @@ export function ManualPaymentEditor({ paymentId, onSaved }: { paymentId: string;
         const form = new FormData(event.currentTarget)
         setBusy(true)
         try {
-            const result = await correctManualPayment({
+            const result = action === 'reassign' ? await reassignManualPayment({ id: paymentId, version: details.payment.updated_at, childId: String(form.get('child_id') || ''), reason: String(form.get('reason') || '') }) : await correctManualPayment({
                 id: paymentId, version: details.payment.updated_at, action,
                 reason: String(form.get('reason') || ''),
                 ...(action === 'edit' ? {
@@ -60,6 +60,7 @@ export function ManualPaymentEditor({ paymentId, onSaved }: { paymentId: string;
                             <div className="flex flex-wrap gap-2">
                                 <Button type="button" variant={action === 'edit' ? 'default' : 'outline'} onClick={() => setAction('edit')}>Editar pago</Button>
                                 <Button type="button" variant={action === 'cancel' ? 'destructive' : 'outline'} onClick={() => setAction('cancel')}>Anular duplicado</Button>
+                                <Button type="button" variant={action === 'reassign' ? 'default' : 'outline'} onClick={() => setAction('reassign')}>Cambiar jugador</Button>
                             </div>
                             {action === 'edit' ? <>
                                 <label className="block text-sm">Concepto<Input name="description" required minLength={3} maxLength={240} defaultValue={details.payment.description || ''} /></label>
@@ -68,7 +69,7 @@ export function ManualPaymentEditor({ paymentId, onSaved }: { paymentId: string;
                                     <label className="block text-sm">Fecha<Input name="date" type="date" required defaultValue={(details.payment.paid_at || details.payment.due_date || '').slice(0, 10)} /></label>
                                 </div>
                                 <label className="block text-sm">Método<select name="method" className="mt-1 h-10 w-full rounded-md border px-3" defaultValue={['cash', 'efectivo'].includes(details.payment.method) ? 'cash' : 'transfer'}><option value="cash">Efectivo</option><option value="transfer">Transferencia</option></select></label>
-                            </> : <div className="rounded-md bg-amber-50 p-3 text-sm text-amber-950">
+                            </> : action === 'reassign' ? <div className="space-y-2 text-sm"><p>Solo cambia el jugador asociado a este ingreso independiente. No liquida ninguna mensualidad ni modifica su importe.</p><label className="block">Jugador correcto<select name="child_id" required defaultValue={details.payment.child_id || ''} className="mt-1 w-full rounded border p-2"><option value="">Selecciona jugador</option>{details.students.map(student => <option key={student.id} value={student.id}>{student.full_name}</option>)}</select></label><label className="flex gap-2"><input type="checkbox" required />He comprobado el jugador correcto; cambiará la familia que puede ver este ingreso.</label></div> : <div className="rounded-md bg-amber-50 p-3 text-sm text-amber-950">
                                 No se borrará el registro ni se devolverá dinero. Dejará de contar como ingreso y como deuda pendiente.
                                 <label className="mt-3 flex items-start gap-2"><input type="checkbox" required className="mt-1" />Confirmo que este registro es un duplicado o un ingreso introducido por error.</label>
                             </div>}
@@ -86,7 +87,7 @@ export function ManualPaymentEditor({ paymentId, onSaved }: { paymentId: string;
                                 <p className="font-medium">{entry.reason}</p>
                                 <p className="text-xs text-slate-500">{new Date(entry.changed_at).toLocaleString('es-ES')} · Usuario {entry.actor_id?.slice(0, 8) || 'Sistema'}</p>
                                 <p>{money(before.amount)} → {money(after.amount)} · {String(before.status)} → {String(after.status)}</p>
-                                {['description', 'method', 'due_date'].filter(key => before[key] !== after[key]).map(key => <p key={key} className="break-words">{String(before[key] || '—')} → {String(after[key] || '—')}</p>)}
+                                {['description', 'method', 'due_date', 'child_id'].filter(key => before[key] !== after[key]).map(key => <p key={key} className="break-words">{key === 'child_id' ? 'Jugador: ' : ''}{key === 'child_id' ? details.students.find(s => s.id === before[key])?.full_name || String(before[key] || 'Sin asignar') : String(before[key] || '—')} → {key === 'child_id' ? details.students.find(s => s.id === after[key])?.full_name || String(after[key] || 'Sin asignar') : String(after[key] || '—')}</p>)}
                             </div>
                         })}
                     </section>

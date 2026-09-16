@@ -20,13 +20,15 @@ export async function RecentActivity() {
         .select('*')
         .order('created_at', { ascending: false })
         .limit(5)
+    const { data: batches } = await supabase.from('manual_collection_batches').select('id,total,created_at,voided_at').order('created_at', { ascending: false }).limit(5)
 
     // Normalize and merge
     const activity = [
+        ...(batches || []).map(b => ({ type: 'payment', id: b.id, title: `Cobro registrado: ${b.total} €`, subtitle: b.voided_at ? 'Anulado con historial' : 'Abonos asignados a recibos', date: new Date(b.created_at), status: b.voided_at ? 'Anulado' : 'paid', amount: b.total })),
         ...(payments || []).map(p => ({
             type: 'payment',
             id: p.id,
-            title: `Pago recibido: ${p.amount} €`,
+            title: `Recibo: ${p.amount} €`,
             subtitle: p.status === 'completed' || p.status === 'paid' ? 'Completado' : 'Pendiente',
             date: new Date(p.created_at),
             status: p.status,

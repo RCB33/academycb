@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { CreditCard, Euro, Clock, CheckCircle2, AlertCircle, ArrowRight } from "lucide-react"
 import Link from "next/link"
 import { getBillingSuffix, normalizeBillingFrequency } from "@/lib/membership-billing"
+import { receiptBalance } from '@/lib/receipt-balance'
 
 type PaymentsData = {
     memberships: any[]
@@ -17,8 +18,8 @@ export function PaymentsList({ paymentsData, plans, childId, onRefresh }: {
     const { memberships, payments } = paymentsData
 
     // Stats
-    const totalPaid = payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + (p.amount || 0), 0)
-    const totalPending = payments.filter(p => ['pending', 'failed'].includes(p.status)).reduce((sum, p) => sum + Number(p.amount || 0), 0)
+    const totalPaid = payments.reduce((sum, p) => sum + receiptBalance(p).paid, 0)
+    const totalPending = payments.reduce((sum, p) => sum + receiptBalance(p).remaining, 0)
     const paidCount = payments.filter(p => p.status === 'paid').length
     const pendingCount = payments.filter(p => ['pending', 'failed'].includes(p.status)).length
 
@@ -105,6 +106,7 @@ export function PaymentsList({ paymentsData, plans, childId, onRefresh }: {
                                     <div>
                                         <p className="font-bold text-xs text-slate-900">{p.description || `Pago ${p.type}`}</p>
                                         <Badge variant="outline">{{ paid: 'Pagado', pending: 'Pendiente', failed: 'Fallido', cancelled: 'Anulado', refunded: 'Reembolsado' }[p.status as string] || p.status}</Badge>
+                                        <p className="text-xs">Abonado: {receiptBalance(p).paid.toFixed(2)} € · Pendiente: {receiptBalance(p).remaining.toFixed(2)} €</p>
                                         <p className="text-[10px] text-slate-400">
                                             {['cash', 'efectivo'].includes(p.method) ? '💵 Efectivo' : ['transfer', 'transferencia'].includes(p.method) ? '🏦 Transfer.' : '💳 Tarjeta'}
                                             {p.paid_at && ` • Cobrado ${new Date(p.paid_at).toLocaleDateString()}`}

@@ -3,6 +3,7 @@ import { Receipt, Calendar, CreditCard, ShoppingBag, GraduationCap, Tent, Trophy
 import { Card, CardContent } from '@/components/ui/card'
 import { redirect } from 'next/navigation'
 import { PortalPageHeader } from '@/components/portal/portal-page-header'
+import { receiptBalance } from '@/lib/receipt-balance'
 
 export default async function PagosPage() {
     const supabase = await createClient()
@@ -24,7 +25,7 @@ export default async function PagosPage() {
     if (childIds.length > 0) {
         const { data: payments } = await supabase
             .from('payments')
-            .select('*')
+            .select('*, manual_receipt_allocations(amount,paid_date,method,voided_at)')
             .in('child_id', childIds)
         academyPayments = payments || []
     }
@@ -42,6 +43,7 @@ export default async function PagosPage() {
             type: p.type || 'academy', // academy, campus, tournament, other
             title: p.description || 'Cuota de Academia',
             amount: p.amount,
+            balance: receiptBalance(p),
             status: p.status,
             date: p.created_at,
             method: p.method || 'transferencia',
@@ -99,7 +101,7 @@ export default async function PagosPage() {
                                             <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
                                                 {tx.title}
                                                 <span className={`text-[10px] uppercase font-black px-2 py-0.5 rounded-full tracking-wider ${tx.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                                                    {tx.status === 'paid' ? 'Pagado' : 'Pendiente'}
+                                                    {tx.balance?.partial ? 'Pago parcial' : tx.status === 'paid' ? 'Pagado' : tx.status === 'cancelled' ? 'Anulado' : tx.status === 'refunded' ? 'Reembolsado' : 'Pendiente'}
                                                 </span>
                                             </h3>
                                             <div className="flex flex-wrap items-center text-sm font-medium text-slate-500 mt-1 gap-x-4 gap-y-2">
@@ -125,15 +127,16 @@ export default async function PagosPage() {
                                     </div>
                                     
                                     <div className="mt-6 sm:mt-0 pt-4 sm:pt-0 border-t sm:border-t-0 sm:border-l border-slate-100 sm:pl-6 flex flex-col items-end sm:items-center justify-center w-full sm:w-auto shrink-0 min-w-[140px]">
-                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 w-full text-right sm:text-center">Total abonado</p>
-                                        <div className="text-3xl font-black text-slate-900 tracking-tight w-full text-right sm:text-center">{tx.amount?.toFixed(2)} €</div>
+                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 w-full text-right sm:text-center">Importe del recibo</p>
+                                        <div className="text-3xl font-black text-slate-900 tracking-tight w-full text-right sm:text-center">{Number(tx.amount).toFixed(2)} €</div>
+                                        {tx.balance && <div className="mt-2 text-sm"><p className="text-green-700">Abonado: {tx.balance.paid.toFixed(2)} €</p><p className="text-amber-800">Pendiente: {tx.balance.remaining.toFixed(2)} €</p></div>}
                                         
                                         {tx.isStore && (
                                             <a href="/portal/tienda" className="mt-3 flex w-full items-center justify-center rounded-md bg-gold/10 py-2 text-xs font-bold text-navy transition-colors hover:bg-gold/20">
                                                 Volver a Tienda
                                             </a>
                                         )}
-                                        {!tx.isStore && tx.status !== 'paid' && (
+                                        {!tx.isStore && !['paid','cancelled','refunded'].includes(tx.status) && (
                                             <div className="mt-3 flex w-full items-center justify-center rounded-md bg-amber-50 py-2 text-xs font-bold text-amber-700">
                                                 Pendiente de gestión
                                             </div>

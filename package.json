@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test:payments": "node scripts/test-finance-collection.cjs",
+    "test:payments": "node scripts/test-finance-collection.cjs && node scripts/test-receipt-balance.cjs && node scripts/test-finance-allocation-totals.cjs",
     "test": "npm run lint && npm run typecheck",
     "verify": "npm run test && npm run build",
     "production:check": "node scripts/check-production.mjs"

@@ -32,6 +32,7 @@ import {
 import { toast } from "sonner"
 import { ManualPaymentEditor } from '@/components/admin/manual-payment-editor'
 import { CollectReceiptDialog } from '@/components/admin/collect-receipt-dialog'
+import { ReceiptCollectionHistory } from '@/components/admin/receipt-collection-history'
 import { getPaymentConfiguration, type PaymentMethodOption } from '@/app/actions/settings'
 
 const TYPE_CFG: Record<string, { label: string, icon: React.ReactNode, color: string }> = {
@@ -133,8 +134,8 @@ export default function FinancePage() {
         return result
     }, [paymentGrid, cobrosSearch, cobrosFilter])
 
-    const gridPaidTotal = paymentGrid.filter(g => g.status === 'paid').reduce((sum, g) => sum + (g.amount || 0), 0)
-    const gridPendingTotal = paymentGrid.filter(g => ['pending', 'overdue', 'failed'].includes(g.status)).reduce((sum, g) => sum + (g.amount || 0), 0)
+    const gridPaidTotal = paymentGrid.reduce((sum, g) => sum + g.paidAmount, 0)
+    const gridPendingTotal = paymentGrid.reduce((sum, g) => sum + g.remainingAmount, 0)
     const gridTotalAmount = gridPaidTotal + gridPendingTotal
     const gridPaidPct = gridTotalAmount > 0 ? Math.round((gridPaidTotal / gridTotalAmount) * 100) : 0
 
@@ -440,12 +441,13 @@ export default function FinancePage() {
                                                 <TableCell className="text-right pr-6">
                                                     {tx.paymentId && ['pending', 'overdue', 'failed'].includes(tx.status) ? (
                                                         <CollectReceiptDialog paymentId={tx.paymentId} onSaved={async () => { await Promise.all([fetchAll(), fetchPaymentGrid()]) }} />
-                                                    ) : tx.paymentId && tx.status === 'paid' ? (
+                                                    ) : tx.paymentId && tx.status === 'paid' && !tx.allocationPaymentId ? (
                                                         <Button size="sm" variant="ghost" className="h-8 text-[10px] text-slate-400 hover:text-amber-600" disabled={markingId === tx.paymentId} onClick={() => handlePaymentStatus(tx.paymentId!, 'pending')}>
                                                             <RotateCcw className="h-3 w-3 mr-1" /> Reabrir recibo
                                                         </Button>
                                                     ) : <span className="text-slate-300">—</span>}
                                                     {tx.paymentId && tx.manualManageable && <ManualPaymentEditor paymentId={tx.paymentId} onSaved={async () => { await Promise.all([fetchAll(), fetchPaymentGrid()]) }} />}
+                                                    {tx.allocationPaymentId && <ReceiptCollectionHistory paymentId={tx.allocationPaymentId} onSaved={async () => { await Promise.all([fetchAll(), fetchPaymentGrid()]) }} />}
                                                 </TableCell>
                                             </TableRow>
                                         )
@@ -571,8 +573,9 @@ export default function FinancePage() {
                                                     </span>
                                                 </TableCell>
                                                 <TableCell className="text-xs text-slate-500">{row.dueDate ? new Date(`${row.dueDate}T12:00:00`).toLocaleDateString('es-ES') : '—'}</TableCell>
-                                                <TableCell><span className="font-black text-sm text-slate-900">{row.amount}€</span></TableCell>
+                                                <TableCell><span className="font-black text-sm text-slate-900">{row.amount}€</span><p className="text-xs text-green-700">Abonado: {row.paidAmount.toFixed(2)} €</p><p className="text-xs text-amber-800">Pendiente: {row.remainingAmount.toFixed(2)} €</p></TableCell>
                                                 <TableCell>
+                                                    {row.paidAmount > 0 && row.remainingAmount > 0 && <Badge variant="outline">Pago parcial</Badge>}
                                                     {row.status === 'paid' ? (
                                                         <Badge className="bg-green-100 text-green-700 border-none text-[10px]"><CheckCircle2 className="h-3 w-3 mr-1" /> Pagado</Badge>
                                                     ) : row.status === 'overdue' ? (
@@ -591,7 +594,7 @@ export default function FinancePage() {
                                                     ) : row.status === 'paid' ? (
                                                         <div className="flex items-center justify-end gap-2">
                                                             <span className="text-[10px] text-green-500">{row.paidAt ? new Date(row.paidAt).toLocaleDateString('es-ES') : 'Cobrado'}</span>
-                                                            <Button
+                                                            {!row.hasAllocations && <Button
                                                                 size="sm"
                                                                 variant="ghost"
                                                                 className="h-7 px-2 text-[10px] text-slate-400 hover:text-amber-600"
@@ -599,9 +602,10 @@ export default function FinancePage() {
                                                                 onClick={() => handlePaymentStatus(row.paymentId, 'pending')}
                                                             >
                                                                 <RotateCcw className="h-3 w-3 mr-1" /> Reabrir recibo
-                                                            </Button>
+                                                            </Button>}
                                                         </div>
                                                     ) : <span className="text-slate-400">Sin cobro pendiente</span>}
+                                                    {row.hasAllocations && <ReceiptCollectionHistory paymentId={row.paymentId} onSaved={async () => { await Promise.all([fetchAll(), fetchPaymentGrid()]) }} />}
                                                 </TableCell>
                                             </TableRow>
                                         ))}

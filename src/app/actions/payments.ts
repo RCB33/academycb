@@ -18,7 +18,7 @@ export async function getStudentPayments(childId: string) {
     // Fetch individual payments from payments table
     const { data: paymentRecords } = await supabase
         .from('payments')
-        .select('*')
+        .select('*, manual_receipt_allocations(id,batch_id,amount,paid_date,method,voided_at)')
         .eq('child_id', childId)
         .order('created_at', { ascending: false })
 

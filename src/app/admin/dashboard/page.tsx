@@ -20,17 +20,13 @@ export default async function AdminDashboard() {
     const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString()
     const endOfPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59).toISOString()
 
-    const { data: paidPayments } = await supabase
+    const { data: receipts } = await supabase
         .from('payments')
-        .select('amount, paid_at, created_at')
-        .eq('status', 'paid')
-    
-    const { data: prevMonthPayments } = await supabase
-        .from('payments')
-        .select('amount')
-        .eq('status', 'paid')
-        .gte('paid_at', startOfPrevMonth)
-        .lte('paid_at', endOfPrevMonth)
+        .select('amount, status, paid_at, created_at, manual_receipt_allocations(amount,paid_date,voided_at)')
+    const paidPayments = (receipts || []).flatMap(p => p.manual_receipt_allocations.length
+        ? p.manual_receipt_allocations.filter(a => !a.voided_at).map(a => ({ amount: a.amount, paid_at: `${a.paid_date}T12:00:00Z`, created_at: p.created_at }))
+        : p.status === 'paid' ? [{ amount: p.amount, paid_at: p.paid_at, created_at: p.created_at }] : [])
+    const prevMonthPayments = paidPayments.filter(p => p.paid_at && p.paid_at >= startOfPrevMonth && p.paid_at <= endOfPrevMonth)
 
     const totalRevenueSum = paidPayments?.reduce((acc, curr) => acc + Number(curr.amount), 0) || 0
     const currentMonthSum = paidPayments

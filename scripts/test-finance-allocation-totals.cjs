@@ -1,0 +1,11 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),ts=require('typescript')
+const allocation=(id,amount,date)=>({id,batch_id:id,amount,paid_date:date,method:'cash',voided_at:null})
+const base={type:'academy',ref_id:null,child_id:'child',description:'Quota',method:'cash',due_date:'2026-09-01',created_at:'2026-09-01',child:{full_name:'QA'}}
+const payments=[
+ {...base,id:'a',amount:80,status:'paid',paid_at:'2026-10-02',manual_receipt_allocations:[allocation('a1',40,'2026-09-02'),allocation('a2',40,'2026-10-02')]},
+ {...base,id:'b',amount:100,status:'pending',manual_receipt_allocations:[allocation('b1',25,'2026-09-02'),{...allocation('b2',10,'2026-09-03'),voided_at:'2026-09-04'}]},
+ {...base,id:'c',amount:10,status:'paid',paid_at:'2026-09-02',manual_receipt_allocations:[]}
+]
+function from(table){const q={then(resolve,reject){return Promise.resolve({data:table==='payments'?payments:table==='academy_settings'?{value:'0'}:[],error:null}).then(resolve,reject)}};for(const m of ['select','eq','is','gte','lt','order','maybeSingle'])q[m]=()=>q;return q}
+function load(path){const m={exports:{}};new Function('module','exports','require',ts.transpileModule(fs.readFileSync(path,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText)(m,m.exports,n=>n==='next/cache'?{revalidatePath(){}}:n==='@/lib/auth'?{requireFinanceAccess:async()=>({supabase:{from},role:'admin'})}:n==='@/lib/receipt-balance'?load('src/lib/receipt-balance.ts'):require(n));return m.exports}
+;(async()=>{const {getFinanceOverview}=load('src/app/actions/finance.ts');const sept=await getFinanceOverview('2026-09');assert.equal(sept.kpis.totalRevenue,75);assert.equal(sept.kpis.pendingPayments,75);assert.equal(sept.transactions.filter(t=>t.status==='paid').reduce((s,t)=>s+t.amount,0),75);const oct=await getFinanceOverview('2026-10');assert.equal(oct.kpis.totalRevenue,40);assert.equal(oct.transactions.filter(t=>t.status==='paid').reduce((s,t)=>s+t.amount,0),40);console.log('PASS: partial revenue by actual receipt month, legacy revenue unchanged, no final-payment double count, voids excluded, remaining debt correct')})().catch(e=>{console.error(e);process.exitCode=1})
