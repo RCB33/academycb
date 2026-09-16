@@ -18,9 +18,9 @@ export function PaymentsList({ paymentsData, plans, childId, onRefresh }: {
 
     // Stats
     const totalPaid = payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + (p.amount || 0), 0)
-    const totalPending = payments.filter(p => p.status === 'pending').reduce((sum, p) => sum + (p.amount || 0), 0)
+    const totalPending = payments.filter(p => ['pending', 'failed'].includes(p.status)).reduce((sum, p) => sum + Number(p.amount || 0), 0)
     const paidCount = payments.filter(p => p.status === 'paid').length
-    const pendingCount = payments.filter(p => p.status === 'pending').length
+    const pendingCount = payments.filter(p => ['pending', 'failed'].includes(p.status)).length
 
     return (
         <div className="space-y-6">
@@ -104,8 +104,9 @@ export function PaymentsList({ paymentsData, plans, childId, onRefresh }: {
                                     )}
                                     <div>
                                         <p className="font-bold text-xs text-slate-900">{p.description || `Pago ${p.type}`}</p>
+                                        <Badge variant="outline">{{ paid: 'Pagado', pending: 'Pendiente', failed: 'Fallido', cancelled: 'Anulado', refunded: 'Reembolsado' }[p.status as string] || p.status}</Badge>
                                         <p className="text-[10px] text-slate-400">
-                                            {p.method === 'efectivo' ? '💵 Efectivo' : p.method === 'transferencia' ? '🏦 Transfer.' : '💳 Tarjeta'}
+                                            {['cash', 'efectivo'].includes(p.method) ? '💵 Efectivo' : ['transfer', 'transferencia'].includes(p.method) ? '🏦 Transfer.' : '💳 Tarjeta'}
                                             {p.paid_at && ` • Cobrado ${new Date(p.paid_at).toLocaleDateString()}`}
                                         </p>
                                     </div>
