@@ -11,6 +11,7 @@ create table public.children(id uuid primary key);
 create table public.child_guardians(child_id uuid,guardian_id uuid);
 create table public.academy_settings(key text,value text);
 create table public.payments(id uuid primary key default gen_random_uuid(),child_id uuid,ref_id uuid,method text,stripe_payment_intent_id text,stripe_invoice_id text,status text,amount numeric,description text,due_date date,paid_at timestamptz,updated_at timestamptz default clock_timestamp());
+alter table payments add constraint payments_method_check check(method in ('cash','transfer','stripe'));
 create table public.receipt_checkout_attempts(payment_id uuid,mode text,state text);
 create table public.academy_checkout_contracts(membership_id uuid,mode text,state text);
 grant usage on schema auth to authenticated;
@@ -18,6 +19,7 @@ grant select,update,insert on public.payments to authenticated;
 grant select on public.children to authenticated;
 \ir ../supabase/migrations/20260915164342_manual_payment_corrections.sql
 \ir ../supabase/migrations/20260916034936_manual_receipt_allocations.sql
+\ir ../supabase/migrations/20261011220243_karen_manual_methods.sql
 insert into auth.users values('00000000-0000-0000-0000-000000000001');
 insert into children values('10000000-0000-0000-0000-000000000001'),('10000000-0000-0000-0000-000000000002'),('10000000-0000-0000-0000-000000000003');
 insert into child_guardians select id,'20000000-0000-0000-0000-000000000001'::uuid from children where id::text like '%0001' or id::text like '%0002';

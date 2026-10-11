@@ -6,6 +6,13 @@ import { CreditCard, Euro, Clock, CheckCircle2, AlertCircle, ArrowRight } from "
 import Link from "next/link"
 import { getBillingSuffix, normalizeBillingFrequency } from "@/lib/membership-billing"
 import { receiptBalance } from '@/lib/receipt-balance'
+import { CollectReceiptDialog } from '@/components/admin/collect-receipt-dialog'
+import { PaymentReminderButton } from '@/components/admin/payment-reminder-button'
+import { CreateChargeDialog } from '@/components/admin/create-charge-dialog'
+import { paymentMethodLabel, PAYMENT_CONCEPTS } from '@/lib/payment-concepts'
+import { PlayerPaymentSummary } from '@/components/admin/player-payment-summary'
+import { ReceiptCollectionHistory } from '@/components/admin/receipt-collection-history'
+import { SharePaymentReceipt } from '@/components/admin/share-payment-receipt'
 
 type PaymentsData = {
     memberships: any[]
@@ -25,6 +32,7 @@ export function PaymentsList({ paymentsData, plans, childId, onRefresh }: {
 
     return (
         <div className="space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="font-bold">Pagos del jugador</h3><p className="text-sm text-slate-500">Registra uno o varios meses sobre sus recibos, sin duplicar ingresos.</p></div><CreateChargeDialog childId={childId} onSaved={onRefresh}/><CollectReceiptDialog childId={childId} onSaved={async () => { await onRefresh() }} /></div>
             {/* KPI Row */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div className="bg-green-50 rounded-xl p-3 border border-green-100">
@@ -51,6 +59,7 @@ export function PaymentsList({ paymentsData, plans, childId, onRefresh }: {
                 </div>
             </div>
 
+            <PlayerPaymentSummary payments={payments} />
             {/* Memberships */}
             {memberships.length > 0 && (
                 <div className="space-y-3">
@@ -105,10 +114,17 @@ export function PaymentsList({ paymentsData, plans, childId, onRefresh }: {
                                     )}
                                     <div>
                                         <p className="font-bold text-xs text-slate-900">{p.description || `Pago ${p.type}`}</p>
-                                        <Badge variant="outline">{{ paid: 'Pagado', pending: 'Pendiente', failed: 'Fallido', cancelled: 'Anulado', refunded: 'Reembolsado' }[p.status as string] || p.status}</Badge>
+                                        <Badge variant="outline">{p.status==='paid' && Number(p.amount)===0 && Number(p.discount_amount)>0 ? 'Bonificado' : receiptBalance(p).partial ? 'Pagado parcialmente' : ({ paid: 'Pagado', pending: 'Pendiente', failed: 'Fallido', cancelled: 'Anulado', refunded: 'Reembolsado' }[p.status as string] || p.status)}</Badge>
+                                        {p.concept_code && <p className="text-xs font-semibold">{PAYMENT_CONCEPTS[p.concept_code as keyof typeof PAYMENT_CONCEPTS]}{p.covered_month && ` · Mes cubierto: ${p.covered_month}`}</p>}
+                                        {p.promotion_label && <p className="text-xs">Promoción: {p.promotion_label} · Descuento: {Number(p.discount_amount).toFixed(2)} €</p>}
+                                        <p className="text-xs">Vencimiento: {p.due_date ? new Date(`${p.due_date}T12:00:00`).toLocaleDateString('es-ES') : 'Sin fecha'}</p>
                                         <p className="text-xs">Abonado: {receiptBalance(p).paid.toFixed(2)} € · Pendiente: {receiptBalance(p).remaining.toFixed(2)} €</p>
+                                        {['pending', 'failed'].includes(p.status) && receiptBalance(p).remaining > 0 && <PaymentReminderButton id={p.id} />}
+                                        <Button asChild size="sm" variant="outline"><a href={`/api/payments/${p.id}/receipt`} target="_blank" rel="noopener noreferrer">Descargar comprobante</a></Button>
+                                        <SharePaymentReceipt id={p.id}/>
+                                        {p.manual_receipt_allocations?.length>0 && <ReceiptCollectionHistory paymentId={p.id} onSaved={async()=>{await onRefresh()}}/>}
                                         <p className="text-[10px] text-slate-400">
-                                            {['cash', 'efectivo'].includes(p.method) ? '💵 Efectivo' : ['transfer', 'transferencia'].includes(p.method) ? '🏦 Transfer.' : '💳 Tarjeta'}
+                                            {paymentMethodLabel(p.method)}
                                             {p.paid_at && ` • Cobrado ${new Date(p.paid_at).toLocaleDateString()}`}
                                         </p>
                                     </div>

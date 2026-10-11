@@ -71,7 +71,7 @@ export default function SetPasswordPage() {
             if (!active) return
 
             setSessionReady(Boolean(session))
-            setIsWorkerAccess(Boolean(session?.user.user_metadata?.intended_role))
+            setIsWorkerAccess(['admin', 'coach', 'staff', 'finance', 'marketing'].includes(session?.user.user_metadata?.intended_role))
             setCheckingLink(false)
 
             if (session && (window.location.hash || code)) {

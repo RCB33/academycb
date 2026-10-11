@@ -46,3 +46,24 @@ No habilites políticas `using (true)` para tablas privadas. Los documentos, fir
 El proyecto es una aplicación Next.js estándar. En Vercel u otro proveedor compatible configura las cuatro variables de `.env.example`, usa `npm run build` como comando de construcción y sirve la aplicación con `npm run start` si el proveedor lo requiere.
 
 No hay pago online integrado: la tienda registra solicitudes de pedido pendientes para su gestión manual. No debe anunciarse como compra pagada hasta integrar una pasarela y sus webhooks.
+
+## Revisión de Karen (12 de octubre de 2026)
+
+- Tutores: enviar/repetir activación desde la ficha existente, sin recrear vínculos. Las cuentas bloqueadas o con email discrepante requieren revisión, no se desbloquean automáticamente.
+- Ficha del jugador > Pagos: crear cuotas por meses o conceptos únicos (matrícula, Plan Plus, equipación, campus, torneo, otros). Se guarda importe base, descuento y motivo. Una cuota totalmente bonificada no cuenta como dinero recibido.
+- Registrar pago: aplicar un importe recibido a uno o varios recibos; parciales y reparto entre hermanos se conservan. Transferencia, efectivo, Bizum o tarjeta externa son registros manuales, no cargos Stripe.
+- El resumen distingue meses sin cuota creada de deudas. No se infieren meses ni promociones de pagos históricos.
+- Recordatorios: prepara texto con saldo actualizado y enlaces a WhatsApp/correo. No envía automáticamente ni acredita entrega. Rechaza recibos saldados/anulados.
+- Comprobantes: PDF por recibo, incluyendo abonos y anulaciones. Compartir usa el selector del dispositivo cuando admite archivos; alternativamente descarga para adjuntarlo. No es factura fiscal ni envío automático por Resend.
+- Justificantes: privados, solo admin/finanzas; PDF/JPG/PNG hasta 3 MB, accesibles desde Abonos / historial. No se reemplazan archivos previos.
+- Entrenadores: jugadores/evaluaciones/observaciones de equipos asignados y avisos internos de coordinación. No acceden a finanzas. Avisos internos no copian mensajes históricos de familias ni envían email/WhatsApp.
+
+### Validación y límites
+
+`npm run test:karen` ejecuta pruebas sin red y sin correos reales. `node scripts/test-receipt-pdf.cjs` genera una muestra ficticia en `tmp/pdfs/` para inspección visual.
+
+Los scripts `scripts/test-manual-allocations.sql`, `scripts/test-karen-charges.sql`, `scripts/test-karen-coach.sql` y `scripts/test-karen-proofs.sql` son exclusivamente para una base PostgreSQL local vacía y desechable. Crean fixtures dentro de una transacción y la revierten. Nunca ejecutarlos en producción.
+
+Pendiente antes de anunciar pagos online: integrar la rama Stripe revisada módulo a módulo, probar Checkout + webhook + retorno con sesión + conciliación del mes, y comprobar altas/bajas y vencimiento de suscripciones. No activar claves/cobros reales por completar la gestión manual.
+
+Pendiente de negocio: confirmar promoción vigente e identificar los meses cubiertos por los anticipos históricos. No recalcular esos pagos sin indicación expresa. La configuración de precios de nuevas cuotas no corrige por sí sola recibos antiguos.

@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
     root: path.resolve('./'),
   },
   poweredByHeader: false,
+  experimental: { serverActions: { bodySizeLimit: '4mb' } },
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: '**.supabase.co' },

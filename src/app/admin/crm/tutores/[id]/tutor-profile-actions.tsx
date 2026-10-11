@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { MessageCircle } from "lucide-react"
 import { GuardianDialog } from '../components/guardian-dialog'
-import { ResetPasswordButton } from './reset-password-button'
+import { GuardianAccessButton } from '@/components/admin/guardian-access-button'
 
 interface Props {
     guardian: any
@@ -21,7 +21,7 @@ export function TutorProfileActions({ guardian }: Props) {
 
     return (
         <div className="flex gap-2 flex-wrap justify-end">
-            {guardian.user_id && <ResetPasswordButton userId={guardian.user_id} />}
+            <GuardianAccessButton id={guardian.id} hasAccount={Boolean(guardian.user_id)} email={guardian.email} />
 
             {guardian.phone && (
                 <Button variant="outline" className="text-green-600 border-green-200 bg-green-50 hover:bg-green-100" asChild>

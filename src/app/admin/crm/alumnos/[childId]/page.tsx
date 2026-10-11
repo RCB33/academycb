@@ -799,6 +799,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
                                         </div>
                                     </div>
 
+                                    <a href={`/coach/jugadores/${childId}`} className="inline-flex rounded border px-3 py-2 text-sm font-semibold">Ver observaciones del equipo técnico</a>
                                     {/* Notes Timeline */}
                                     <div className="space-y-4 relative pl-4">
                                         <div className="absolute left-[0.45rem] top-2 h-[calc(100%-1rem)] w-0.5 bg-slate-100"></div>

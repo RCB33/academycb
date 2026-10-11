@@ -730,7 +730,7 @@ export default function FinancePage() {
                                 {paymentMethods.map((method) => <option key={method.value} value={method.value}>{method.label}</option>)}
                             </select>
                         </div>
-                        <p className="text-sm text-amber-800">Para mensualidades, campus o torneos pendientes utiliza «Registrar cobro». Este formulario crea un ingreso nuevo y no liquida recibos existentes.</p>
+                        <p className="text-sm text-amber-800">Para mensualidades, campus o torneos pendientes utiliza «Registrar pago». Este formulario crea un ingreso nuevo y no liquida recibos existentes.</p>
                         <label className="flex gap-2 text-sm"><input name="independent_income" type="checkbox" required />Confirmo que es un ingreso independiente, no el pago de un recibo ya creado.</label>
                         <div className="pt-3 flex justify-end gap-3 border-t">
                             <Button type="button" variant="ghost" onClick={() => setManualPaymentOpen(false)}>Cancelar</Button>

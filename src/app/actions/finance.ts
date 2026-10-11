@@ -502,7 +502,7 @@ export async function setPaymentStatus(paymentId: string, statusInput: 'paid' | 
     const parsedId = z.string().uuid().safeParse(paymentId)
     const parsedStatus = PaymentStatusSchema.safeParse(statusInput)
     if (!parsedId.success || !parsedStatus.success) return { success: false, error: 'Cobro no válido' }
-    if (statusInput === 'paid') return { success: false, error: 'Usa Registrar cobro para indicar la fecha y el método de pago' }
+    if (statusInput === 'paid') return { success: false, error: 'Usa Registrar pago para indicar la fecha y el método de pago' }
 
     const { supabase } = await requireFinanceAccess()
     const { data: payment, error: readError } = await supabase
@@ -559,7 +559,7 @@ export async function collectExistingReceipt(input: { id: string; version: strin
 export async function collectManualBatch(input: { requestId: string; lines: { id: string; version: string; amount: number }[]; total: number; date: string; method: string; note: string }) {
     const { supabase } = await requireFinanceAccess()
     const money = z.number().finite().positive().max(1_000_000).refine(n => Math.abs(n * 100 - Math.round(n * 100)) < 0.00001)
-    const parsed = z.object({ requestId: z.string().uuid(), lines: z.array(z.object({ id: z.string().uuid(), version: z.string().datetime({ offset: true }), amount: money })).min(1).max(30), total: money, date: z.string().date(), method: z.enum(['cash', 'transfer']), note: z.string().trim().max(500) }).safeParse(input)
+    const parsed = z.object({ requestId: z.string().uuid(), lines: z.array(z.object({ id: z.string().uuid(), version: z.string().datetime({ offset: true }), amount: money })).min(1).max(30), total: money, date: z.string().date(), method: z.enum(['cash', 'transfer', 'bizum', 'external_card']), note: z.string().trim().max(500) }).safeParse(input)
     if (!parsed.success) return { success: false, error: 'Revisa el reparto, fecha y método. Usa importes con un máximo de dos decimales.' }
     const p = parsed.data
     if (p.lines.reduce((n, line) => n + Math.round(line.amount * 100), 0) !== Math.round(p.total * 100)) return { success: false, error: 'El reparto debe sumar exactamente el importe recibido' }
@@ -648,7 +648,7 @@ export async function recordManualPayment(input: {
     if (!parsed.success) return { success: false, error: 'Revisa la fecha, el importe y la descripción' }
 
     const { supabase } = await requireFinanceAccess()
-    if (!parsed.data.independent_income) return { success: false, error: 'Confirma que es un ingreso independiente. Para mensualidades usa Registrar cobro y selecciona el recibo.' }
+    if (!parsed.data.independent_income) return { success: false, error: 'Confirma que es un ingreso independiente. Para mensualidades usa Registrar pago y selecciona el recibo.' }
     const methodSetting = ['cash', 'efectivo'].includes(parsed.data.method)
         ? 'payment_cash_enabled'
         : ['transfer', 'transferencia'].includes(parsed.data.method)

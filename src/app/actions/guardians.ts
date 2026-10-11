@@ -3,6 +3,40 @@
 import { revalidatePath } from 'next/cache'
 import { requireAdmin } from '@/lib/auth'
 import { getAccessActivationStatuses } from '@/lib/auth/access-activation'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { z } from 'zod'
+
+/** Provision access on the existing contact. Never delete/recreate its child links. */
+export async function sendGuardianAccess(guardianId: string) {
+    const { supabase } = await requireAdmin()
+    if (!z.string().uuid().safeParse(guardianId).success) return { success: false, error: 'Tutor no válido' }
+    const { data: guardian, error } = await supabase.from('guardians').select('id,user_id,full_name,email').eq('id', guardianId).single()
+    if (error || !guardian || !z.string().email().safeParse(guardian.email).success) return { success: false, error: 'Completa un email válido en la ficha del tutor.' }
+    const admin = createAdminClient()
+    const email = guardian.email.trim().toLowerCase()
+    const site = process.env.NEXT_PUBLIC_SITE_URL
+    if (!site || !site.startsWith('https://')) return { success: false, error: 'Falta configurar la dirección segura del portal.' }
+    const redirectTo = `${site.replace(/\/$/, '')}/portal/establecer-contrasena`
+    if (guardian.user_id) {
+        const { data, error: lookupError } = await admin.auth.admin.getUserById(guardian.user_id)
+        if (lookupError || !data.user) return { success: false, error: 'No se ha encontrado la cuenta vinculada. Contacta con soporte sin borrar la ficha.' }
+        if (data.user.email?.toLowerCase() !== email) return { success: false, error: 'El email de la ficha no coincide con el de acceso. Revisa la cuenta antes de enviar.' }
+        if (data.user.banned_until && new Date(data.user.banned_until).getTime() > Date.now()) return { success: false, error: 'La cuenta está bloqueada. No se ha reactivado ni enviado ningún enlace.' }
+        const { error: sendError } = await admin.auth.resetPasswordForEmail(email, { redirectTo })
+        if (sendError) return { success: false, error: 'No se pudo enviar el enlace. Espera un minuto antes de reintentar.' }
+    } else {
+        const { data, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
+            data: { full_name: guardian.full_name, intended_role: 'guardian', password_set: false }, redirectTo,
+        })
+        if (inviteError || !data.user) return { success: false, error: 'No se pudo invitar. Si ese correo ya tiene cuenta, debe revisarse su vínculo; no borres ni dupliques el tutor.' }
+        // Compare-and-set: concurrent requests must never replace an existing account.
+        const { data: linked, error: linkError } = await supabase.from('guardians').update({ user_id: data.user.id }).eq('id', guardian.id).is('user_id', null).select('id').maybeSingle()
+        if (linkError || !linked) return { success: false, error: 'La invitación se creó, pero no se pudo confirmar el vínculo. Contacta con soporte antes de repetir.' }
+    }
+    revalidatePath('/admin/crm/tutores')
+    revalidatePath(`/admin/crm/tutores/${guardian.id}`)
+    return { success: true }
+}
 
 export async function getGuardians() {
     const { supabase } = await requireAdmin()

@@ -128,7 +128,7 @@ export default async function CoachDashboard() {
                                     <div className="pt-4 flex justify-end">
                                         <Button asChild size="sm" className="w-full bg-gold font-bold text-navy shadow-sm hover:bg-gold-light md:w-auto"><Link href={`/coach/session/${event.id}`}>
                                                 <Users className="h-4 w-4 mr-2" />
-                                                Pasar Lista y Evaluar
+                                                Pasar lista
                                         </Link></Button>
                                     </div>
                                 </CardContent>
