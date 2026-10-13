@@ -1,4 +1,5 @@
 "use client"
+import { profileImageUrl } from '@/lib/profile-image'
 
 import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -39,7 +40,7 @@ export function WorkerCard({ worker }: { worker: any }) {
                         >
                             {worker.avatar_url ? (
                                 <Avatar className="w-full h-full">
-                                    <AvatarImage src={worker.avatar_url} className="object-cover" />
+                                    <AvatarImage src={profileImageUrl(worker.avatar_url)} className="object-cover" />
                                     <AvatarFallback>{worker.full_name?.substring(0, 2)}</AvatarFallback>
                                 </Avatar>
                             ) : (

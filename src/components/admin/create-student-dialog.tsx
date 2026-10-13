@@ -67,16 +67,20 @@ export function CreateStudentDialog({ onUpdate }: { onUpdate?: () => void }) {
 
             const guardianEmail = formData.guardian_email.trim().toLowerCase()
             if (guardianEmail && child) {
-                const { data: existingGuardian, error: guardianLookupError } = await supabase
+                const { data: matchingGuardians, error: guardianLookupError } = await supabase
                     .from('guardians')
                     .select('id')
-                    .ilike('email', guardianEmail)
-                    .limit(1)
-                    .maybeSingle()
+                    .ilike('email', guardianEmail.replace(/[\\%_]/g, '\\$&'))
+                    .limit(2)
                 if (guardianLookupError) {
                     await supabase.from('children').delete().eq('id', child.id)
                     throw new Error(`No se ha podido buscar el tutor: ${guardianLookupError.message}`)
                 }
+                if (matchingGuardians && matchingGuardians.length > 1) {
+                    await supabase.from('children').delete().eq('id', child.id)
+                    throw new Error('Hay varios tutores con este correo. Revisa los duplicados antes de crear la ficha.')
+                }
+                const existingGuardian = matchingGuardians?.[0]
 
                 const isNewGuardian = !existingGuardian
                 const { data: createdGuardian, error: guardianCreateError } = existingGuardian

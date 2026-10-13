@@ -1,7 +1,7 @@
 'use server'
 
 import { requireAdmin } from '@/lib/auth'
-import { getBillingIntervalMonths, normalizeBillingFrequency } from '@/lib/membership-billing'
+import { addBillingMonths, buildMonthlyCharges, getBillingIntervalMonths, normalizeBillingFrequency } from '@/lib/membership-billing'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
@@ -245,8 +245,7 @@ export async function enrollPlayerWithPlan(data: {
 
     // 3. Create membership
     const startDate = new Date()
-    const endDate = new Date()
-    endDate.setMonth(endDate.getMonth() + durationMonths)
+    const endDate = addBillingMonths(startDate, durationMonths)
 
     const { data: membership, error: memError } = await supabase
         .from('academy_memberships')
@@ -270,25 +269,20 @@ export async function enrollPlayerWithPlan(data: {
         return { success: false, error: "Error al crear la membresía" }
     }
 
-    // 4. Generate one receipt per real billing period.
+    // Each covered month is explicit; a multi-month period shares its due date and total.
     if (membership) {
-        const payments = []
-        const paymentCount = Math.ceil(durationMonths / billingIntervalMonths)
-        for (let i = 0; i < paymentCount; i++) {
-            const paymentDate = new Date(startDate)
-            paymentDate.setMonth(paymentDate.getMonth() + (i * billingIntervalMonths))
-            if (i > 0 || startDate.getDate() <= billingDueDay) paymentDate.setDate(billingDueDay)
-            payments.push({
+        const payments = buildMonthlyCharges(startDate, durationMonths, billingIntervalMonths, enrollment.periodPrice, billingDueDay).map(charge => ({
                 type: 'academy',
                 ref_id: membership.id,
                 child_id: enrollment.childId,
-                amount: enrollment.periodPrice,
+                amount: charge.amount,
                 status: 'pending',
                 method: enrollment.paymentMethod,
-                due_date: paymentDate.toISOString().split('T')[0],
-                description: `Cuota ${frequency} - ${paymentDate.toLocaleDateString('es', { month: 'long', year: 'numeric' })}`
-            })
-        }
+                due_date: charge.due_date,
+                concept_code: 'monthly',
+                covered_month: charge.covered_month,
+                description: `Cuota ${frequency} · mes ${charge.covered_month}`
+            }))
         const { error: paymentsError } = await supabase.from('payments').insert(payments)
         if (paymentsError) {
             console.error('Error creating payment schedule:', paymentsError)

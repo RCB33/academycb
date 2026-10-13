@@ -1,4 +1,5 @@
 "use client"
+import { profileImageUrl } from '@/lib/profile-image'
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import {
@@ -127,7 +128,7 @@ function WorkerFilter({ worker, count, active, onClick }: { worker: CalendarWork
     return (
         <button type="button" onClick={onClick} className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition ${active ? 'border-yellow-500 bg-yellow-400 font-bold text-black shadow-sm' : 'border-slate-200 bg-white text-slate-700 hover:border-slate-400'}`}>
             <Avatar className="h-5 w-5">
-                <AvatarImage src={worker.avatar_url || undefined} />
+                <AvatarImage src={profileImageUrl(worker.avatar_url)} />
                 <AvatarFallback className="text-[8px]" style={{ backgroundColor: eventColor(worker.color), color: 'white' }}>{worker.full_name.slice(0, 2)}</AvatarFallback>
             </Avatar>
             <span>{worker.full_name}</span>

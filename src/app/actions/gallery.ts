@@ -15,8 +15,8 @@ export async function uploadImage(formData: FormData) {
 
     const extensions: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }
     const fileExt = extensions[file.type]
-    if (!fileExt || file.size > 8 * 1024 * 1024) {
-        return { error: 'Solo se admiten JPG, PNG o WebP de hasta 8 MB.' }
+    if (!fileExt || file.size > 3 * 1024 * 1024) {
+        return { error: 'Solo se admiten JPG, PNG o WebP de hasta 3 MB.' }
     }
 
     // 1. Upload to Storage

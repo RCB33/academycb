@@ -27,6 +27,10 @@ export async function requireRole(allowedRoles: AppRole[]) {
     if (error || !profile?.role || !allowedRoles.includes(profile.role as AppRole)) {
         throw new Error('No tienes permisos para realizar esta acción')
     }
+    const { data: authorized, error: accessError } = await supabase.rpc('has_role', { allowed_roles: allowedRoles })
+    if (accessError || authorized !== true) {
+        throw new Error('Tu acceso no está activo o no tienes permisos para esta acción')
+    }
 
     return { supabase, user, role: profile.role as AppRole }
 }

@@ -9,7 +9,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test:payments": "node scripts/test-finance-collection.cjs && node scripts/test-receipt-balance.cjs && node scripts/test-finance-allocation-totals.cjs",
-    "test:karen": "npm run test:payments && node scripts/test-karen-access.cjs && node scripts/test-karen-reminders.cjs",
+    "test:karen": "npm run test:payments && node scripts/test-karen-access.cjs && node scripts/test-karen-reminders.cjs && node scripts/test-billing-dates.cjs && node scripts/test-private-images.cjs",
     "test": "npm run lint && npm run typecheck",
     "verify": "npm run test && npm run build",
     "production:check": "node scripts/check-production.mjs"

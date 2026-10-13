@@ -21,8 +21,8 @@ export async function uploadStudentAvatar(formData: FormData) {
 
     const extensions: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }
     const fileExt = extensions[file.type]
-    if (!fileExt || file.size > 8 * 1024 * 1024) {
-        return { success: false, error: 'Solo se admiten JPG, PNG o WebP de hasta 8 MB.' }
+    if (!fileExt || file.size > 3 * 1024 * 1024) {
+        return { success: false, error: 'Solo se admiten JPG, PNG o WebP de hasta 3 MB.' }
     }
 
     // 1. Upload to Storage
@@ -61,6 +61,18 @@ export async function updateStudentData(childId: string, data: any) {
     const { supabase } = await requireAdmin()
     const jerseyNumber = parseJerseyNumber(data.jersey_number)
     if (jerseyNumber === undefined) return { success: false, error: 'El dorsal debe estar entre 1 y 99.' }
+    data = { ...data, guardian_email: data.guardian_email?.trim().toLowerCase() }
+    if (data.guardian_email) {
+        const { data: matches, error } = await supabase.from('guardians').select('id')
+            .ilike('email', data.guardian_email.replace(/[\\%_]/g, '\\$&')).limit(2)
+        if (error) return { success: false, error: 'No se pudo comprobar el tutor. No se han guardado cambios.' }
+        if ((matches?.length || 0) > 1 || (data.guardian_id && matches?.some(g => g.id !== data.guardian_id))) {
+            return { success: false, error: 'El correo coincide con otra ficha de tutor. Revisa los duplicados antes de guardar.' }
+        }
+        if (!data.guardian_id && matches?.length) {
+            return { success: false, error: 'Este tutor ya existe. Usa «Vincular tutor» para asociarlo sin duplicar ni sobrescribir sus datos.' }
+        }
+    }
 
     // 1. Update Child Data
     const { error: childError } = await supabase
@@ -95,8 +107,6 @@ export async function updateStudentData(childId: string, data: any) {
         if (guardianError) return { success: false, error: guardianError.message }
     } else if (data.guardian_name) {
         // 3. Create New Guardian (if ID missing but name provided)
-        // Check if a user/guardian already exists with this email to avoid duplicates?
-        // For now, simpler logic: Insert new guardian record.
 
         const { data: newGuardian, error: createGuardianError } = await supabase
             .from('guardians')
@@ -169,13 +179,23 @@ export async function createStudent(data: any) {
 
 export async function linkGuardianByEmail(childId: string, email: string) {
     const { supabase } = await requireAdmin()
+    email = email.trim().toLowerCase()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return { success: false, error: 'Introduce un correo válido.' }
+    }
 
     // 1. Search for existing Guardian by Email
-    const { data: existingGuardian } = await supabase
+    const { data: matchingGuardians, error: lookupError } = await supabase
         .from('guardians')
         .select('id, full_name, email')
-        .eq('email', email)
-        .single()
+        .ilike('email', email.replace(/[\\%_]/g, '\\$&'))
+        .limit(2)
+
+    if (lookupError) return { success: false, error: 'No se pudo comprobar el tutor. Inténtalo de nuevo.' }
+    if (matchingGuardians && matchingGuardians.length > 1) {
+        return { success: false, error: 'Hay varios tutores con este correo. Revisa los duplicados antes de vincular; no se ha elegido ninguno automáticamente.' }
+    }
+    const existingGuardian = matchingGuardians?.[0]
 
     let guardianId = existingGuardian?.id
 

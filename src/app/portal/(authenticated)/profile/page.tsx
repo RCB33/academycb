@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { profileImageUrl } from '@/lib/profile-image'
 import { updateProfile } from '@/app/actions/profiles'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -45,7 +46,7 @@ export default async function ProfilePage() {
                 <CardHeader>
                     <div className="flex items-center space-x-4">
                         <Avatar className="h-20 w-20">
-                            <AvatarImage src={profile?.avatar_url} />
+                            <AvatarImage src={profileImageUrl(profile?.avatar_url)} />
                             <AvatarFallback className="text-2xl">
                                 {profile?.full_name?.charAt(0) || user.email?.charAt(0).toUpperCase()}
                             </AvatarFallback>

@@ -194,6 +194,10 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
     const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (!file) return
+        if (file.size > 3 * 1024 * 1024) {
+            toast.error('La foto supera los 3 MB. Reduce su tamaño antes de subirla.')
+            return
+        }
 
         setIsUploadingAvatar(true)
         const formData = new FormData()

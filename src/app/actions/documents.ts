@@ -16,8 +16,8 @@ export async function uploadStudentDocument(formData: FormData) {
     }
 
     const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png']
-    if (!allowedTypes.includes(file.type) || file.size > 10 * 1024 * 1024) {
-        return { success: false, error: 'Solo se admiten PDF, JPG o PNG de hasta 10 MB.' }
+    if (!allowedTypes.includes(file.type) || file.size > 3 * 1024 * 1024) {
+        return { success: false, error: 'Solo se admiten PDF, JPG o PNG de hasta 3 MB.' }
     }
 
     try {

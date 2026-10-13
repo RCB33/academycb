@@ -30,6 +30,10 @@ export function DocumentUploader({ childId, onSuccess }: DocumentUploaderProps) 
     async function handleUpload(e: React.FormEvent) {
         e.preventDefault()
         if (!file) return
+        if (file.size > 3 * 1024 * 1024) {
+            toast.error('El documento supera los 3 MB. Comprímelo antes de subirlo.')
+            return
+        }
 
         setLoading(true)
         const formData = new FormData()

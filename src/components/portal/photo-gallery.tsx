@@ -27,6 +27,11 @@ export function PhotoGallery({ childId, initialImages, canEdit }: PhotoGalleryPr
     const [uploadOpen, setUploadOpen] = useState(false)
 
     async function handleUpload(formData: FormData) {
+        const file = formData.get('file') as File | null
+        if (file && file.size > 3 * 1024 * 1024) {
+            toast.error('La foto supera los 3 MB. Reduce su tamaño antes de subirla.')
+            return
+        }
         startTransition(async () => {
             formData.append('childId', childId)
             const result = await uploadImage(formData)

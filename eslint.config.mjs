@@ -9,6 +9,8 @@ const eslintConfig = defineConfig([
   // a las reglas estrictas de React 19. Se mantienen visibles como warnings para
   // que el CI sea accionable sin ocultar la deuda técnica existente.
   {
+    files: ["**/*.{js,jsx,ts,tsx,mjs,cjs}"],
+    plugins: { "react-hooks": nextVitals.find(config => config.plugins?.["react-hooks"])?.plugins["react-hooks"] },
     rules: {
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/ban-ts-comment": "warn",
@@ -17,6 +19,10 @@ const eslintConfig = defineConfig([
       "react-hooks/set-state-in-effect": "warn",
       "@next/next/no-html-link-for-pages": "warn",
     },
+  },
+  {
+    files: ["scripts/**/*.cjs"],
+    rules: { "@typescript-eslint/no-require-imports": "off" },
   },
   // Override default ignores of eslint-config-next.
   globalIgnores([

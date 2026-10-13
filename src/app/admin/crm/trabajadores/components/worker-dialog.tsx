@@ -1,4 +1,5 @@
 "use client"
+import { profileImageUrl } from '@/lib/profile-image'
 
 import {
     Dialog,
@@ -144,7 +145,7 @@ export function WorkerDialog({ mode, worker, trigger, open, onOpenChange }: Work
                     {/* Avatar Upload UI */}
                     <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
                         <Avatar className="h-24 w-24 border-4 border-black/10 shadow-xl bg-white">
-                            <AvatarImage src={avatarUrl || ""} className="object-cover" />
+                            <AvatarImage src={profileImageUrl(avatarUrl)} className="object-cover" />
                             <AvatarFallback className="bg-slate-100 text-slate-300">
                                 <User className="h-10 w-10" />
                             </AvatarFallback>

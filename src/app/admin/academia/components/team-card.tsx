@@ -1,4 +1,5 @@
 "use client"
+import { profileImageUrl } from '@/lib/profile-image'
 
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -63,7 +64,7 @@ export function TeamCard({ team, onEdit }: TeamCardProps) {
                         {team.coach ? (
                             <>
                                 <Avatar className="h-8 w-8 border-2 border-white shadow-sm">
-                                    <AvatarImage src={team.coach.avatar_url || ""} />
+                                    <AvatarImage src={profileImageUrl(team.coach.avatar_url)} />
                                     <AvatarFallback className="bg-indigo-100 text-indigo-600 text-xs font-bold">
                                         {team.coach.full_name?.charAt(0)}
                                     </AvatarFallback>
