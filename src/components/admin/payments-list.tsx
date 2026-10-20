@@ -67,7 +67,8 @@ export function PaymentsList({ paymentsData, plans, childId, onRefresh }: {
                         <CreditCard className="h-3 w-3" /> Suscripciones
                     </h4>
                     {memberships.map((m: any) => {
-                        const frequency = normalizeBillingFrequency(m.plan?.frequency, m.plan?.duration_months, m.plan?.name)
+                        const savedPlan = m.plan_snapshot || m.plan
+                        const frequency = normalizeBillingFrequency(savedPlan?.frequency, savedPlan?.duration_months, savedPlan?.name)
                         return (
                             <div key={m.id} className="flex items-center justify-between p-4 bg-white rounded-xl border border-slate-100">
                                 <div className="flex items-center gap-3">
@@ -75,7 +76,7 @@ export function PaymentsList({ paymentsData, plans, childId, onRefresh }: {
                                         <Euro className={`h-5 w-5 ${m.status === 'active' ? 'text-green-600' : 'text-slate-400'}`} />
                                     </div>
                                     <div>
-                                        <p className="font-bold text-sm text-slate-900">{m.plan?.name || 'Plan personalizado'}</p>
+                                        <p className="font-bold text-sm text-slate-900">{savedPlan?.name || 'Plan personalizado'}</p>
                                         <div className="flex items-center gap-2 text-[10px] text-slate-400">
                                             <span>{new Date(m.start_date).toLocaleDateString()} → {new Date(m.end_date).toLocaleDateString()}</span>
                                             {m.payment_method && <span>• {m.payment_method === 'efectivo' ? '💵' : m.payment_method === 'transferencia' ? '🏦' : '💳'} {m.payment_method}</span>}
@@ -83,7 +84,7 @@ export function PaymentsList({ paymentsData, plans, childId, onRefresh }: {
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <span className="text-lg font-black text-yellow-600">{m.monthly_price || m.plan?.price || 0}€</span>
+                                    <span className="text-lg font-black text-yellow-600">{m.monthly_price ?? m.plan?.price ?? 0}€</span>
                                     <span className="text-[10px] text-slate-400">/{getBillingSuffix(frequency)}</span>
                                     <Badge className={`text-xs ${m.payment_status === 'paid'
                                         ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'} border-none`}>

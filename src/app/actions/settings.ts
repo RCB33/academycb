@@ -109,11 +109,15 @@ const PlanSchema = z.object({
     name: z.string().trim().min(2, 'El nombre es obligatorio').max(100),
     description: z.string().trim().max(500).default(''),
     duration_months: z.number().int().min(1).max(60),
-    price: z.number().finite().min(0).max(1_000_000),
-    enrollment_fee: z.number().finite().min(0).max(1_000_000).default(0),
-    frequency: z.enum(['mensual', 'trimestral', 'anual']),
+    price: z.number().finite().min(0).max(1_000_000).multipleOf(0.01),
+    enrollment_fee: z.number().finite().min(0).max(1_000_000).multipleOf(0.01).default(0),
+    frequency: z.enum(['mensual', 'trimestral', 'anual', 'temporada']),
     is_active: z.boolean().default(true),
     sort_order: z.number().int().min(0).max(999).default(0),
+}).refine(value => value.frequency !== 'trimestral' || value.duration_months % 3 === 0, {
+    message: 'Un plan trimestral debe durar un múltiplo de 3 meses', path: ['duration_months'],
+}).refine(value => value.frequency !== 'anual' || value.duration_months % 12 === 0, {
+    message: 'Usa Temporada para un pago único de duración distinta de 12 meses', path: ['duration_months'],
 })
 
 const CategorySchema = z.object({
@@ -135,7 +139,7 @@ export type MembershipPlan = {
     duration_months: number
     price: number
     enrollment_fee: number
-    frequency: 'mensual' | 'trimestral' | 'anual'
+    frequency: 'mensual' | 'trimestral' | 'anual' | 'temporada'
     is_active: boolean
     sort_order: number
     created_at: string

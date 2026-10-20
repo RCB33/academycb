@@ -1,7 +1,6 @@
 'use server'
 
 import { requireAdmin } from '@/lib/auth'
-import { addBillingMonths, buildMonthlyCharges, getBillingIntervalMonths, normalizeBillingFrequency } from '@/lib/membership-billing'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
@@ -15,14 +14,6 @@ const TeamSchema = z.object({
     max_players: z.number().int().min(1).default(16),
     status: z.enum(['active', 'inactive']).default('active'),
     color: z.string().default('#3b82f6'),
-})
-
-const EnrollmentSchema = z.object({
-    childId: z.string().uuid(),
-    teamId: z.string().uuid(),
-    planId: z.string().uuid(),
-    paymentMethod: z.enum(['efectivo', 'transferencia', 'tarjeta']),
-    periodPrice: z.number().finite().nonnegative(),
 })
 
 export async function getTeams() {
@@ -43,7 +34,6 @@ export async function getTeams() {
     }
     return data
 }
-
 export async function getTeamById(id: string) {
     const supabase = await createClient()
     const { data, error } = await supabase
@@ -174,125 +164,3 @@ export async function getUnassignedPlayers() {
     return data
 }
 
-export async function enrollPlayerWithPlan(data: {
-    childId: string
-    teamId: string
-    planId: string
-    paymentMethod: string // 'efectivo' | 'transferencia' | 'tarjeta'
-    periodPrice: number
-}) {
-    const supabase = await createClient()
-    const validated = EnrollmentSchema.safeParse(data)
-
-    if (!validated.success) {
-        return { success: false, error: "Los datos de inscripción no son válidos" }
-    }
-
-    const enrollment = validated.data
-
-    const methodSetting = enrollment.paymentMethod === 'efectivo'
-        ? 'payment_cash_enabled'
-        : enrollment.paymentMethod === 'transferencia'
-            ? 'payment_transfer_enabled'
-            : 'payment_card_enabled'
-    const { data: paymentSettings } = await supabase
-        .from('academy_settings')
-        .select('key, value')
-        .in('key', [methodSetting, 'billing_due_day'])
-    const paymentValues = Object.fromEntries((paymentSettings || []).map((row) => [row.key, row.value || '']))
-    if (paymentValues[methodSetting] === 'false' || (enrollment.paymentMethod === 'tarjeta' && paymentValues[methodSetting] !== 'true')) {
-        return { success: false, error: 'El método de pago seleccionado está desactivado en Ajustes' }
-    }
-
-    // Read the plan before mutating the player so an invalid plan cannot leave
-    // a half-completed team assignment.
-    const { data: plan, error: planError } = await supabase
-        .from('membership_plans')
-        .select('name, duration_months, frequency, is_active')
-        .eq('id', enrollment.planId)
-        .single()
-
-    if (planError || !plan || !plan.is_active) {
-        console.error('Error fetching membership plan:', planError)
-        return { success: false, error: "El plan seleccionado ya no existe" }
-    }
-
-    const { data: player, error: playerError } = await supabase
-        .from('children')
-        .select('team_id')
-        .eq('id', enrollment.childId)
-        .single()
-
-    if (playerError || !player) {
-        return { success: false, error: "No se encontró el alumno" }
-    }
-
-    // 1. Assign to team
-    const { error: teamError } = await supabase
-        .from('children')
-        .update({ team_id: enrollment.teamId })
-        .eq('id', enrollment.childId)
-
-    if (teamError) {
-        console.error('Error assigning player:', teamError)
-        return { success: false, error: "Error al asignar jugador" }
-    }
-
-    const durationMonths = plan?.duration_months || 12
-    const frequency = normalizeBillingFrequency(plan?.frequency, durationMonths, plan?.name)
-    const billingIntervalMonths = getBillingIntervalMonths(frequency)
-    const billingDueDay = Math.min(28, Math.max(1, Number(paymentValues.billing_due_day || 5)))
-
-    // 3. Create membership
-    const startDate = new Date()
-    const endDate = addBillingMonths(startDate, durationMonths)
-
-    const { data: membership, error: memError } = await supabase
-        .from('academy_memberships')
-        .insert([{
-            child_id: enrollment.childId,
-            plan_id: enrollment.planId,
-            start_date: startDate.toISOString().split('T')[0],
-            end_date: endDate.toISOString().split('T')[0],
-            status: 'active',
-            payment_status: 'pending',
-            payment_method: enrollment.paymentMethod,
-            // Legacy database column: this stores the price of each billing period.
-            monthly_price: enrollment.periodPrice,
-        }])
-        .select('id')
-        .single()
-
-    if (memError) {
-        console.error('Error creating membership:', memError)
-        await supabase.from('children').update({ team_id: player.team_id }).eq('id', enrollment.childId)
-        return { success: false, error: "Error al crear la membresía" }
-    }
-
-    // Each covered month is explicit; a multi-month period shares its due date and total.
-    if (membership) {
-        const payments = buildMonthlyCharges(startDate, durationMonths, billingIntervalMonths, enrollment.periodPrice, billingDueDay).map(charge => ({
-                type: 'academy',
-                ref_id: membership.id,
-                child_id: enrollment.childId,
-                amount: charge.amount,
-                status: 'pending',
-                method: enrollment.paymentMethod,
-                due_date: charge.due_date,
-                concept_code: 'monthly',
-                covered_month: charge.covered_month,
-                description: `Cuota ${frequency} · mes ${charge.covered_month}`
-            }))
-        const { error: paymentsError } = await supabase.from('payments').insert(payments)
-        if (paymentsError) {
-            console.error('Error creating payment schedule:', paymentsError)
-            await supabase.from('academy_memberships').delete().eq('id', membership.id)
-            await supabase.from('children').update({ team_id: player.team_id }).eq('id', enrollment.childId)
-            return { success: false, error: "No se pudo crear el calendario de cobros" }
-        }
-    }
-
-    revalidatePath('/admin/academia')
-    revalidatePath('/admin/finanzas')
-    return { success: true }
-}

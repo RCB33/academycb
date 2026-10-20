@@ -1,4 +1,4 @@
-export type BillingFrequency = 'mensual' | 'trimestral' | 'anual'
+export type BillingFrequency = 'mensual' | 'trimestral' | 'anual' | 'temporada'
 
 /** Calendar arithmetic: clamp the day instead of overflowing into the next month. */
 export function addBillingMonths(date: Date, months: number): Date {
@@ -46,18 +46,21 @@ export function normalizeBillingFrequency(
     if (normalizedName === 'anual' && durationMonths === 12) return 'anual'
     if (normalizedName === 'trimestral' && durationMonths === 3) return 'trimestral'
 
+    if (normalizedFrequency === 'temporada') return 'temporada'
     if (normalizedFrequency === 'anual') return 'anual'
     if (normalizedFrequency === 'trimestral') return 'trimestral'
     return 'mensual'
 }
 
-export function getBillingIntervalMonths(frequency: BillingFrequency) {
+export function getBillingIntervalMonths(frequency: BillingFrequency, durationMonths = 12) {
+    if (frequency === 'temporada') return durationMonths
     if (frequency === 'anual') return 12
     if (frequency === 'trimestral') return 3
     return 1
 }
 
 export function getBillingSuffix(frequency: BillingFrequency) {
+    if (frequency === 'temporada') return 'temporada'
     if (frequency === 'anual') return 'año'
     if (frequency === 'trimestral') return 'trim.'
     return 'mes'

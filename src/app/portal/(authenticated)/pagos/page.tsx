@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { redirect } from 'next/navigation'
 import { PortalPageHeader } from '@/components/portal/portal-page-header'
 import { receiptBalance } from '@/lib/receipt-balance'
+import { FamilyPlanSummary, type FamilyMembership, type FamilyPayment } from '@/components/family-plan-summary'
 
 export default async function PagosPage() {
     const supabase = await createClient()
@@ -19,14 +20,20 @@ export default async function PagosPage() {
         .single()
         
     const childIds = guardian?.child_guardians?.map((cg: any) => cg.child_id) || []
+    const [familyChildren, familyMemberships] = childIds.length ? await Promise.all([
+        supabase.from('children').select('id,full_name').in('id',childIds),
+        supabase.from('academy_memberships').select('*,plan:membership_plans(name,frequency)').in('child_id',childIds).order('start_date',{ascending:false}),
+    ]) : [{data:[],error:null},{data:[],error:null}]
+    if (familyChildren.error || familyMemberships.error) throw new Error('No se pudieron cargar los planes de la familia')
 
     // 2. Fetch payments for those children (Admin assigned payments/fees)
     let academyPayments: any[] = []
     if (childIds.length > 0) {
-        const { data: payments } = await supabase
+        const { data: payments, error } = await supabase
             .from('payments')
             .select('*, manual_receipt_allocations(amount,paid_date,method,voided_at)')
             .in('child_id', childIds)
+        if (error) throw new Error('No se pudieron cargar los pagos')
         academyPayments = payments || []
     }
 
@@ -86,6 +93,7 @@ export default async function PagosPage() {
     return (
         <div className="space-y-6">
             <PortalPageHeader icon={<Receipt className="h-6 w-6" />} title="Pagos" description="Consulta cuotas, inscripciones y compras asociadas a tu familia." />
+            <FamilyPlanSummary students={familyChildren.data||[]} memberships={familyMemberships.data as unknown as FamilyMembership[]} payments={academyPayments as FamilyPayment[]} />
             
             <div className="space-y-4">
                 {allTransactions && allTransactions.length > 0 ? (

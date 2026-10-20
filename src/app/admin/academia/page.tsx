@@ -6,17 +6,16 @@ import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
-    Dialog, DialogContent, DialogHeader, DialogTitle
+    Dialog, DialogContent, DialogTitle
 } from "@/components/ui/dialog"
-import { Plus, Shield, Users, Calendar, UserMinus, UserPlus, ExternalLink, Euro, ChevronLeft, Loader2 } from "lucide-react"
+import { Plus, Shield, Users, Calendar, UserMinus, UserPlus } from "lucide-react"
 import { TeamCard } from "./components/team-card"
 import { TeamDialog } from "./components/team-dialog"
-import { getTeams, getUnassignedPlayers, assignPlayerToTeam, enrollPlayerWithPlan } from "@/app/actions/teams"
-import { getPaymentConfiguration, getPlans, type MembershipPlan, type PaymentMethodOption } from "@/app/actions/settings"
+import { getTeams, getUnassignedPlayers, assignPlayerToTeam } from "@/app/actions/teams"
+import { FamilyPlanAssignment } from '@/components/admin/family-plan-assignment'
+import { getPlans, type MembershipPlan } from "@/app/actions/settings"
 import { toast } from "sonner"
 
 export default function AcademyPage() {
@@ -33,7 +32,6 @@ export default function AcademyPage() {
     const [assignStep, setAssignStep] = useState<'team' | 'plan'>('team')
     const [selectedTeamForAssign, setSelectedTeamForAssign] = useState<any | null>(null)
     const [membershipPlans, setMembershipPlans] = useState<MembershipPlan[]>([])
-    const [paymentMethods, setPaymentMethods] = useState<PaymentMethodOption[]>([])
     const router = useRouter()
     const supabase = createClient()
 
@@ -43,20 +41,18 @@ export default function AcademyPage() {
 
     async function fetchAll() {
         setLoading(true)
-        const [teamsData, { data: cats }, { data: wrks }, unassignedData, plansData, paymentConfig] = await Promise.all([
+        const [teamsData, { data: cats }, { data: wrks }, unassignedData, plansData] = await Promise.all([
             getTeams(),
             supabase.from('categories').select('*').eq('is_active', true).order('sort_order').order('name'),
             supabase.from('workers').select('*').order('full_name'),
             getUnassignedPlayers(),
             getPlans(),
-            getPaymentConfiguration(),
         ])
         setTeams(teamsData)
         setCategories(cats || [])
         setWorkers(wrks || [])
         setUnassigned(unassignedData)
         setMembershipPlans(plansData)
-        setPaymentMethods(paymentConfig.methods.filter((method) => method.enabled))
         setLoading(false)
     }
 
@@ -410,12 +406,12 @@ export default function AcademyPage() {
                             )}
                         </div>
                     ) : (
-                        <EnrollmentForm
+                        <FamilyPlanAssignment
                             plans={membershipPlans}
-                            paymentMethods={paymentMethods}
-                            player={playerToAssign}
-                            team={selectedTeamForAssign}
-                            onBack={() => setAssignStep('team')}
+                            childId={playerToAssign.id}
+                            childName={playerToAssign.full_name}
+                            teams={activeTeams}
+                            defaultTeamId={selectedTeamForAssign.id}
                             onComplete={() => {
                                 setAssignModalOpen(false)
                                 setPlayerToAssign(null)
@@ -504,152 +500,3 @@ function parseSchedule(schedule: string | null): Record<string, string> {
     return result
 }
 
-// ─── ENROLLMENT FORM (Plan + Payment step) ───
-
-function EnrollmentForm({ plans, paymentMethods, player, team, onBack, onComplete }: {
-    plans: MembershipPlan[], paymentMethods: PaymentMethodOption[], player: any, team: any, onBack: () => void, onComplete: () => void
-}) {
-    const [selectedPlan, setSelectedPlan] = useState<string>('')
-    const [paymentMethod, setPaymentMethod] = useState(paymentMethods[0]?.value || 'transferencia')
-    const [customPrice, setCustomPrice] = useState('')
-    const [loading, setLoading] = useState(false)
-
-    const plan = plans.find(p => p.id === selectedPlan)
-    const price = customPrice ? parseFloat(customPrice) : (plan?.price || 0)
-
-    async function handleEnroll() {
-        if (!selectedPlan || !player || !team) {
-            toast.error("Selecciona un plan")
-            return
-        }
-        setLoading(true)
-        const res = await enrollPlayerWithPlan({
-            childId: player.id,
-            teamId: team.id,
-            planId: selectedPlan,
-            paymentMethod,
-            periodPrice: price
-        })
-        setLoading(false)
-        if (res.success) {
-            toast.success(`${player.full_name} inscrito en ${team.name}`)
-            onComplete()
-        } else {
-            toast.error(res.error)
-        }
-    }
-
-    return (
-        <div className="p-5 space-y-4">
-            <button onClick={onBack} className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 transition-colors">
-                <ChevronLeft className="h-3 w-3" /> Volver a equipos
-            </button>
-
-            {/* Team badge */}
-            <div className="flex items-center gap-2 p-3 rounded-xl border border-slate-100 bg-white">
-                <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${team?.color}15` }}>
-                    <Shield className="h-4 w-4" style={{ color: team?.color }} />
-                </div>
-                <div>
-                    <p className="text-xs font-bold text-slate-900">{team?.name}</p>
-                    <p className="text-[10px] text-slate-400">{team?.category?.name || ''}</p>
-                </div>
-            </div>
-
-            {/* Plan selector */}
-            <div className="space-y-2">
-                <Label className="text-slate-700 font-bold uppercase text-[10px] tracking-wider">Plan de Membresía *</Label>
-                {plans.length === 0 ? (
-                    <p className="text-xs text-amber-600 bg-amber-50 p-3 rounded-lg">
-                        ⚠️ No hay planes creados. Ve a Ajustes → Planes para crear uno.
-                    </p>
-                ) : (
-                    <div className="space-y-1.5">
-                        {plans.map(p => (
-                            <button
-                                key={p.id}
-                                type="button"
-                                onClick={() => { setSelectedPlan(p.id); setCustomPrice(String(p.price || 0)) }}
-                                className={`w-full flex items-center justify-between p-3 rounded-lg text-left transition-all text-sm
-                                    ${selectedPlan === p.id
-                                        ? 'bg-yellow-50 border-2 border-yellow-400'
-                                        : 'bg-white border border-slate-100 hover:border-yellow-200'
-                                    }`}
-                            >
-                                <div>
-                                    <p className="font-bold text-slate-900 text-xs">{p.name}</p>
-                                    <p className="text-[10px] text-slate-400">
-                                        {p.frequency === 'mensual' ? 'Mensual' : p.frequency === 'trimestral' ? 'Trimestral' : 'Anual'} • {p.duration_months} meses
-                                    </p>
-                                </div>
-                                <span className="text-sm font-black text-yellow-600">{p.price || 0}€</span>
-                            </button>
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            {/* Payment method */}
-            <div className="space-y-2">
-                <Label className="text-slate-700 font-bold uppercase text-[10px] tracking-wider">Método de Pago</Label>
-                <div className="grid grid-cols-3 gap-2">
-                    {paymentMethods.map(m => (
-                        <button
-                            key={m.value}
-                            type="button"
-                            onClick={() => setPaymentMethod(m.value)}
-                            className={`p-2.5 rounded-lg text-xs font-bold text-center transition-all
-                                ${paymentMethod === m.value
-                                    ? 'bg-yellow-50 border-2 border-yellow-400 text-yellow-700'
-                                    : 'bg-white border border-slate-100 text-slate-600 hover:border-yellow-200'
-                                }`}
-                        >
-                            {m.label}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {/* Custom price */}
-            {selectedPlan && (
-                <div className="space-y-2">
-                    <Label className="text-slate-700 font-bold uppercase text-[10px] tracking-wider">Precio (editable si hay descuento)</Label>
-                    <div className="flex items-center gap-2">
-                        <Input
-                            type="number"
-                            step="0.01"
-                            value={customPrice}
-                            onChange={(e) => setCustomPrice(e.target.value)}
-                            className="bg-white"
-                        />
-                        <span className="text-sm font-bold text-slate-500">€/{plan?.frequency === 'mensual' ? 'mes' : plan?.frequency === 'trimestral' ? 'trim.' : 'año'}</span>
-                    </div>
-                </div>
-            )}
-
-            {/* Summary */}
-            {selectedPlan && (
-                <div className="bg-slate-900 text-white rounded-xl p-4 space-y-1">
-                    <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Resumen</p>
-                    <p className="text-sm font-bold">{player?.full_name} → {team?.name}</p>
-                    <p className="text-xs text-slate-300">
-                        {plan?.name} • {price}€/{plan?.frequency === 'mensual' ? 'mes' : plan?.frequency === 'trimestral' ? 'trim.' : 'año'} • {paymentMethod === 'efectivo' ? '💵 Efectivo' : paymentMethod === 'transferencia' ? '🏦 Transferencia' : '💳 Tarjeta'}
-                    </p>
-                </div>
-            )}
-
-            {/* Actions */}
-            <div className="pt-2 flex justify-end gap-3 border-t">
-                <Button type="button" variant="ghost" onClick={onBack}>Cancelar</Button>
-                <Button
-                    onClick={handleEnroll}
-                    disabled={loading || !selectedPlan}
-                    className="bg-black hover:bg-slate-800 text-white font-bold px-6"
-                >
-                    {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                    Inscribir y Crear Membresía
-                </Button>
-            </div>
-        </div>
-    )
-}

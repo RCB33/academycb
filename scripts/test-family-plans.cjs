@@ -1,0 +1,29 @@
+const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const ts = require('typescript')
+function load(path) {
+  const m = {exports:{}}
+  new Function('module','exports','require',ts.transpileModule(fs.readFileSync(path,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText)(m,m.exports,()=>load('src/lib/membership-billing.ts'))
+  return m.exports
+}
+const {previewFamilyPlan} = load('src/lib/family-plan.ts')
+const plan = {id:'x',name:'Academia',price:75,enrollment_fee:30,duration_months:10,frequency:'mensual',updated_at:''}
+const monthly=previewFamilyPlan(plan,'2026-09',5,5,true,50)
+assert.equal(monthly.total,780)
+assert.equal(monthly.endDate,'2027-06-30')
+assert.equal(monthly.rows.length,10)
+assert.equal(monthly.rows[9].covered_month,'2027-06')
+assert.equal(monthly.rows[0].due_date,'2026-09-05')
+const full=previewFamilyPlan({...plan,frequency:'temporada',price:650},'2026-09',28,10,false,0)
+assert.equal(full.total,640)
+assert.ok(full.rows.every(r=>r.due_date==='2026-09-28'))
+assert.throws(()=>previewFamilyPlan({...plan,frequency:'trimestral'},'2026-09',5,0,false,0),/periodos completos/)
+const quarter=previewFamilyPlan({...plan,duration_months:9,frequency:'trimestral',price:200},'2026-09',5,0,false,0)
+assert.equal(quarter.total,600)
+assert.deepEqual(quarter.rows.slice(0,3).map(r=>r.amount),[66.67,66.67,66.66])
+assert.equal(quarter.rows[3].due_date,'2026-12-05')
+assert.throws(()=>previewFamilyPlan(plan,'2026-13',5,0,false,0))
+assert.throws(()=>previewFamilyPlan(plan,'2026-09',29,0,false,0))
+assert.throws(()=>previewFamilyPlan(plan,'2026-09',5,76,false,0))
+assert.equal(previewFamilyPlan(plan,'2026-09',5,75,false,0).total,0)
+console.log('PASS: family plan previews, monthly/quarterly/season, discounts, extras, cents, validation')

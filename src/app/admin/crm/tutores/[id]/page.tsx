@@ -2,12 +2,16 @@ import { getGuardianById } from '@/app/actions/guardians'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Mail, Phone, Users, Calendar, ArrowLeft, Receipt, MessageCircle } from "lucide-react"
+import { Mail, Phone, Users, Calendar, ArrowLeft } from "lucide-react"
 import { GuardianNotesEditor } from './notes-editor'
 import { TutorProfileActions } from './tutor-profile-actions'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { AccessActivationStatus } from '@/components/admin/access-activation-status'
+import { requireAdmin } from '@/lib/auth'
+import { getPlans } from '@/app/actions/settings'
+import { FamilyPlanAssignment } from '@/components/admin/family-plan-assignment'
+import { FamilyPlanSummary, type FamilyMembership, type FamilyPayment } from '@/components/family-plan-summary'
 
 export default async function TutorProfilePage({ params }: { params: Promise<{ id: string }> }) {
     const resolvedParams = await params
@@ -16,6 +20,16 @@ export default async function TutorProfilePage({ params }: { params: Promise<{ i
     if (!guardian) {
         notFound()
     }
+    const { supabase } = await requireAdmin()
+    const children = (guardian.children || []).map((row: { child: { id: string; full_name: string } }) => row.child).filter(Boolean)
+    const ids = children.map((child: {id: string}) => child.id)
+    const [plans, teamsResult, membershipsResult, paymentsResult] = await Promise.all([
+        getPlans(),
+        supabase.from('teams').select('id,name').eq('status','active').order('name'),
+        ids.length ? supabase.from('academy_memberships').select('*,plan:membership_plans(name,frequency)').in('child_id',ids).order('start_date',{ascending:false}) : Promise.resolve({data:[],error:null}),
+        ids.length ? supabase.from('payments').select('*,manual_receipt_allocations(amount,paid_date,method,voided_at)').in('child_id',ids) : Promise.resolve({data:[],error:null}),
+    ])
+    if (teamsResult.error || membershipsResult.error || paymentsResult.error) throw new Error('No se pudo cargar la información de planes y pagos')
 
     return (
         <div className="space-y-6">
@@ -83,11 +97,14 @@ export default async function TutorProfilePage({ params }: { params: Promise<{ i
                                                     </div>
                                                 </div>
                                             </div>
+                                            <div className="flex flex-wrap justify-end gap-2">
+                                            <FamilyPlanAssignment childId={childGuardian.child.id} childName={childGuardian.child.full_name} plans={plans} teams={teamsResult.data||[]} />
                                             <Button variant="outline" size="sm" asChild>
                                                 <Link href={`/admin/crm/alumnos/${childGuardian.child.id}`}>
                                                     Ver Perfil Alumno
                                                 </Link>
                                             </Button>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
@@ -100,19 +117,7 @@ export default async function TutorProfilePage({ params }: { params: Promise<{ i
                         </CardContent>
                     </Card>
 
-                    {/* Placeholder for future Billing History */}
-                    <Card className="shadow-sm border-slate-100 opacity-60">
-                        <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-4 relative overflow-hidden">
-                            <div className="absolute inset-0 bg-[url('/grain.png')] opacity-10 mix-blend-overlay"></div>
-                            <CardTitle className="text-lg flex items-center gap-2 text-slate-500">
-                                <Receipt className="h-5 w-5" />
-                                Historial de Facturación
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-8 text-center">
-                            <p className="text-slate-500 italic">Módulo de facturación consolidada en camino...</p>
-                        </CardContent>
-                    </Card>
+                    <FamilyPlanSummary students={children} memberships={membershipsResult.data as unknown as FamilyMembership[]} payments={paymentsResult.data as unknown as FamilyPayment[]} />
                 </div>
 
                 {/* Right Column: Meta & Notes */}
