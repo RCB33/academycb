@@ -43,14 +43,14 @@ export default async function TutorProfilePage({ params }: { params: Promise<{ i
             </div>
 
             {/* Profile Header */}
-            <div className="flex flex-col md:flex-row justify-between md:items-start gap-4 p-8 bg-white border border-slate-200 shadow-sm rounded-xl">
-                <div className="flex items-start gap-6">
-                    <div className="h-24 w-24 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 text-3xl font-bold shadow-inner">
+            <div className="flex flex-col md:flex-row justify-between md:items-start gap-4 p-5 sm:p-8 bg-white border border-slate-200 shadow-sm rounded-xl">
+                <div className="flex items-start gap-3 sm:gap-6 min-w-0">
+                    <div className="h-14 w-14 sm:h-24 sm:w-24 shrink-0 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 text-3xl font-bold shadow-inner">
                         {guardian.full_name.charAt(0).toUpperCase()}
                     </div>
-                    <div className="space-y-2 mt-1">
-                        <div className="flex items-center gap-3">
-                            <h1 className="text-3xl font-black tracking-tight text-slate-900">{guardian.full_name}</h1>
+                    <div className="space-y-2 mt-1 min-w-0 break-words">
+                        <div className="flex flex-wrap items-center gap-3">
+                            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">{guardian.full_name}</h1>
                             <Badge variant="secondary" className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100">
                                 Rol: Tutor
                             </Badge>
@@ -82,7 +82,7 @@ export default async function TutorProfilePage({ params }: { params: Promise<{ i
                             {guardian.children && guardian.children.length > 0 ? (
                                 <div className="divide-y divide-slate-100">
                                     {guardian.children.map((childGuardian: any) => (
-                                        <div key={childGuardian.child.id} className="p-6 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                                        <div key={childGuardian.child.id} className="p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 hover:bg-slate-50 transition-colors">
                                             <div className="flex items-center gap-4">
                                                 <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-500">
                                                     {childGuardian.child.full_name.charAt(0)}

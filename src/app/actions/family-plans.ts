@@ -19,6 +19,15 @@ export async function assignFamilyPlan(input: z.input<typeof assignment>) {
     try {
         const { supabase } = await requireAdmin()
         const data = assignment.parse(input)
+        // Legacy receipts cannot safely be matched to new monthly obligations.
+        // Do not infer a covered month from the payment date or alter Karen's records.
+        const { data: legacy, error: legacyError } = await supabase.from('payments')
+            .select('id,concept_code').eq('child_id',data.childId).eq('type','academy')
+            .is('covered_month',null).in('status',['paid','pending','failed']).gt('amount',0)
+        if (legacyError) return { success:false, error:'No se pudo comprobar el historial del alumno. No se ha creado ninguna cuota.' }
+        if (legacy?.some(p=>!p.concept_code || p.concept_code==='monthly')) {
+            return { success:false, error:'Este alumno tiene pagos antiguos sin concepto o mes cubierto. Karen debe revisar a qué meses corresponden antes de generar el plan. No se ha modificado ningún pago.' }
+        }
         const { error } = await supabase.rpc('assign_family_plan', {
             p_request_id: data.requestId, p_child_id: data.childId, p_plan_id: data.planId,
             p_plan_version: data.planVersion, p_start: `${data.startMonth}-01`,

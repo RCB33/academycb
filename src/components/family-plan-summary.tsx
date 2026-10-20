@@ -8,6 +8,7 @@ export type FamilyMembership = {
 }
 export type FamilyPayment = {
     id: string; child_id: string; ref_id: string | null; amount: number; status: string
+    type: string; concept_code: string | null
     description: string | null; due_date: string | null; covered_month: string | null
     manual_receipt_allocations: ReceiptAllocation[]
 }
@@ -24,9 +25,11 @@ export function FamilyPlanSummary({students, memberships, payments}: {
             const remaining=childPayments.reduce((s,p)=>s+receiptBalance(p).remaining,0)
             const paid=childPayments.filter(p=>!['cancelled','refunded'].includes(p.status)).reduce((s,p)=>s+receiptBalance(p).paid,0)
             const next=childPayments.filter(p=>receiptBalance(p).remaining>0&&p.due_date).sort((a,b)=>a.due_date!.localeCompare(b.due_date!))[0]
+            const legacy=childPayments.filter(p=>p.type==='academy'&&!p.covered_month&&(!p.concept_code||p.concept_code==='monthly')&&!['cancelled','refunded'].includes(p.status)&&Number(p.amount)>0)
             return <div key={child.id} className="rounded-xl border bg-white p-5">
                 <h3 className="font-bold">{child.full_name}</h3>
                 {!childPlans.length && <p className="mt-2 text-sm text-slate-500">Sin plan asignado. Los pagos ya registrados se conservan.</p>}
+                {legacy.length>0 && <p className="mt-2 rounded-md bg-amber-50 p-3 text-sm text-amber-900">{legacy.length} pago(s) anterior(es) sin concepto o mes identificado. Administración debe revisar qué cubren antes de asignar nuevas cuotas; estos importes no se han convertido automáticamente en meses pagados.</p>}
                 {childPlans.map(m=><div key={m.id} className="mt-3 rounded-lg bg-slate-50 p-3 text-sm">
                     <p className="font-semibold">{m.plan_snapshot?.name||m.plan?.name||'Plan de academia'}</p>
                     <p>{m.start_date} → {m.end_date} · {m.plan_snapshot?.frequency||m.plan?.frequency} · {m.status==='active'?'Activo':m.status==='cancelled'?'Anulado':m.status==='paused'?'Pausado':'Pendiente'}</p>

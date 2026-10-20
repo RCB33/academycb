@@ -13,7 +13,7 @@ create table public.academy_memberships(id uuid primary key default gen_random_u
 status text,payment_status text,payment_method text,monthly_price numeric);
 create table public.payments(id uuid primary key default gen_random_uuid(),type text,ref_id uuid,child_id uuid,amount numeric,gross_amount numeric,
 discount_amount numeric,promotion_label text,status text,method text,due_date date,concept_code text,covered_month text,description text);
-\ir ../supabase/migrations/20261020093134_family_plan_assignments.sql
+\ir ../supabase/migrations/20261020093906_family_plan_assignments.sql
 do $$
 declare c uuid; p uuid; v timestamptz; req uuid:=gen_random_uuid(); m uuid; t uuid; before_count int; c2 uuid;
 begin

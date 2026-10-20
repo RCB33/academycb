@@ -87,7 +87,7 @@ export function FamilyPlanAssignment({ childId, childName, plans, teams, default
                     </div>
                     <p className="text-sm">Los meses de un mismo trimestre o temporada comparten vencimiento. Se mostrarán desglosados para saber qué meses quedan cubiertos.</p>
                     <div className="max-h-56 overflow-auto rounded-lg border"><table className="w-full text-left text-sm"><thead><tr><th className="p-2">Mes cubierto</th><th>Vencimiento</th><th>Importe</th></tr></thead><tbody>{preview.rows.map(r=><tr key={r.covered_month} className="border-t"><td className="p-2">{r.covered_month}</td><td>{r.due_date}</td><td>{euro(r.amount)}</td></tr>)}</tbody></table></div>
-                    <p className="text-xs text-slate-600">Matrícula y Plus, si los has añadido, vencen el {preview.rows[0]?.due_date}. Si hay cuotas o un plan solapados, se bloqueará la asignación sin tocar los pagos existentes.</p>
+                    <p className="text-xs text-slate-600">Matrícula y Plus, si los has añadido, vencen el {preview.rows[0]?.due_date}. Si hay cuotas solapadas o pagos antiguos sin mes/concepto identificado, se bloqueará la asignación sin tocar los pagos existentes.</p>
                     <div className="flex flex-wrap justify-end gap-2"><Button variant="outline" disabled={busy} onClick={()=>setReview(false)}>Volver</Button><Button disabled={busy} onClick={()=>void save()}>{busy?'Guardando…':'Confirmar y crear cuotas'}</Button></div>
                 </div>}
             </DialogContent>
