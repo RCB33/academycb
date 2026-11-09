@@ -565,7 +565,7 @@ function CampusDialog({ open, onOpenChange, campus }: {
 
                     <div className="space-y-2">
                         <Label className="text-slate-700 font-bold uppercase text-xs tracking-wider">Horario</Label>
-                        <Input name="schedule" defaultValue={campus?.schedule || ''} placeholder="Ej. 9:00 - 14:00" className="bg-white" />
+                        <Textarea name="schedule" defaultValue={campus?.schedule || ''} rows={6} placeholder={"09:00–09:15 Llegada\n09:15–10:45 Tecnificación\n10:45–11:15 Almuerzo\n11:15–12:30 Juegos de fútbol\n12:30–13:45 Competición\n13:45–14:00 Recogida"} className="bg-white" />
                     </div>
 
                     <div className="space-y-2">

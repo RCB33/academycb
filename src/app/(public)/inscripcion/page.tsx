@@ -1,5 +1,6 @@
 import { CalendarDays, ClipboardCheck, Clock3, ExternalLink, FileText, MapPin, ShieldCheck } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import EnrollmentForm, { type EnrollmentActivity, type EnrollmentService } from './enrollment-form'
 
@@ -16,6 +17,7 @@ export const metadata = {
 
 export default async function InscripcionPage({ searchParams }: { searchParams: SearchParams }) {
     const params = await searchParams
+    if (params.service === 'campus' && !params.activity) redirect('/campus/inscripcion')
     const supabase = await createClient()
     const today = new Date().toISOString().slice(0, 10)
     const { data: { user } } = await supabase.auth.getUser()
@@ -61,7 +63,7 @@ export default async function InscripcionPage({ searchParams }: { searchParams: 
             </section>
 
             <div className="container relative z-10 -mt-14 max-w-5xl pb-16 md:-mt-20 md:pb-24">
-                <AcademyEnrollmentInfo />
+                {parseService(params.service) === 'academy' && <AcademyEnrollmentInfo />}
                 <EnrollmentForm
                     campuses={campuses}
                     tournaments={tournaments}

@@ -43,6 +43,8 @@ export default function EnrollmentForm({
         setState({})
         const formData = new FormData(event.currentTarget)
         const data = Object.fromEntries(formData)
+        const campusPreferences = players.filter(id => formData.get(`player_${id}_service`) === 'campus').map(id => `${formData.get(`player_${id}_child_name`)}: ${formData.get(`player_${id}_campus_period`) || 'Periodo por confirmar'} · ${formData.get(`player_${id}_campus_role`) || 'Modalidad por confirmar'}`)
+        if (campusPreferences.length) data.notes = [data.notes, ...campusPreferences].filter(Boolean).join('\n')
         const children = players.map((id) => Object.fromEntries(['service', 'activity_id', 'child_name', 'birth_date', 'linked_child_id'].map((key) => [key, formData.get(`player_${id}_${key}`) || ''])))
 
         try {
@@ -115,6 +117,10 @@ function PlayerFields({ prefix, campuses, tournaments, initialService, initialAc
                 <div className="mt-4 grid gap-3 sm:grid-cols-3">
                     {(Object.keys(serviceLabels) as EnrollmentService[]).map((item) => <label key={item} className={`cursor-pointer rounded-xl border p-4 transition ${service === item ? 'border-gold bg-gold/10 ring-1 ring-gold shadow-sm' : 'border-slate-200 hover:border-gold/60 hover:bg-slate-50'}`}><input className="sr-only" type="radio" name={`${prefix}service`} value={item} checked={service === item} onChange={() => { setService(item); setActivityId('') }} /><span className="block font-bold text-navy">{serviceLabels[item]}</span><span className="mt-1 block text-xs text-slate-500">{item === 'academy' ? 'Temporada deportiva' : item === 'campus' ? 'Edición intensiva' : 'Competición o evento'}</span></label>)}
                 </div>
+                {service === 'campus' && <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                    <div><label htmlFor={`${prefix}campus_period`} className="text-sm font-bold text-slate-700">Semana o pack solicitado</label><input id={`${prefix}campus_period`} name={`${prefix}campus_period`} required maxLength={100} placeholder="Ej. Navidad: 22–24 diciembre o pack completo" className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm" /></div>
+                    <div><label htmlFor={`${prefix}campus_role`} className="text-sm font-bold text-slate-700">Participación en el campus</label><select id={`${prefix}campus_role`} name={`${prefix}campus_role`} className="mt-2 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm"><option value="Jugador de campo">Jugador de campo</option><option value="Portero (tecnificación específica dentro del campus)">Portero · tecnificación específica</option></select></div>
+                </div>}
                 {service !== 'academy' && <div className="mt-5"><label htmlFor={`${prefix}activity_id`} className="text-sm font-bold text-slate-700">{service === 'campus' ? 'Campus seleccionado' : 'Torneo seleccionado'}</label><select id={`${prefix}activity_id`} name={`${prefix}activity_id`} value={activityId} onChange={(event) => setActivityId(event.target.value)} required className="mt-2 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900"><option value="">Selecciona una actividad</option>{activities.map((activity) => <option key={activity.id} value={activity.id}>{activity.name} · {activity.detail}</option>)}</select>{activities.length === 0 && <p className="mt-2 text-sm text-amber-700">Ahora mismo no hay convocatorias publicadas. Puedes contactar con la academia para recibir información.</p>}</div>}
             </section>
 

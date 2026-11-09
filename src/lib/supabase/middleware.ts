@@ -7,6 +7,7 @@ const PUBLIC_ROUTES = [
   '/',
   '/academia',
   '/campus',
+  '/campus/inscripcion',
   '/torneos',
   '/tienda',
   '/contacto',
