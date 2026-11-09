@@ -50,7 +50,8 @@ export default async function TorneosPage() {
             .order('start_date', { ascending: true, nullsFirst: false }),
         getPublicSettings()
     ])
-    const tournaments = data || []
+    // Retirada de la convocatoria pública; conservamos el registro y su historial.
+    const tournaments = (data || []).filter(tournament => !/iber\s*cup/i.test(tournament.title))
     const resultsUrl = settings.tournaments_url || ''
 
     return (
