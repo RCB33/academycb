@@ -4,6 +4,7 @@ import { ArrowRight, Brain, CalendarDays, ExternalLink, HeartHandshake, MapPin, 
 import { createClient } from '@/lib/supabase/server'
 import { getPublicSettings } from '@/lib/public-settings'
 import { Button } from '@/components/ui/button'
+import { ChristmasTournaments } from '@/components/christmas-tournaments'
 
 export const metadata = {
     title: 'Torneos Academy',
@@ -63,11 +64,12 @@ export default async function TorneosPage() {
                         <p className="inline-flex items-center rounded-full border border-gold/35 bg-gold/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-gold backdrop-blur"><Trophy className="mr-2 h-4 w-4" /> Torneos Academy</p>
                         <h1 className="mt-7 font-heading text-4xl font-black uppercase leading-[.9] text-white sm:text-5xl md:text-8xl">Competir, aprender<br /><span className="text-gold">y vivir la experiencia.</span></h1>
                         <p className="mt-7 max-w-2xl text-lg leading-relaxed text-slate-200 md:text-2xl">La competición forma parte del crecimiento. Cada torneo es fútbol, convivencia y aprendizaje dentro y fuera del campo.</p>
-                        <Button asChild size="lg" className="mt-9 min-h-14 bg-gold px-7 font-bold uppercase text-navy hover:bg-gold-light"><Link href="#proximos-torneos">Ver próximos torneos <ArrowRight className="ml-2 h-5 w-5" /></Link></Button>
+                        <Button asChild size="lg" className="mt-9 min-h-14 bg-gold px-7 font-bold uppercase text-navy hover:bg-gold-light"><Link href="#navidad">Ver torneos de Navidad <ArrowRight className="ml-2 h-5 w-5" /></Link></Button>
                     </div>
                 </div>
             </section>
 
+            <ChristmasTournaments />
             <section className="container py-20 md:py-28">
                 <div className="mx-auto max-w-3xl text-center"><p className="text-sm font-bold uppercase tracking-[0.18em] text-gold">Nuestra forma de competir</p><h2 className="mt-3 font-heading text-4xl font-black uppercase text-white md:text-6xl">El resultado importa.<br /><span className="text-gold">La formación, más.</span></h2><p className="mt-6 text-base leading-relaxed text-slate-300 md:text-lg">Queremos competir, mejorar y darlo todo. Y hacerlo con respeto, buen comportamiento y los valores que representan a Academy Costa Brava.</p></div>
                 <div className="mt-12 grid gap-4 md:grid-cols-3">{formationValues.map((item) => <article key={item.title} className="rounded-3xl border border-white/10 bg-white/[.045] p-6 text-center transition hover:-translate-y-1 hover:border-gold/50"><item.icon className="mx-auto h-8 w-8 text-gold" /><h3 className="mt-5 font-heading text-3xl font-black uppercase text-white">{item.title}</h3><p className="mt-3 text-sm leading-relaxed text-slate-300">{item.text}</p></article>)}</div>

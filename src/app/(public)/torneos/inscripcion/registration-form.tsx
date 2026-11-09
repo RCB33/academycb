@@ -1,0 +1,65 @@
+'use client'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { getEventFamily, submitEventRegistration } from '@/app/actions/event-registrations'
+import { christmasTournaments, registrationStatuses, tournamentQuote } from '@/lib/christmas-tournaments'
+import { EventRegistrationFiles } from '@/components/event-registration-files'
+
+type Family = Awaited<ReturnType<typeof getEventFamily>>
+const field = 'mt-1 block w-full rounded-lg border border-slate-300 bg-white p-3 text-base'
+export function EventRegistrationForm({ family, initialTournament }: { family: Family; initialTournament?: string }) {
+  const [selectedChild, setSelectedChild] = useState('')
+  const [selected, setSelected] = useState<string[]>(christmasTournaments.some(t => t.id === initialTournament) ? [initialTournament!] : [])
+  const [ownsKit, setOwnsKit] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState('')
+  const [requestId, setRequestId] = useState(() => crypto.randomUUID())
+  const [showForm, setShowForm] = useState(family.registrations.length === 0)
+  const router = useRouter()
+  const child = family.children.find(c => c.id === selectedChild)
+  const quote = selected.length ? tournamentQuote(selected, ownsKit) : null
+  const needsKit = selected.some(id => id !== 'champions')
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault(); setBusy(true); setMessage('')
+    const form = new FormData(event.currentTarget)
+    const value = (name: string) => String(form.get(name) || '')
+    const payload = { request_id: requestId, child_id: selectedChild || null, child_name: value('child_name'), birth_date: value('birth_date'), guardian_name: value('guardian_name'), phone: value('phone'), club: value('club'), coach: value('coach'), category: value('category'), level: value('level'), tournaments: selected, owns_kit: ownsKit, shirt_size: value('shirt_size'), shorts_size: value('shorts_size'), socks_size: value('socks_size'), champions_clothing: value('champions_clothing') === 'yes', image_consent: value('image_consent') === 'yes', privacy_consent: form.has('privacy'), terms_consent: form.has('terms'), participation_consent: form.has('participation'), notes: value('notes') }
+    const result = await submitEventRegistration(payload)
+    setBusy(false)
+    if (result.error) setMessage(result.error)
+    else {setMessage('Solicitud recibida. Espera la validación de Academy antes de realizar la transferencia. Puedes adjuntar la ficha federativa en tu solicitud.'); setShowForm(false); setRequestId(crypto.randomUUID()); router.refresh()}
+  }
+  return <div className="space-y-6"><p className="rounded-xl bg-white p-4 text-sm">Cuenta verificada: <strong>{family.email}</strong>. Tus inscripciones se guardan aquí; puedes volver cuando quieras.</p>
+    {message && <p role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-5">{message}</p>}
+    {family.registrations.length > 0 && <section><h2 className="mb-4 text-2xl font-bold">Mis inscripciones</h2><div className="space-y-5">{family.registrations.map(r => <article key={r.id} className="rounded-2xl border bg-white p-5"><div className="flex flex-wrap justify-between gap-3"><h3 className="text-xl font-bold">{r.details.child_name}</h3><span className="rounded-full bg-slate-100 px-3 py-1 text-sm">{registrationStatuses[r.status]}</span></div><p className="mt-2">{christmasTournaments.filter(t => (r.approved_tournaments || r.tournaments).includes(t.id)).map(t => t.name).join(' · ')}</p><p className="mt-2 text-sm">Referencia: <strong>{r.id.slice(0, 8).toUpperCase()}</strong></p><p className="mt-2 font-bold">{r.approved_amount != null ? 'Importe validado' : 'Importe orientativo'}: {Number(r.approved_amount ?? r.quoted_amount).toFixed(2)} €</p>
+      {r.admin_note && <p className="mt-3 rounded-lg bg-blue-50 p-3 text-sm">Academy: {r.admin_note}</p>}
+      {r.status === 'requested' && <p className="mt-3 text-sm text-amber-800">Pendiente de revisión de categoría, equipo y disponibilidad. Todavía no hagas la transferencia.</p>}
+      {r.status === 'awaiting_payment' && <div className="mt-4 rounded-xl bg-amber-50 p-4 text-sm"><strong>Transferencia bancaria</strong><p className="mt-2">Titular: {family.bank?.bank_holder}</p><p className="mt-2 break-all font-mono">{family.bank?.iban}</p><p className="mt-2">Concepto: NAVIDAD {r.id.slice(0, 8).toUpperCase()} · {r.details.child_name}</p><p className="mt-2">Fecha límite: {r.due_date}. Revisa los datos del beneficiario que te muestre tu banco antes de confirmar. Después adjunta el justificante aquí.</p></div>}
+      {r.status === 'proof_review' && <p className="mt-3 text-sm">Justificante recibido. Academy comprobará el ingreso antes de confirmar la plaza. No repitas la transferencia.</p>}
+      <EventRegistrationFiles id={r.id} status={r.status} />
+    </article>)}</div></section>}
+    {!showForm && <button onClick={() => {setShowForm(true);setSelectedChild('')}} className="rounded-xl bg-gold px-6 py-3 font-bold">Inscribir a otro hijo</button>}
+    {showForm && <form onSubmit={submit} className="space-y-6">
+      <fieldset className="rounded-2xl border bg-white p-6"><legend className="px-2 text-xl font-bold">1. Jugador y familia</legend>
+        {family.children.length > 0 && <label className="mb-5 block text-sm font-semibold">Selecciona un hijo<select value={selectedChild} onChange={e => setSelectedChild(e.target.value)} className={field}><option value="">Añadir un nuevo jugador</option>{family.children.map(c => <option key={c.id} value={c.id}>{c.full_name}</option>)}</select></label>}
+        <div key={selectedChild} className="grid gap-4 sm:grid-cols-2"><label className="text-sm font-semibold">Nombre y apellidos del jugador<input name="child_name" required maxLength={120} defaultValue={child?.full_name || ''} readOnly={!!child} className={field} /></label><label className="text-sm font-semibold">Fecha de nacimiento<input type="date" name="birth_date" required defaultValue={child?.birth_date || ''} className={field} /></label></div>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2"><label className="text-sm font-semibold">Nombre y apellidos del tutor<input name="guardian_name" required maxLength={120} defaultValue={family.guardian?.full_name || ''} autoComplete="name" className={field} /></label><label className="text-sm font-semibold">Teléfono de contacto<input name="phone" type="tel" required maxLength={20} defaultValue={family.guardian?.phone || ''} autoComplete="tel" className={field} /></label><label className="text-sm font-semibold">Club actual<input name="club" required maxLength={120} placeholder="Club o Sin equipo" className={field} /></label><label className="text-sm font-semibold">Entrenador actual (opcional)<input name="coach" maxLength={120} className={field} /></label><label className="text-sm font-semibold">Categoría<select name="category" required defaultValue="" className={field}><option value="" disabled>Seleccionar</option>{['S7','S8','S9','S10','S11','S12','Infantil F11'].map(c => <option key={c}>{c}</option>)}</select></label><label className="text-sm font-semibold">Nivel de competición<select name="level" required defaultValue="" className={field}><option value="" disabled>Seleccionar</option><option value="primera">Primera</option><option value="preferente">Preferente</option><option value="segunda">Segunda</option><option value="otra">Otro / por confirmar</option><option value="sin_equipo">Sin equipo</option></select></label></div>
+      </fieldset>
+      <fieldset className="rounded-2xl border bg-white p-6"><legend className="px-2 text-xl font-bold">2. Elige tus torneos</legend><div className="space-y-3">{christmasTournaments.map(t => <label key={t.id} className="flex cursor-pointer gap-3 rounded-xl border p-4"><input type="checkbox" checked={selected.includes(t.id)} onChange={e => setSelected(e.target.checked ? [...selected, t.id] : selected.filter(id => id !== t.id))} className="mt-1 h-5 w-5" /><span><strong>{t.name}</strong><span className="mt-1 block text-sm text-slate-600">{t.date} · {t.categories.join(', ')}</span></span></label>)}</div><p className="mt-4 text-sm">1 torneo: 65 € · 2 torneos: 120 € · 3 torneos: 165 € por jugador.</p>{quote?.reviewCompatibility && <p className="mt-4 rounded-xl bg-amber-50 p-4 text-sm">231 Cup y Champions Dream pueden coincidir el día 27 según el equipo. Puedes enviar tu solicitud: Academy validará la combinación antes de pedir el pago. Si es necesario elegir uno, el importe se recalculará.</p>}</fieldset>
+      <fieldset className="rounded-2xl border bg-white p-6"><legend className="px-2 text-xl font-bold">3. Equipación</legend>
+        {needsKit ? <><label className="block text-sm font-semibold">¿Ya tienes la equipación Academy?<select value={ownsKit ? 'yes' : 'no'} onChange={e => setOwnsKit(e.target.value === 'yes')} className={field}><option value="yes">Sí, usaré la que tengo</option><option value="no">No, necesito comprarla (+55 €)</option></select></label>{!ownsKit && <div className="mt-4 grid gap-4 sm:grid-cols-3">{[['shirt_size','Camiseta'],['shorts_size','Pantalón'],['socks_size','Calcetines']].map(([name,label]) => <label key={name} className="text-sm font-semibold">{label}<input name={name} required maxLength={20} placeholder={name === 'socks_size' ? 'Ej. 35–38' : 'Ej. 10 años / M'} className={field} /></label>)}</div>}<p className="mt-3 text-sm text-slate-600">Se cobra una sola equipación por jugador, aunque participe en varios torneos. Academy comprobará las tallas disponibles.</p></> : <p className="text-sm">En Champions Dream no necesitas comprar la equipación Academy.</p>}
+        {selected.includes('champions') && <label className="mt-5 block text-sm font-semibold">¿Quieres utilizar la ropa que facilita Champions Dream?<select name="champions_clothing" className={field}><option value="no">No</option><option value="yes">Sí</option></select><span className="mt-2 block font-normal text-slate-600">Sin selección de talla, según lo que entregue el organizador. Se devuelve al terminar.</span></label>}
+      </fieldset>
+      <fieldset className="space-y-4 rounded-2xl border bg-white p-6"><legend className="px-2 text-xl font-bold">4. Autorizaciones y envío</legend>
+        <label className="block text-sm font-semibold">Uso de imágenes por Academy<select name="image_consent" required defaultValue="" className={field}><option value="" disabled>Elige una opción</option><option value="yes">Sí, autorizo</option><option value="no">No autorizo</option></select><span className="mt-2 block font-normal text-slate-600">Fotografías y vídeos de la actividad para información y promoción de Academy en su web y redes. Esta decisión no autoriza automáticamente a otros organizadores. <Link href="/autorizacion-imagen" className="underline" target="_blank">Consultar información</Link>.</span></label>
+        <label className="flex gap-3 text-sm"><input type="checkbox" name="participation" required className="mt-1" /><span>Declaro que soy padre, madre o tutor autorizado y autorizo la participación del jugador en los torneos que confirme Academy.</span></label>
+        <label className="flex gap-3 text-sm"><input type="checkbox" name="privacy" required className="mt-1" /><span>He leído la <Link href="/privacidad" target="_blank" className="underline">información de privacidad</Link> sobre la gestión de la inscripción y los datos facilitados.</span></label>
+        <label className="flex gap-3 text-sm"><input type="checkbox" name="terms" required className="mt-1" /><span>Acepto las <Link href="/terminos" target="_blank" className="underline">condiciones</Link> y entiendo que esta solicitud no confirma plaza. Academy revisará equipo, documentación y disponibilidad antes del pago. La transferencia se validará manualmente.</span></label>
+        <label className="block text-sm font-semibold">Observaciones (opcional)<textarea name="notes" maxLength={1500} className={field} placeholder="Dudas de categoría, disponibilidad… No incluyas información médica aquí." /></label>
+        <p className="text-sm text-slate-600">Después del envío podrás adjuntar la ficha federativa y, si se solicita, otros documentos. No es necesario volver a crear la ficha del jugador en próximas inscripciones.</p>
+      </fieldset>
+      <div className="rounded-2xl bg-navy p-6 text-white"><h2 className="text-xl font-bold">Resumen por jugador</h2><p className="mt-3">Torneos: {quote?.tournaments || 0} € · Equipación: {quote?.kit || 0} €</p><p className="mt-2 text-3xl font-bold text-gold">Total orientativo: {quote?.total || 0} €</p><p className="mt-3 text-sm text-slate-300">No pagues todavía. Primero revisaremos la solicitud y te mostraremos la selección validada y los datos de transferencia.</p><button disabled={busy || !selected.length} className="mt-5 w-full rounded-xl bg-gold p-4 font-bold text-navy disabled:opacity-50">{busy ? 'Enviando…' : 'Enviar solicitud de inscripción'}</button></div>
+    </form>}
+  </div>
+}

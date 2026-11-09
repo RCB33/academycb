@@ -1,0 +1,44 @@
+-- Run after the migration inside BEGIN / ROLLBACK. No test records survive.
+do $$
+declare u uuid=gen_random_uuid(); other_user uuid=gen_random_uuid(); admin_id uuid; r uuid; r2 uuid; p jsonb; child uuid; before_count integer; failed boolean;
+begin
+ update public.event_campaign_settings set bank_holder='QA SOLO TRANSACCION REVERTIDA' where id='christmas-2026';
+ select id into admin_id from public.profiles where role='admin' limit 1;
+ select count(*) into before_count from public.payments;
+ insert into auth.users(id,email,email_confirmed_at,raw_user_meta_data) values(u,'qa-event-'||u||'@example.invalid',now(),'{}'),(other_user,'qa-event-'||other_user||'@example.invalid',now(),'{}');
+ p=jsonb_build_object('request_id',gen_random_uuid(),'child_id',null,'child_name','QA TORNEO ROLLBACK','birth_date','2016-01-01','guardian_name','QA TUTOR ROLLBACK','phone','600000000','tournaments',jsonb_build_array('231','champions'),'owns_kit',true,'image_consent',false);
+ r=public.submit_event_registration(u,p,120);
+ if public.submit_event_registration(u,p,120)<>r then raise exception 'Idempotency failed'; end if;
+ select child_id into child from public.event_registrations where id=r;
+ if (select count(*) from public.payments)<>before_count then raise exception 'Submission generated payment'; end if;
+ failed=false;
+ begin perform public.submit_event_registration(other_user,p||jsonb_build_object('request_id',gen_random_uuid(),'child_id',child),120); exception when others then failed=true; end;
+ if not failed then raise exception 'Cross-family child access allowed'; end if;
+ failed=false;
+ begin perform public.attach_event_file(r,u,'proof',r||'/test.pdf','test.pdf'); exception when others then failed=true; end;
+ if not failed then raise exception 'Proof accepted before approval'; end if;
+ perform public.review_event_registration(r,admin_id,'approve',array['231'],65,current_date+7,'Un torneo validado');
+ if (select count(*) from public.payments)<>before_count then raise exception 'Approval generated payment'; end if;
+ perform public.attach_event_file(r,u,'proof',r||'/test.pdf','test.pdf');
+ if (select status from public.event_registrations where id=r)<>'proof_review' then raise exception 'Upload did not move to review'; end if;
+ if (select count(*) from public.payments)<>before_count then raise exception 'Proof upload generated payment'; end if;
+ perform set_config('request.jwt.claims',jsonb_build_object('sub',admin_id,'role','authenticated')::text,true);
+ perform public.review_event_registration(r,admin_id,'confirm',array[]::text[],null,null,'Ingreso comprobado');
+ perform public.review_event_registration(r,admin_id,'confirm',array[]::text[],null,null,'Reintento');
+ if (select count(*) from public.payments)<>before_count+1 then raise exception 'Duplicate or missing payment'; end if;
+ if not exists(select 1 from public.payments where child_id=child and amount=65 and status='paid' and type='tournament') then raise exception 'Wrong payment'; end if;
+ failed=false;
+ begin perform public.review_event_registration(r,admin_id,'cancel',array[]::text[],null,null,'Cancelar'); exception when others then failed=true; end;
+ if not failed then raise exception 'Paid registration cancellation allowed'; end if;
+ if has_function_privilege('authenticated','public.submit_event_registration(uuid,jsonb,numeric)','execute') then raise exception 'Public RPC access'; end if;
+ if has_table_privilege('authenticated','public.event_registrations','insert') then raise exception 'Direct insert allowed'; end if;
+ perform set_config('request.jwt.claims',jsonb_build_object('sub',other_user,'role','authenticated')::text,true);
+ execute 'set local role authenticated';
+ if exists(select 1 from public.event_registrations where id=r) then raise exception 'RLS leaked another family'; end if;
+ execute 'reset role';
+ perform set_config('request.jwt.claims',jsonb_build_object('sub',u,'role','authenticated')::text,true);
+ execute 'set local role authenticated';
+ if not exists(select 1 from public.event_registrations where id=r) then raise exception 'RLS blocks owner'; end if;
+ execute 'reset role';
+ raise notice 'PASS: registration idempotency, ownership, proof states, payment once, paid cancellation protection, grants and RLS';
+end $$;

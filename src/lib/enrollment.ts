@@ -9,6 +9,7 @@ export const enrollmentSchema = z.object({
     service: serviceSchema,
     activity_id: z.string().uuid().optional().or(z.literal('')),
     child_name: z.string().trim().min(2, 'Indica el nombre completo del jugador.').max(120),
+    linked_child_id: z.string().uuid().optional().or(z.literal('')),
     birth_date: z.string()
         .regex(/^\d{4}-\d{2}-\d{2}$/, 'Indica una fecha de nacimiento válida.')
         .refine((value) => {
@@ -28,7 +29,7 @@ export const enrollmentSchema = z.object({
 
 export type EnrollmentPayload = z.input<typeof enrollmentSchema>
 const familyEnrollmentSchema = enrollmentSchema.omit({ service: true, activity_id: true, child_name: true, birth_date: true }).extend({
-    children: z.array(enrollmentSchema.pick({ service: true, activity_id: true, child_name: true, birth_date: true })).min(1).max(6, 'Puedes enviar hasta 6 jugadores a la vez.'),
+    children: z.array(enrollmentSchema.pick({ service: true, activity_id: true, child_name: true, birth_date: true, linked_child_id: true })).min(1).max(6, 'Puedes enviar hasta 6 jugadores a la vez.'),
 })
 export type EnrollmentResult = { success: true; message: string } | { success: false; error: string }
 
@@ -83,6 +84,7 @@ export async function createEnrollmentRequest(payload: unknown): Promise<Enrollm
             activity_id: activity.id || null,
             activity_name: activity.name,
             child_name: child.child_name,
+            linked_child_id: child.linked_child_id || null,
             birth_date: child.birth_date,
             guardian_name: parsed.data.guardian_name,
             email: parsed.data.email.toLowerCase(),

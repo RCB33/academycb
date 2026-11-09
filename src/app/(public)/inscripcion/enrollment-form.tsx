@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 
 export type EnrollmentService = 'academy' | 'campus' | 'tournament'
 export type EnrollmentActivity = { id: string; name: string; detail: string }
+type FamilyPlayer = { id: string; full_name: string; birth_date: string | null }
 
 const serviceLabels: Record<EnrollmentService, string> = {
     academy: 'Academia',
@@ -21,11 +22,15 @@ export default function EnrollmentForm({
     tournaments,
     initialService,
     initialActivityId,
+    familyPlayers = [],
+    guardian,
 }: {
     campuses: EnrollmentActivity[]
     tournaments: EnrollmentActivity[]
     initialService: EnrollmentService
     initialActivityId: string
+    familyPlayers?: FamilyPlayer[]
+    guardian?: {full_name: string; email: string | null; phone: string | null} | null
 }) {
     const [state, setState] = useState<{ success?: boolean; error?: string; message?: string }>({})
     const [pending, setPending] = useState(false)
@@ -38,7 +43,7 @@ export default function EnrollmentForm({
         setState({})
         const formData = new FormData(event.currentTarget)
         const data = Object.fromEntries(formData)
-        const children = players.map((id) => Object.fromEntries(['service', 'activity_id', 'child_name', 'birth_date'].map((key) => [key, formData.get(`player_${id}_${key}`) || ''])))
+        const children = players.map((id) => Object.fromEntries(['service', 'activity_id', 'child_name', 'birth_date', 'linked_child_id'].map((key) => [key, formData.get(`player_${id}_${key}`) || ''])))
 
         try {
             const response = await fetch('/api/enrollment', {
@@ -66,7 +71,7 @@ export default function EnrollmentForm({
                 <p className="text-sm text-slate-600">Añade a tus hijos y elige una actividad para cada uno. Solo tendrás que rellenar una vez los datos del tutor.</p>
                 {players.map((id, index) => <fieldset key={id} disabled={pending} className="min-w-0 space-y-5 rounded-2xl border border-slate-200 p-4 sm:p-6">
                     <legend className="px-2 font-bold text-navy">Jugador {index + 1}</legend>
-                    <PlayerFields prefix={`player_${id}_`} campuses={campuses} tournaments={tournaments} initialService={initialService} initialActivityId={initialActivityId} />
+                    <PlayerFields prefix={`player_${id}_`} campuses={campuses} tournaments={tournaments} initialService={initialService} initialActivityId={initialActivityId} familyPlayers={familyPlayers} />
                     {players.length > 1 && <Button type="button" variant="outline" className="min-h-11" onClick={() => setPlayers(players.filter((value) => value !== id))}>Quitar jugador {index + 1}</Button>}
                 </fieldset>)}
                 <Button type="button" variant="outline" disabled={pending || players.length >= 6} className="min-h-12 w-full border-gold text-navy" onClick={() => { setPlayers([...players, nextPlayer]); setNextPlayer(nextPlayer + 1) }}>Añadir otro hijo/a</Button>
@@ -75,7 +80,7 @@ export default function EnrollmentForm({
 
             <section className="border-t border-slate-200 pt-8">
                 <h2 className="font-heading text-2xl font-black text-navy">2. Datos del tutor/a</h2>
-                <div className="mt-4 grid gap-5 sm:grid-cols-2"><Field label="Nombre completo" name="guardian_name" required autoComplete="name" /><Field label="Email" name="email" type="email" required autoComplete="email" /><Field label="Teléfono" name="phone" type="tel" required autoComplete="tel" placeholder="600 000 000" /><div><label htmlFor="notes" className="text-sm font-bold text-slate-700">Observaciones (opcional)</label><Textarea id="notes" name="notes" maxLength={1000} className="mt-2 min-h-24 border-slate-300" placeholder="Por ejemplo: disponibilidad, dudas o información que debamos conocer." /></div></div>
+                <div className="mt-4 grid gap-5 sm:grid-cols-2"><Field label="Nombre completo" name="guardian_name" defaultValue={guardian?.full_name || ''} required autoComplete="name" /><Field label="Email" name="email" type="email" defaultValue={guardian?.email || ''} required autoComplete="email" /><Field label="Teléfono" name="phone" type="tel" defaultValue={guardian?.phone || ''} required autoComplete="tel" placeholder="600 000 000" /><div><label htmlFor="notes" className="text-sm font-bold text-slate-700">Observaciones (opcional)</label><Textarea id="notes" name="notes" maxLength={1000} className="mt-2 min-h-24 border-slate-300" placeholder="Por ejemplo: disponibilidad, dudas o información que debamos conocer." /></div></div>
             </section>
 
             <input name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
@@ -97,8 +102,10 @@ function Field({ label, ...props }: ComponentProps<typeof Input> & { label: stri
     return <div><label htmlFor={id} className="text-sm font-bold text-slate-700">{label}</label><Input id={id} {...props} className="mt-2 h-11 border-slate-300" /></div>
 }
 
-function PlayerFields({ prefix, campuses, tournaments, initialService, initialActivityId }: { prefix: string; campuses: EnrollmentActivity[]; tournaments: EnrollmentActivity[]; initialService: EnrollmentService; initialActivityId: string }) {
+function PlayerFields({ prefix, campuses, tournaments, initialService, initialActivityId, familyPlayers }: { prefix: string; campuses: EnrollmentActivity[]; tournaments: EnrollmentActivity[]; initialService: EnrollmentService; initialActivityId: string; familyPlayers: FamilyPlayer[] }) {
     const [service, setService] = useState<EnrollmentService>(initialService)
+    const [selectedChild, setSelectedChild] = useState('')
+    const child = familyPlayers.find(c => c.id === selectedChild)
     const [activityId, setActivityId] = useState(initialActivityId)
     const activities = useMemo(() => service === 'campus' ? campuses : service === 'tournament' ? tournaments : [], [campuses, service, tournaments])
     return <div className="space-y-5">
@@ -113,7 +120,8 @@ function PlayerFields({ prefix, campuses, tournaments, initialService, initialAc
 
             <section className="border-t border-slate-200 pt-8">
                 <h2 className="font-heading text-2xl font-black text-navy">Datos del jugador</h2>
-                <div className="mt-4 grid gap-5 sm:grid-cols-2"><Field label="Nombre completo del jugador" name={`${prefix}child_name`} required autoComplete="name" /><Field label="Fecha de nacimiento" name={`${prefix}birth_date`} type="date" required /></div>
+                {familyPlayers.length > 0 && <label className="mt-4 block text-sm font-bold">Usar una ficha existente<select name={`${prefix}linked_child_id`} value={selectedChild} onChange={e => setSelectedChild(e.target.value)} className="mt-2 block w-full rounded-lg border p-3"><option value="">Nuevo jugador</option>{familyPlayers.map(c => <option key={c.id} value={c.id}>{c.full_name}</option>)}</select></label>}
+                <div key={selectedChild} className="mt-4 grid gap-5 sm:grid-cols-2"><Field label="Nombre completo del jugador" name={`${prefix}child_name`} required autoComplete="name" defaultValue={child?.full_name || ''} readOnly={!!child} /><Field label="Fecha de nacimiento" name={`${prefix}birth_date`} type="date" required defaultValue={child?.birth_date || ''} /></div>
             </section>
 
 

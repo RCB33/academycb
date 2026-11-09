@@ -17,6 +17,7 @@ const NAV_ITEMS = [
     { href: '/portal/videoteca', label: 'Videoteca', icon: Video },
     { href: '/portal/documentos', label: 'Documentos y autorizaciones', icon: FileText },
     { href: '/portal/pagos', label: 'Pagos', icon: ShoppingBag },
+    { href: '/torneos/inscripcion', label: 'Mis torneos', icon: Trophy },
     { href: '/portal/tienda', label: 'Tienda', icon: Store },
     { href: '/portal/descargas', label: 'Descargas', icon: Download },
 ]

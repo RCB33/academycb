@@ -18,6 +18,10 @@ export default async function InscripcionPage({ searchParams }: { searchParams: 
     const params = await searchParams
     const supabase = await createClient()
     const today = new Date().toISOString().slice(0, 10)
+    const { data: { user } } = await supabase.auth.getUser()
+    const { data: guardian } = user ? await supabase.from('guardians').select('id,full_name,email,phone').eq('user_id',user.id).maybeSingle() : { data: null }
+    const { data: relations } = guardian ? await supabase.from('child_guardians').select('child:children(id,full_name,birth_date,archived_at)').eq('guardian_id',guardian.id) : { data: [] }
+    const familyPlayers = (relations || []).flatMap(r => Array.isArray(r.child) ? r.child : [r.child]).filter(c => c && !c.archived_at)
     const [{ data: campusRows }, { data: tournamentRows }] = await Promise.all([
         supabase.from('campuses').select('id, name, start_date, end_date, price').eq('status', 'published').gte('end_date', today).order('start_date'),
         supabase.from('tournaments_internal').select('id, title, start_date, end_date, price').eq('status', 'open').or(`end_date.is.null,end_date.gte.${today}`).order('start_date'),
@@ -63,6 +67,8 @@ export default async function InscripcionPage({ searchParams }: { searchParams: 
                     tournaments={tournaments}
                     initialService={parseService(params.service)}
                     initialActivityId={params.activity || ''}
+                    familyPlayers={familyPlayers}
+                    guardian={guardian}
                 />
             </div>
         </div>

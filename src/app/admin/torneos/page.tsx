@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -147,6 +148,8 @@ export default function TorneosPage() {
                     <Plus className="mr-2 h-4 w-4" /> Nuevo Torneo
                 </Button>
             </div>
+
+            <Link href="/admin/torneos/inscripciones" className="flex items-center justify-between rounded-2xl border border-gold/40 bg-amber-50 p-5 font-bold text-navy"><span>Navidad 2026–2027 · Inscripciones de jugadores y justificantes</span><span aria-hidden="true">→</span></Link>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <KpiCard icon={<Trophy className="h-4 w-4" />} label="Torneos Abiertos" value={openTournaments.length} color="yellow" />
