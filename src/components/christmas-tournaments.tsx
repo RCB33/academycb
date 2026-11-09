@@ -4,7 +4,7 @@ import { christmasTournaments } from '@/lib/christmas-tournaments'
 
 export function ChristmasTournaments() {
   return <section id="navidad" className="container scroll-mt-24 py-14 md:py-20">
-    <p className="text-sm font-bold uppercase tracking-widest text-gold">Abierto a jugadores de Academy y de otros clubes</p>
+    <p className="text-sm font-bold uppercase tracking-widest text-gold">Abierto a todos los jugadores</p>
     <h2 className="mt-3 text-4xl font-black md:text-6xl">Esta Navidad,<br /><span className="text-gold">juega con Academy.</span></h2>
     <p className="mt-5 max-w-2xl text-slate-300">Tres torneos. Un mismo equipo. Solicita tu plaza individual y nosotros organizamos los equipos. No necesitas ser alumno de la academia.</p>
     <div className="my-8 flex flex-wrap gap-3">{['1 torneo · 65 €', '2 torneos · 120 €', '3 torneos · 165 €'].map(s => <span key={s} className="rounded-xl border border-gold/40 bg-gold/10 px-5 py-3 font-bold text-gold">{s}</span>)}</div>
