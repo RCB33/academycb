@@ -7,8 +7,37 @@ export function ChristmasTournaments() {
     <p className="text-sm font-bold uppercase tracking-widest text-gold">Abierto a todos los jugadores</p>
     <h2 className="mt-3 text-4xl font-black md:text-6xl">Esta Navidad,<br /><span className="text-gold">juega con Academy.</span></h2>
     <p className="mt-5 max-w-2xl text-slate-300">Tres torneos. Un mismo equipo. Solicita tu plaza individual y nosotros organizamos los equipos. No necesitas ser alumno de la academia.</p>
-    <div className="mb-3 mt-8 flex flex-wrap gap-3">{['1 torneo · 65 €', '2 torneos · 120 €', '3 torneos · 165 €'].map(s => <span key={s} className="rounded-xl border border-gold/40 bg-gold/10 px-5 py-3 font-bold text-gold">{s}</span>)}</div>
-    <p className="mb-8 text-sm text-slate-300">Precios por jugador. Equipación no incluida: 55 € únicamente si la necesitas para 231 Cup o Winter Costa Brava Cup.</p>
+    <div className="my-6 md:my-8" aria-label="Precios de los torneos de Navidad">
+      <p className="mb-4 text-xl font-bold text-white">Más fútbol. Más ahorro.</p>
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
+        <div className="flex flex-col rounded-2xl border border-gold/30 bg-white/5 p-3.5 md:p-6">
+          <h3 className="text-sm font-bold text-white md:text-lg">1 torneo</h3>
+          <p className="mt-1 hidden text-sm text-slate-300 md:block">Elige tu cita con el fútbol.</p>
+          <p className="mt-3 text-3xl font-black text-white md:mt-5 md:text-5xl">65 €<span className="mt-1 block text-xs font-medium text-slate-300 md:ml-1 md:mt-0 md:inline md:text-sm">/ torneo</span></p>
+          <p className="mt-2 text-xs text-slate-300 md:mt-3 md:text-sm">65 € en total<span className="hidden md:inline"> por jugador</span></p>
+        </div>
+        <div className="flex flex-col rounded-2xl border border-gold/30 bg-white/5 p-3.5 md:p-6">
+          <h3 className="text-sm font-bold text-white md:text-lg"><span className="hidden md:inline">Pack de </span>2 torneos</h3>
+          <p className="mt-1 hidden text-sm text-slate-300 md:block">Dobla la experiencia.</p>
+          <p className="mt-3 text-3xl font-black text-white md:mt-5 md:text-5xl">60 €<span className="mt-1 block text-xs font-medium text-slate-300 md:ml-1 md:mt-0 md:inline md:text-sm">/ torneo</span></p>
+          <p className="mt-2 text-xs text-slate-300 md:mt-3 md:text-sm">120 € en total<span className="hidden md:inline"> por jugador</span></p>
+          <p className="mt-2 text-xs font-bold text-gold md:mt-4 md:text-sm">Ahorras 10 €<span className="hidden md:inline"> en total</span></p>
+        </div>
+        <div className="order-first col-span-2 flex flex-col rounded-2xl border border-gold bg-gradient-to-br from-gold-light to-gold p-4 text-navy shadow-lg shadow-gold/10 md:order-none md:col-span-1 md:p-6">
+          <span className="mb-2 self-start md:mb-4 rounded-full bg-navy px-3 py-1 text-xs font-black uppercase tracking-wide text-gold">Recomendado</span>
+          <h3 className="text-lg font-bold">Pack de 3 torneos</h3>
+          <p className="mt-1 hidden text-sm md:block">Vive la Navidad completa con Academy.</p>
+          <p className="mt-3 text-5xl font-black md:mt-5 md:text-6xl">55 €<span className="ml-1 text-sm font-semibold">/ torneo</span></p>
+          <p className="mt-2 text-xs md:mt-3 md:text-sm"><span className="sr-only">Por separado: </span><s className="mr-2">195 €</s><strong>165 € en total por jugador</strong></p>
+          <div className="my-3 rounded-xl border border-navy/15 bg-white/30 px-3 py-2 md:my-5 md:p-4">
+            <p className="text-lg font-black md:text-2xl">Ahorras 30 €</p>
+            <p className="text-xs font-semibold md:mt-1 md:text-sm">10 € menos en cada torneo.</p>
+          </div>
+          <Link href="/torneos/inscripcion" className="mt-auto inline-flex min-h-11 items-center justify-center rounded-xl bg-navy px-4 py-2.5 text-center text-sm font-bold md:min-h-12 md:py-3 md:text-base text-white transition hover:bg-navy-light focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-navy">Quiero el pack de 3 <span aria-hidden="true" className="ml-2">→</span></Link>
+        </div>
+      </div>
+      <p className="mt-3 text-xs leading-relaxed text-slate-400">Ahorro respecto a 65 € por torneo suelto. Precios por jugador. Equipación no incluida: 55 € únicamente si la necesitas para 231 Cup o Winter Costa Brava Cup.</p>
+    </div>
     <div className="grid gap-6 lg:grid-cols-3">{christmasTournaments.map(t => <article id={t.id} key={t.id} className="flex flex-col overflow-hidden rounded-3xl border border-white/15 bg-white/5">
       <div className="relative h-52"><Image src={t.image} alt="Jugadores Academy en una experiencia de fútbol" fill className="object-cover" /><div className="absolute inset-0 bg-gradient-to-t from-navy to-transparent" /><span className="absolute bottom-4 left-5 rounded-full bg-gold px-3 py-1 text-sm font-bold text-navy">Navidad 2026–2027</span></div>
       <div className="flex flex-1 flex-col p-6"><h3 className="text-3xl font-black">{t.name}</h3><p className="mt-3 font-semibold text-gold">{t.date}</p><p className="mt-2 text-sm text-slate-300">{t.location}</p><p className="mt-4 text-slate-200">{t.description}</p><p className="mt-4 text-sm font-semibold">{t.categories.join(' · ')}</p>
