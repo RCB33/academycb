@@ -26,6 +26,9 @@ import {
     type Campus, type CampusEnrollment
 } from "@/app/actions/campus"
 import { toast } from "sonner"
+import Link from 'next/link'
+import { ActivityNavigation } from '@/components/admin/activity-navigation'
+import { CampusEnrollmentEditor } from './enrollment-editor'
 
 const TYPE_CONFIG: Record<string, { label: string, icon: any, color: string }> = {
     'verano': { label: 'Verano', icon: Sun, color: '#f59e0b' },
@@ -57,6 +60,8 @@ export default function CampusPage() {
     const [editingCampus, setEditingCampus] = useState<Campus | null>(null)
     const [enrollDialogOpen, setEnrollDialogOpen] = useState(false)
     const [activeTab, setActiveTab] = useState('ediciones')
+    const [playerSearch,setPlayerSearch] = useState('')
+    const [playerStatus,setPlayerStatus] = useState('all')
 
     useEffect(() => { fetchCampuses() }, [])
 
@@ -120,10 +125,10 @@ export default function CampusPage() {
     }
 
     async function handleRemoveEnrollment(enrollmentId: string) {
-        if (!confirm('¿Eliminar esta inscripción?')) return
+        if (!confirm('¿Cancelar esta inscripción? Se conservarán sus datos y el historial.')) return
         const res = await removeEnrollment(enrollmentId)
         if (res.success) {
-            toast.success("Inscripción eliminada")
+            toast.success("Inscripción cancelada; historial conservado")
             refreshEnrollments()
         } else {
             toast.error(res.error)
@@ -139,6 +144,7 @@ export default function CampusPage() {
 
     return (
         <div className="space-y-6">
+            <ActivityNavigation />
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
                 <div>
@@ -263,6 +269,8 @@ export default function CampusPage() {
                             </Card>
 
                             {/* Enrollments list */}
+                            <div className="flex flex-wrap gap-3"><Input aria-label="Buscar alumno del campus" value={playerSearch} onChange={e=>setPlayerSearch(e.target.value)} placeholder="Buscar jugador o contacto" className="max-w-sm bg-white"/><select aria-label="Estado de inscripción" value={playerStatus} onChange={e=>setPlayerStatus(e.target.value)} className="rounded-lg border bg-white p-2 text-sm"><option value="all">Todos los estados</option>{Object.entries(ENROLLMENT_STATUS).map(([value,config])=><option key={value} value={value}>{config.label}</option>)}</select></div>
+                            <p className="text-xs text-slate-500">El estado de la plaza no sustituye al registro del pago. Abre «Editar / pagos» para ver el saldo, registrar un ingreso comprobado y consultar sus justificantes.</p>
                             {enrollments.length === 0 ? (
                                 <Card className="border-dashed">
                                     <CardContent className="py-12 text-center">
@@ -272,7 +280,7 @@ export default function CampusPage() {
                                 </Card>
                             ) : (
                                 <div className="space-y-2">
-                                    {enrollments.map(enr => (
+                                    {enrollments.filter(enr=>(playerStatus==='all'||enr.status===playerStatus)&&`${enr.child?.full_name||''} ${enr.emergency_contact||''}`.toLowerCase().includes(playerSearch.toLowerCase())).map(enr => (
                                         <Card key={enr.id} className="border-none shadow-sm bg-white hover:shadow-md transition-shadow">
                                             <CardContent className="p-4">
                                                 <div className="flex items-center gap-4 flex-wrap">
@@ -293,6 +301,8 @@ export default function CampusPage() {
                                                         </div>
                                                     </div>
 
+                                                    <CampusEnrollmentEditor enrollment={enr} onSaved={refreshEnrollments}/>
+                                                    <Link href={`/admin/crm/alumnos/${enr.child_id}`} className="text-xs font-semibold underline">Ficha y pagos</Link>
                                                     {/* Status Selector */}
                                                     <Select value={enr.status} onValueChange={(val) => handleEnrollmentStatusChange(enr.id, val)}>
                                                         <SelectTrigger className="w-[140px] h-8 text-xs">
@@ -310,7 +320,7 @@ export default function CampusPage() {
                                                     {/* Delete */}
                                                     <button onClick={() => handleRemoveEnrollment(enr.id)}
                                                         className="text-slate-300 hover:text-red-500 transition-colors">
-                                                        <Trash2 className="h-4 w-4" />
+                                                        <span className="text-xs">Cancelar</span>
                                                     </button>
                                                 </div>
 
@@ -541,7 +551,7 @@ function CampusDialog({ open, onOpenChange, campus }: {
                     <div className="grid grid-cols-3 gap-4">
                         <div className="space-y-2">
                             <Label className="text-slate-700 font-bold uppercase text-xs tracking-wider">Precio (€)</Label>
-                            <Input name="price" type="number" step="0.01" defaultValue={campus?.price || ''} placeholder="250" className="bg-white" />
+                            <Input name="price" type="number" step="0.01" defaultValue={campus?.price ?? ''} placeholder="250" className="bg-white" />
                         </div>
                         <div className="space-y-2">
                             <Label className="text-slate-700 font-bold uppercase text-xs tracking-wider">Plazas</Label>

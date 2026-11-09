@@ -2,6 +2,8 @@
 
 import { requireAdmin } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
+import { z } from 'zod'
+import { receiptBalance } from '@/lib/receipt-balance'
 
 const createClient = async () => (await requireAdmin()).supabase
 
@@ -63,7 +65,7 @@ export async function getCampuses() {
     return ((data || []) as unknown as Array<Campus & { campus_enrollments?: Array<{ id: string; status: string }> }>)
         .map(({ campus_enrollments = [], ...campus }) => ({
             ...campus,
-            enrollment_count: campus_enrollments.length,
+            enrollment_count: campus_enrollments.filter(enrollment => enrollment.status !== 'cancelled').length,
             confirmed_count: campus_enrollments.filter((enrollment) => enrollment.status === 'confirmed').length,
         }))
 }
@@ -151,7 +153,7 @@ export async function deleteCampus(id: string) {
         .eq('campus_id', id)
 
     if (count && count > 0) {
-        return { success: false, error: `No se puede eliminar: tiene ${count} inscripciones. Elimina las inscripciones primero.` }
+        return { success: false, error: `No se puede eliminar: tiene ${count} inscripciones. Cierra la edición para conservar sus datos e historial.` }
     }
 
     const { error } = await supabase
@@ -264,9 +266,19 @@ export async function updateEnrollment(id: string, data: Partial<{
 }>) {
     const supabase = await createClient()
 
+    const parsed = z.object({status:z.enum(['reserved','pending_payment','confirmed','cancelled']).optional(),tshirt_size:z.string().max(20).nullable().optional(),allergies:z.string().max(1500).nullable().optional(),emergency_contact:z.string().max(120).nullable().optional(),emergency_phone:z.string().max(20).nullable().optional(),notes:z.string().max(3000).nullable().optional()}).strict().safeParse(data)
+    if (!z.string().uuid().safeParse(id).success || !parsed.success) return {success:false,error:'Revisa los datos de la inscripción.'}
+    if(parsed.data.status) {
+        const {data:payments,error:paymentError}=await supabase.from('payments').select('amount,status,manual_receipt_allocations(amount,paid_date,method,voided_at)').eq('type','campus').eq('ref_id',id)
+        if(paymentError)return {success:false,error:'No se pudo comprobar el estado del pago.'}
+        const hasMoney=(payments||[]).some(p=>receiptBalance(p).paid>0)
+        if(parsed.data.status==='cancelled' && hasMoney)return {success:false,error:'Esta inscripción tiene pagos. Revisa la cancelación y los abonos en Finanzas antes de continuar.'}
+        if(parsed.data.status==='confirmed' && (!(payments||[]).length || (payments||[]).some(p=>receiptBalance(p).remaining>0||['cancelled','refunded','failed'].includes(p.status))))return {success:false,error:'Registra primero el pago completo desde Editar / pagos. Cambiar el estado no acredita un ingreso.'}
+    }
+
     const { error } = await supabase
         .from('campus_enrollments')
-        .update(data)
+        .update(parsed.data)
         .eq('id', id)
 
     if (error) {
@@ -279,20 +291,8 @@ export async function updateEnrollment(id: string, data: Partial<{
 }
 
 export async function removeEnrollment(id: string) {
-    const supabase = await createClient()
-
-    const { error } = await supabase
-        .from('campus_enrollments')
-        .delete()
-        .eq('id', id)
-
-    if (error) {
-        console.error("Error removing enrollment:", error)
-        return { success: false, error: "Error al eliminar la inscripción" }
-    }
-
-    revalidatePath('/admin/campus')
-    return { success: true }
+    // Keep the enrollment and its receipt/history instead of detaching financial records.
+    return updateEnrollment(id, {status:'cancelled'})
 }
 
 // ─── HELPERS ───

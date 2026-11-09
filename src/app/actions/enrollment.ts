@@ -41,6 +41,8 @@ export async function updateEnrollmentRequestStatus(id: string, status: string) 
     })
     if (error) return { success: false, error: error.message }
     revalidatePath('/admin/leads')
+    revalidatePath('/admin/campus/solicitudes')
+    revalidatePath('/admin/actividades')
     return { success: true }
 }
 
@@ -48,6 +50,16 @@ export async function convertEnrollmentRequest(id: string) {
     const { supabase } = await requireAdmin()
     const parsedId = z.string().uuid().safeParse(id)
     if (!parsedId.success) return { success: false, error: 'Solicitud no válida.' }
+
+    const {data:request,error:requestError}=await supabase.from('enrollment_requests').select('service').eq('id',parsedId.data).single()
+    if(requestError || !request)return {success:false,error:'No se pudo cargar la solicitud.'}
+    if(request.service==='campus') {
+        const {data:enrollmentId,error}=await supabase.rpc('accept_campus_request',{request_uuid:parsedId.data})
+        if(error)return {success:false,error:error.message}
+        const {data:enrollment}=await supabase.from('campus_enrollments').select('child_id').eq('id',enrollmentId).single()
+        for(const path of ['/admin/leads','/admin/campus','/admin/campus/solicitudes','/admin/actividades','/admin/crm/alumnos','/admin/crm/tutores','/admin/finanzas'])revalidatePath(path)
+        return {success:true,childId:enrollment?.child_id}
+    }
 
     const { data: childId, error } = await supabase.rpc('convert_enrollment_request', {
         request_uuid: parsedId.data,

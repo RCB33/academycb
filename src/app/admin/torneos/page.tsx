@@ -25,6 +25,7 @@ import {
 } from "@/app/actions/tournaments"
 import { toast } from "sonner"
 import { createClient } from '@/lib/supabase/client'
+import { ActivityNavigation } from '@/components/admin/activity-navigation'
 
 const STATUS_CFG: Record<string, { label: string, color: string }> = {
     'draft': { label: 'Borrador', color: 'bg-slate-100 text-slate-600' },
@@ -135,6 +136,7 @@ export default function TorneosPage() {
 
     return (
         <div className="space-y-6">
+            <ActivityNavigation />
             <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
                 <div>
                     <h1 className="text-3xl font-black tracking-tight text-slate-900 flex items-center gap-3">

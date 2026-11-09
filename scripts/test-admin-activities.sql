@@ -1,0 +1,47 @@
+-- Execute with migration in BEGIN/ROLLBACK: no test records or payment changes survive.
+do $$
+declare a uuid; u uuid=gen_random_uuid(); camp uuid=gen_random_uuid(); req uuid=gen_random_uuid(); req2 uuid=gen_random_uuid(); req3 uuid=gen_random_uuid(); enroll uuid; child uuid; event uuid; rejected boolean; before_children int; before_payments int;
+begin
+ select id into a from public.profiles where role='admin' limit 1;
+ insert into auth.users(id,email,email_confirmed_at,raw_user_meta_data) values(u,'qa-admin-activity-'||u||'@example.invalid',now(),'{}');
+ insert into public.campuses(id,year,name,type,start_date,end_date,capacity,price,status) values(camp,2027,'QA ACTIVITY ROLLBACK','invierno','2027-01-02','2027-01-03',1,89,'published');
+ insert into public.enrollment_requests(id,service,activity_id,activity_name,child_name,birth_date,guardian_name,email,phone) values(req,'campus',camp,'QA ACTIVITY ROLLBACK','QA ACTIVITY CHILD','2016-01-01','QA ACTIVITY TUTOR','qa-admin-activity-'||u||'@example.invalid','600000000');
+ perform set_config('request.jwt.claims',jsonb_build_object('sub',u,'role','authenticated')::text,true);
+ execute 'set local role authenticated';
+ rejected=false;begin perform public.accept_campus_request(req);exception when others then rejected=true;end;
+ if not rejected then raise exception 'Non-admin accepted request';end if;
+ execute 'reset role';
+ perform set_config('request.jwt.claims',jsonb_build_object('sub',a,'role','authenticated')::text,true);
+ execute 'set local role authenticated';
+ enroll=public.accept_campus_request(req);
+ if public.accept_campus_request(req)<>enroll then raise exception 'Acceptance not idempotent';end if;
+ select child_id into child from public.campus_enrollments where id=enroll;
+ if not exists(select 1 from public.payments where ref_id=enroll and type='campus' and status='pending' and amount=89) then raise exception 'Pending campus receipt missing';end if;
+ if exists(select 1 from public.payments where ref_id=enroll and status='paid') then raise exception 'Acceptance marked money paid';end if;
+ execute 'reset role';
+ insert into public.enrollment_requests(id,service,activity_id,activity_name,child_name,birth_date,guardian_name,email,phone) values(req2,'campus',camp,'QA ACTIVITY ROLLBACK','QA ACTIVITY CHILD','2016-01-01','QA ACTIVITY TUTOR','qa-admin-activity-'||u||'@example.invalid','600000000'),(req3,'campus',camp,'QA ACTIVITY ROLLBACK','QA SECOND CHILD','2015-01-01','QA ACTIVITY TUTOR','qa-admin-activity-'||u||'@example.invalid','600000000');
+ select count(*) into before_children from public.children;
+ select count(*) into before_payments from public.payments;
+ execute 'set local role authenticated';
+ if public.accept_campus_request(req2)<>enroll then raise exception 'Repeated family request duplicated enrollment';end if;
+ rejected=false;begin perform public.accept_campus_request(req3);exception when others then rejected=true;end;
+ if not rejected then raise exception 'Capacity overflow allowed';end if;
+ execute 'reset role';
+ if (select count(*) from public.children)<>before_children or (select count(*) from public.payments)<>before_payments then raise exception 'Retry/capacity rejection left duplicate child/payment';end if;
+ if (select status from public.enrollment_requests where id=req3)<>'new' then raise exception 'Failed acceptance changed request';end if;
+ event=public.submit_event_registration(u,jsonb_build_object('request_id',gen_random_uuid(),'child_id',child,'child_name','QA ACTIVITY CHILD','birth_date','2016-01-01','guardian_name','QA ACTIVITY TUTOR','phone','600000000','tournaments',jsonb_build_array('231'),'owns_kit',true,'image_consent',false),65);
+ perform public.save_event_operations(event,a,jsonb_build_object('teams',jsonb_build_object('231','Academy S11 A'),'phone','600000001','club','QA CLUB','coach','QA COACH','internal_note','QA PRIVATE NOTE','kit_status','not_needed','documents_checked',true,'contacted',true,'image_consent',true,'approved_amount',1));
+ if not exists(select 1 from public.event_registration_operations where registration_id=event and teams->>'231'='Academy S11 A' and contacted_at is not null and documents_checked) then raise exception 'Operations missing';end if;
+ if (select (details->>'image_consent')::boolean from public.event_registrations where id=event) then raise exception 'Consent changed';end if;
+ if (select quoted_amount from public.event_registrations where id=event)<>65 or (select approved_amount from public.event_registrations where id=event) is not null then raise exception 'Financial data changed';end if;
+ if not exists(select 1 from public.event_registration_history where registration_id=event and action='operations_updated') then raise exception 'Audit missing';end if;
+ rejected=false;begin perform public.save_event_operations(event,a,'{"teams":{"champions":"Wrong"}}');exception when others then rejected=true;end;
+ if not rejected then raise exception 'Unselected tournament team accepted';end if;
+ perform set_config('request.jwt.claims',jsonb_build_object('sub',u,'role','authenticated')::text,true);
+ execute 'set local role authenticated';
+ if exists(select 1 from public.event_registration_operations) or exists(select 1 from public.campus_request_links) then raise exception 'Internal data leaked to family';end if;
+ execute 'reset role';
+ if has_function_privilege('authenticated','public.save_event_operations(uuid,uuid,jsonb)','execute') then raise exception 'Operations service function public';end if;
+ if (select count(*) from public.payments)<>before_payments then raise exception 'Tournament tracking changed payments';end if;
+ raise notice 'PASS: admin-only campus acceptance, idempotency, family reuse, capacity atomicity, pending-not-paid, private operations, consent/amount protection and audit';
+end $$;
