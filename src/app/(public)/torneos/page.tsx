@@ -64,7 +64,8 @@ export default async function TorneosPage() {
                     <div className="max-w-4xl">
                         <p className="inline-flex items-center rounded-full border border-gold/35 bg-gold/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-gold backdrop-blur"><Trophy className="mr-2 h-4 w-4" /> Torneos Academy</p>
                         <h1 className="mt-7 font-heading text-4xl font-black uppercase leading-[.9] text-white sm:text-5xl md:text-8xl">Competir, aprender<br /><span className="text-gold">y vivir la experiencia.</span></h1>
-                        <p className="mt-7 max-w-2xl text-lg leading-relaxed text-slate-200 md:text-2xl">La competición forma parte del crecimiento. Cada torneo es fútbol, convivencia y aprendizaje dentro y fuera del campo.</p>
+                        <p className="mt-7 max-w-2xl text-lg leading-relaxed text-slate-200 md:text-2xl">Cada torneo es una oportunidad para crecer, compartir y sentirnos parte de un mismo equipo.</p>
+                        <p className="mt-4 max-w-2xl text-lg leading-relaxed text-slate-200 md:text-2xl"><strong className="font-bold text-gold">Defiende nuestro escudo. Vive nuestros colores.</strong> Representa a Academy Costa Brava con orgullo, respeto y compañerismo, dentro y fuera del campo.</p>
                         <Button asChild size="lg" className="mt-9 min-h-14 bg-gold px-7 font-bold uppercase text-navy hover:bg-gold-light"><Link href="#navidad">Ver torneos de Navidad <ArrowRight className="ml-2 h-5 w-5" /></Link></Button>
                     </div>
                 </div>
