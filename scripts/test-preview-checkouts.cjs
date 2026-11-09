@@ -11,7 +11,7 @@ const api='https://pnaitrnthhclyzfdvgbp.supabase.co'
 const deployment=process.argv[2]
 if(!/^academycb-[a-z0-9-]+-roques-projects-bd4f7acb\.vercel\.app$/.test(deployment||''))throw Error('Pass an Academy preview deployment, never production')
 const origin='https://'+deployment
-const ids={user:null,guardian:randomUUID(),child:randomUUID(),plan:randomUUID(),membership:randomUUID(),contract:randomUUID(),receipt:randomUUID()}
+const ids={user:null,guardian:randomUUID(),child:randomUUID(),plan:randomUUID(),membership:randomUUID(),contract:randomUUID(),receipt:randomUUID(),event:randomUUID(),order:randomUUID(),shopReceipt:null}
 let key,access,cookie='',stage='credentials',keepFixtures=false
 async function sb(path,method='GET',body){
  const response=await fetch(api+path,{method,headers:{apikey:key,Authorization:`Bearer ${key}`,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined})
@@ -27,10 +27,10 @@ async function loadDeployedActions(){
  const chunks=[...new Set([...html.matchAll(/src="([^" ]+\.js[^" ]*)"/g)].map(m=>m[1]))].filter(s=>s.startsWith('/_next/'))
  for(const path of chunks){
   const source=previewGet(path)
-  for(const match of source.matchAll(/"([0-9a-f]{40,})"[^;\n]{0,220}?"(payReceipt|payAcademy|cancelCheckout)"/g))deployedRefs[match[2]]=match[1]
-  if(Object.keys(deployedRefs).length===3)break
+  for(const match of source.matchAll(/"([0-9a-f]{40,})"[^;\n]{0,220}?"(payReceipt|payAcademy|cancelCheckout|payEventRegistration)"/g))deployedRefs[match[2]]=match[1]
+  if(Object.keys(deployedRefs).length===4)break
  }
- if(Object.keys(deployedRefs).length!==3)throw Error('No action result: deployed action references not found')
+ if(Object.keys(deployedRefs).length!==4)throw Error('No action result: deployed action references not found')
  console.log('Authenticated family page and deployed button references verified.')
 }
 async function action(name,args){
@@ -63,6 +63,33 @@ async function action(name,args){
   const login=await client.auth.signInWithPassword({email,password});if(login.error)throw Error('Temporary login failed')
   access=login.data.session.access_token;cookie=[...jar].map(([k,v])=>`${k}=${v}`).join('; ')
   stage='deployed button references';await loadDeployedActions()
+  if(process.argv.includes('--shop-only')){
+   stage='shop Checkout'
+   await sb('/rest/v1/orders','POST',{id:ids.order,customer_name:'QA TEMPORAL — Tienda',customer_email:email,customer_phone:'000000000',total_amount:1,status:'pending',payment_method:'manual'})
+   const receipts=await sb('/rest/v1/payments?type=eq.shop&ref_id=eq.'+ids.order);assert.equal(receipts.length,1);ids.shopReceipt=receipts[0].id
+   const shopCheckout=await action('payReceipt',[ids.shopReceipt]);assert.ok(shopCheckout.url?.startsWith('https://checkout.stripe.com/'),shopCheckout.error)
+   keepFixtures=true
+   const attempts=await sb('/rest/v1/receipt_checkout_attempts?payment_id=eq.'+ids.shopReceipt);assert.equal(attempts[0].mode,'test');assert.equal(attempts[0].amount_cents,100)
+   const twice=await action('payReceipt',[ids.shopReceipt]);assert.equal(twice.url,shopCheckout.url)
+   const cancelled=await action('cancelCheckout',['receipt',attempts[0].id]);assert.equal(cancelled.success,true,cancelled.error)
+   keepFixtures=false
+   const order=await sb('/rest/v1/orders?id=eq.'+ids.order);assert.equal(order[0].status,'pending')
+   console.log('PASS: verified buyer TEST shop Checkout, exact amount, duplicate click and expiration; real order remains unpaid.')
+   return
+  }
+  if(process.argv.includes('--event-only')){
+   stage='event Checkout'
+   await sb('/rest/v1/event_registrations','POST',{id:ids.event,request_id:randomUUID(),user_id:ids.user,child_id:ids.child,details:{child_name:'QA TEMPORAL — Pago evento'},tournaments:['winter'],status:'awaiting_payment',quoted_amount:1,approved_amount:1,approved_tournaments:['winter'],due_date:new Date(Date.now()+86400000).toISOString().slice(0,10)})
+   const eventCheckout=await action('payEventRegistration',[ids.event]);assert.ok(eventCheckout.url?.startsWith('https://checkout.stripe.com/'),eventCheckout.error)
+   keepFixtures=true
+   const attempts=await sb('/rest/v1/event_checkout_attempts?registration_id=eq.'+ids.event);assert.equal(attempts[0].mode,'test');assert.equal(attempts[0].amount_cents,100)
+   const twice=await action('payEventRegistration',[ids.event]);assert.equal(twice.url,eventCheckout.url)
+   const cancelled=await action('cancelCheckout',['event',attempts[0].id]);assert.equal(cancelled.success,true,cancelled.error)
+   keepFixtures=false
+   const registration=await sb('/rest/v1/event_registrations?id=eq.'+ids.event);assert.equal(registration[0].status,'awaiting_payment');assert.equal(registration[0].payment_id,null)
+   console.log('PASS: approved event TEST Checkout, exact amount, duplicate click, Stripe expiration; real registration remains unpaid.')
+   return
+  }
   stage='receipt Checkout'
   const receipt=await action('payReceipt',[ids.receipt]);assert.ok(receipt.url?.startsWith('https://checkout.stripe.com/'),receipt.error)
   const attempts=await sb('/rest/v1/receipt_checkout_attempts?payment_id=eq.'+ids.receipt)
@@ -92,8 +119,16 @@ async function action(name,args){
   // trail just because the HTTP action failed.
   const existingAttempts=await sb('/rest/v1/receipt_checkout_attempts?payment_id=eq.'+ids.receipt)
   const existingContracts=await sb('/rest/v1/academy_checkout_contracts?membership_id=eq.'+ids.membership)
-  if([...(existingAttempts||[]),...(existingContracts||[])].some(a=>['creating','open','active','completed','paid'].includes(a.state)))keepFixtures=true
+  const shopAttempts=ids.shopReceipt ? await sb('/rest/v1/receipt_checkout_attempts?payment_id=eq.'+ids.shopReceipt) : []
+  const eventAttempts=await sb('/rest/v1/event_checkout_attempts?registration_id=eq.'+ids.event)
+  if([...(existingAttempts||[]),...(existingContracts||[]),...(eventAttempts||[]),...shopAttempts].some(a=>['creating','open','active','completed','paid'].includes(a.state)))keepFixtures=true
   if(keepFixtures){console.error('A TEST session could not be expired. Retaining its private records for reconciliation; no real charges.');console.log('Temporary owner ID:',ids.user);process.exitCode=1;return}
+  for(const a of shopAttempts){await sb('/rest/v1/receipt_checkout_events?attempt_id=eq.'+a.id,'DELETE');await sb('/rest/v1/receipt_checkout_attempts?id=eq.'+a.id,'DELETE')}
+  if(ids.shopReceipt)await sb('/rest/v1/payments?id=eq.'+ids.shopReceipt,'DELETE')
+  await sb('/rest/v1/orders?id=eq.'+ids.order,'DELETE')
+  for(const a of eventAttempts||[])await sb('/rest/v1/event_checkout_events?attempt_id=eq.'+a.id,'DELETE')
+  await sb('/rest/v1/event_checkout_attempts?registration_id=eq.'+ids.event,'DELETE')
+  await sb('/rest/v1/event_registrations?id=eq.'+ids.event,'DELETE')
   const attempts=await sb('/rest/v1/receipt_checkout_attempts?payment_id=eq.'+ids.receipt)
   for(const a of attempts||[])await sb('/rest/v1/receipt_checkout_events?attempt_id=eq.'+a.id,'DELETE')
   await sb('/rest/v1/receipt_checkout_attempts?payment_id=eq.'+ids.receipt,'DELETE')

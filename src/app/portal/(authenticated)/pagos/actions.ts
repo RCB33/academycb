@@ -82,13 +82,14 @@ async function payObligation(paymentId: string, kind: 'receipt' | 'event') {
     try {
         if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(paymentId)) return { error: 'Recibo inválido.' }
         const { user } = await requireUser()
+        if (!user.email || !user.email_confirmed_at) return { error: 'Verifica tu correo electrónico antes de pagar.' }
         await requireStripeCheckout()
         const { mode, stripe } = configuredStripe()
         const origin = stripePaymentOrigin((await headers()).get('origin'), mode, process.env.VERCEL_URL)
         const admin = createAdminClient()
         // Amount, source eligibility and family ownership are resolved inside
         // the transaction. No browser-supplied price or user ID is accepted.
-        const { data: attempt, error } = await admin.rpc(kind === 'event' ? 'reserve_event_checkout' : 'reserve_receipt_checkout', { ...(kind === 'event' ? { registration_input: paymentId } : { payment_input: paymentId }), owner_input: user.id, mode_input: mode, origin_input: origin })
+        const { data: attempt, error } = await admin.rpc(kind === 'event' ? 'reserve_event_checkout' : 'reserve_receipt_checkout_verified', { ...(kind === 'event' ? { registration_input: paymentId } : { payment_input: paymentId, verified_email_input: user.email }), owner_input: user.id, mode_input: mode, origin_input: origin })
         if (error || !attempt) return { error: 'Este recibo no está disponible para pagar. Revisa su estado o consulta con Academy.' }
         if (attempt.owner_id !== user.id) return { error: 'Otro tutor ya tiene un pago abierto para este recibo. Espera a que termine o caduque.' }
         if (attempt.state === 'paid') return { error: mode === 'test' ? 'Este recibo ya tiene una prueba completada. El recibo real no se ha modificado.' : 'El recibo ya está pagado.' }

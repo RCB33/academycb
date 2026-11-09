@@ -1,16 +1,24 @@
 \set ON_ERROR_STOP on
 -- EMPTY LOCAL DATABASE ONLY. Every fixture rolls back; never run in production.
 begin;
-create role anon; create role authenticated; create role service_role;
+create role anon; create role authenticated; create role service_role bypassrls;
 create schema auth; create schema private;
 create table auth.users(id uuid primary key,email_confirmed_at timestamptz);
 create function auth.uid() returns uuid language sql as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
 create function public.has_role(text[]) returns boolean language sql as $$select false$$;
-create table public.payments(id uuid primary key default gen_random_uuid(),type text,ref_id uuid,child_id uuid,amount numeric,status text,method text,paid_at timestamptz,description text,concept_code text,stripe_payment_intent_id text);
+create table public.profiles(id uuid,role text);
+create table public.guardians(id uuid,user_id uuid);
+create table public.child_guardians(child_id uuid,guardian_id uuid);
+create table public.orders(id uuid,customer_email text,status text);
+create table public.campus_enrollments(id uuid,status text);
+create table public.payments(id uuid primary key default gen_random_uuid(),type text,ref_id uuid,child_id uuid,amount numeric,status text,method text,paid_at timestamptz,description text,concept_code text,stripe_payment_intent_id text, stripe_invoice_id text,created_at timestamptz,updated_at timestamptz);
 create table public.event_registrations(id uuid primary key default gen_random_uuid(),user_id uuid,child_id uuid,status text,approved_amount numeric,approved_tournaments text[],due_date date,payment_id uuid,updated_at timestamptz);
 create table public.event_registration_history(registration_id uuid,actor_id uuid,action text,note text);
 create table public.notifications(user_id uuid,title text,message text,type text,link_url text);
 \ir ../supabase/migrations/20261109103141_stripe_production_event_receipts.sql
+\ir ../supabase/migrations/20260914193102_receipt_checkout_ledger.sql
+\ir ../supabase/migrations/20261109112210_stripe_verified_owner_context.sql
+grant all on public.event_registrations,public.payments,public.profiles,public.guardians,public.child_guardians,public.orders,public.campus_enrollments to service_role;
 
 do $$
 declare u uuid:=gen_random_uuid(); other_u uuid:=gen_random_uuid(); r uuid:=gen_random_uuid(); a public.event_checkout_attempts%rowtype; b public.event_checkout_attempts%rowtype;
@@ -20,7 +28,9 @@ begin
  begin perform public.reserve_event_checkout(r,u,'live','https://www.academycostabrava.com'); raise exception 'unapproved accepted'; exception when others then if sqlerrm='unapproved accepted' then raise; end if; end;
  update public.event_registrations set status='awaiting_payment' where id=r;
  begin perform public.reserve_event_checkout(r,other_u,'live','https://www.academycostabrava.com'); raise exception 'foreign owner accepted'; exception when others then if sqlerrm='foreign owner accepted' then raise; end if; end;
+ set local role service_role;
  a:=public.reserve_event_checkout(r,u,'test','https://example.com'); b:=public.reserve_event_checkout(r,u,'test','https://example.com');
+ reset role;
  if a.id<>b.id then raise exception 'duplicate session'; end if;
  update public.event_checkout_attempts set state='open',stripe_session_id='cs_test_event' where id=a.id;
  begin perform public.confirm_event_checkout('evt_bad','checkout.session.completed',a.id,'cs_test_event',false,1,'eur','paid','pi_test'); raise exception 'wrong amount accepted'; exception when others then if sqlerrm='wrong amount accepted' then raise; end if; end;
@@ -49,5 +59,20 @@ begin
  if (select count(*) from public.event_checkout_attempts)<>2 then raise exception 'owner cannot read attempts'; end if;
  reset role;
  raise notice 'PASS: approval, ownership, exact amount, mode isolation, duplicate clicks/events, manual race, immutable price/owner, accounting, late expiry, RLS and RPC grants.';
+end $$;
+do $$
+declare u uuid:=gen_random_uuid(); o uuid:=gen_random_uuid(); p uuid:=gen_random_uuid(); a public.receipt_checkout_attempts%rowtype;
+begin
+ insert into auth.users values(u,now());
+ insert into public.orders values(o,'Buyer@Example.com','pending');
+ insert into public.payments(id,type,ref_id,amount,status,description) values(p,'shop',o,25,'pending','Pedido de prueba');
+ if has_table_privilege('service_role','auth.users','SELECT') then raise exception 'Service role unexpectedly reads Auth'; end if;
+ set local role service_role;
+ begin perform public.reserve_receipt_checkout_verified(p,u,'test','https://example.com','stranger@example.com'); raise exception 'Foreign order accepted'; exception when others then if sqlerrm='Foreign order accepted' then raise; end if; end;
+ a:=public.reserve_receipt_checkout_verified(p,u,'test','https://example.com','buyer@example.com');
+ if a.amount_cents<>2500 or a.owner_id<>u then raise exception 'Wrong shop checkout'; end if;
+ reset role;
+ if has_function_privilege('authenticated','public.reserve_receipt_checkout_verified(uuid,uuid,text,text,text)','EXECUTE') then raise exception 'Owner email can be forged by client'; end if;
+ raise notice 'PASS: shop ownership uses verified server context; unrelated email rejected; no Auth-table permissions added.';
 end $$;
 rollback;
