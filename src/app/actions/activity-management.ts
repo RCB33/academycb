@@ -5,10 +5,14 @@ import { revalidatePath } from 'next/cache'
 import { requireAdmin } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 
-export async function acceptCampusRequest(id: string) {
+export async function acceptCampusRequest(id: string, assignment?: {campusId:string;amount:number}) {
   const { supabase } = await requireAdmin()
   if (!z.string().uuid().safeParse(id).success) return { error: 'Solicitud no válida.' }
-  const { data, error } = await supabase.rpc('accept_campus_request', { request_uuid: id })
+  const parsedAssignment=z.object({campusId:z.string().uuid(),amount:z.number().finite().min(0).max(10000)}).optional().safeParse(assignment)
+  if(!parsedAssignment.success)return {error:'Selecciona una edición y revisa el importe.'}
+  const { data, error } = assignment
+    ? await supabase.rpc('assign_and_accept_campus_request',{request_uuid:id,selected_campus:assignment.campusId,validated_amount:assignment.amount})
+    : await supabase.rpc('accept_campus_request', { request_uuid: id })
   if (error) return { error: error.message }
   for (const path of ['/admin/campus', '/admin/campus/solicitudes', '/admin/actividades', '/admin/leads', '/admin/crm/alumnos', '/admin/finanzas']) revalidatePath(path)
   return { success: true, enrollmentId: data as string }

@@ -51,9 +51,10 @@ export async function convertEnrollmentRequest(id: string) {
     const parsedId = z.string().uuid().safeParse(id)
     if (!parsedId.success) return { success: false, error: 'Solicitud no válida.' }
 
-    const {data:request,error:requestError}=await supabase.from('enrollment_requests').select('service').eq('id',parsedId.data).single()
+    const {data:request,error:requestError}=await supabase.from('enrollment_requests').select('service,activity_id,campus_details').eq('id',parsedId.data).single()
     if(requestError || !request)return {success:false,error:'No se pudo cargar la solicitud.'}
     if(request.service==='campus') {
+        if(!request.activity_id || request.campus_details)return {success:false,error:'Revisa y acepta esta solicitud desde Campus → Solicitudes, indicando su edición y el importe de las semanas.'}
         const {data:enrollmentId,error}=await supabase.rpc('accept_campus_request',{request_uuid:parsedId.data})
         if(error)return {success:false,error:error.message}
         const {data:enrollment}=await supabase.from('campus_enrollments').select('child_id').eq('id',enrollmentId).single()
