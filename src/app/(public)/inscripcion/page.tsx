@@ -40,12 +40,12 @@ export default async function InscripcionPage({ searchParams }: { searchParams: 
     const campuses: EnrollmentActivity[] = (campusRows || []).map((campus) => ({
         id: campus.id,
         name: campus.name,
-        detail: `${new Date(campus.start_date).toLocaleDateString('es-ES')} – ${new Date(campus.end_date).toLocaleDateString('es-ES')}${campus.price !== null ? ` · ${Number(campus.price).toFixed(2)} €` : ''}`,
+        detail: `${new Date(campus.start_date).toLocaleDateString(translate.locale)} – ${new Date(campus.end_date).toLocaleDateString(translate.locale)}${campus.price !== null ? ` · ${Number(campus.price).toFixed(2)} €` : ''}`,
     }))
     const tournaments: EnrollmentActivity[] = (tournamentRows || []).map((tournament) => ({
         id: tournament.id,
         name: tournament.title,
-        detail: `${tournament.start_date ? new Date(tournament.start_date).toLocaleDateString('es-ES') : 'Fecha por confirmar'}${tournament.end_date ? ` – ${new Date(tournament.end_date).toLocaleDateString('es-ES')}` : ''}${Number(tournament.price) > 0 ? ` · ${Number(tournament.price).toFixed(2)} €` : ''}`,
+        detail: `${tournament.start_date ? new Date(tournament.start_date).toLocaleDateString(translate.locale) : translate('Fecha por confirmar')}${tournament.end_date ? ` – ${new Date(tournament.end_date).toLocaleDateString(translate.locale)}` : ''}${Number(tournament.price) > 0 ? ` · ${Number(tournament.price).toFixed(2)} €` : ''}`,
     }))
 
     return (

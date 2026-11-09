@@ -97,7 +97,7 @@ export default function EnrollmentForm({
                 <p className="px-1 text-xs leading-relaxed text-slate-500">{translate("Al activar el acceso al Portal Familias, el tutor legal firmará el documento de aceptación. Quedará disponible en ")}<strong>{translate("Mis documentos")}</strong> {translate(" y en la ficha del jugador.")}</p>
             </section>
             {translate(state.error && <p className="rounded-xl bg-red-50 p-4 text-sm font-medium text-red-700" role="alert">{translate(state.error)}</p>)}
-            <Button disabled={pending} className="h-12 w-full bg-gold text-base font-black text-navy shadow-lg shadow-gold/20 hover:bg-gold/80">{translate(pending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {translate(" Enviando solicitud…")}</> : <><Send className="mr-2 h-4 w-4" /> {translate(players.length > 1 ? `Enviar solicitudes (${players.length} jugadores)` : 'Enviar solicitud de inscripción')}</>)}</Button>
+            <Button disabled={pending} className="min-h-12 h-auto whitespace-normal py-3 w-full bg-gold text-sm sm:text-base font-black text-navy shadow-lg shadow-gold/20 hover:bg-gold/80">{translate(pending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {translate(" Enviando solicitud…")}</> : <><Send className="mr-2 h-4 w-4" /> {translate(players.length > 1 ? `Enviar solicitudes (${players.length} jugadores)` : 'Enviar solicitud de inscripción')}</>)}</Button>
             <p className="text-center text-xs text-slate-500">{translate("Enviar esta solicitud no crea un cargo ni confirma una plaza automáticamente.")}</p>
         </form>
     )

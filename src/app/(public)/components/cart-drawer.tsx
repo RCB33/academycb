@@ -89,6 +89,7 @@ export default function CartDrawer() {
                             </div>
                             <button
                                 onClick={() => setIsCartOpen(false)}
+                                aria-label={translate("Cerrar carrito")}
                                 className="p-2 rounded-full hover:bg-gray-100 transition-colors"
                             >
                                 <X className="h-6 w-6 text-gray-500" />

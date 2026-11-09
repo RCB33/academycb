@@ -77,7 +77,7 @@ export default async function AuthenticatedLayout({
                         <LanguageSwitcher />
                         <NotificationBell />
                         <form action={signOut}>
-                            <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 hover:text-white"><LogOut className="h-5 w-5" /></Button>
+                            <Button variant="ghost" size="icon" aria-label={translate("Cerrar sesión")} className="text-white hover:bg-white/10 hover:text-white"><LogOut className="h-5 w-5" /></Button>
                         </form>
                     </div>
                 </div>

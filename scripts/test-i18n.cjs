@@ -21,6 +21,15 @@ assert.equal(ca(null), null)
 const record = { name: 'Ana', price: 197 }
 assert.equal(ca(record), record, 'Do not mutate records or React element props')
 assert.equal(ca('Jugador inventado 123'), 'Jugador inventado 123')
+assert.equal(ca('Tu Carrito (2)'), 'La teva cistella (2)')
+assert.equal(ca('10 mensualidades de 55.00 €'), '10 mensualitats de 55.00 €')
+assert.equal(ca(' y autorizo los 10 cobros mensuales indicados'), ' i autoritzo els 10 cobraments mensuals indicats')
+assert.equal(ca('Firma para registrar tu decisión sobre el uso de imagen y vídeo de Àlex Puig.'), 'Signa per registrar la teva decisió sobre l’ús d’imatge i vídeo de Àlex Puig.')
+assert.equal(ca('Mira la ficha de Àlex en Academy Costa Brava: https://example.com/player/a?x=$&'), 'Mira la fitxa de Àlex a Academy Costa Brava: https://example.com/player/a?x=$&')
+assert.equal(es('10 mensualidades de 55.00 €'), '10 mensualidades de 55.00 €')
+assert.equal(ca('Mi comentario: Tu Carrito (2)'), 'Mi comentario: Tu Carrito (2)', 'Templates must match the entire message')
+assert.equal(ca('Tu Carrito (abc)'), 'Tu Carrito (abc)', 'Numeric placeholders only accept numbers')
+assert.equal(ca('Documento no válido.'), 'Document no vàlid.')
 const metadata = { title: 'Torneos Academy', alternates: { canonical: '/torneos' } }
 assert.deepEqual(translateMetadata(metadata, ca), { title: 'Tornejos Academy', alternates: { canonical: '/torneos' } })
 assert.equal(metadata.title, 'Torneos Academy')
@@ -29,5 +38,7 @@ for (const [source, translation] of Object.entries(messages)) {
   assert.ok(translation.trim(), `Empty translation: ${source}`)
   const numbers = text => (text.match(/\d+(?:[.,]\d+)*/g) || []).sort()
   assert.deepEqual(numbers(translation), numbers(source), `Changed numbers: ${source}`)
+  const placeholders = text => (text.match(/\{\w+\}/g) || []).sort()
+  assert.deepEqual(placeholders(translation), placeholders(source), `Changed placeholders: ${source}`)
 }
 console.log(`i18n: locale fallback, dates, whitespace, metadata, data preservation and ${Object.keys(messages).length} numeric consistency checks passed`)

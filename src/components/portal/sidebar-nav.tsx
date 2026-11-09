@@ -119,7 +119,7 @@ export function MobilePortalNav() {
                 {translate(MOBILE_MORE_ITEMS.map((item) => {
                     const active = isCurrent(pathname, item.href)
                     const Icon = item.icon
-                    return <Link key={item.href} href={item.href} onClick={() => setMoreOpen(false)} aria-current={active ? 'page' : undefined} className={cn('flex min-h-20 items-center gap-3 rounded-2xl border p-3 text-left transition active:scale-[0.98]', active ? 'border-gold bg-gold/10 text-navy shadow-sm' : 'border-slate-200 bg-white text-navy')}><span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-xl', active ? 'bg-gold text-navy' : 'bg-navy/7 text-navy')}><Icon className="h-5 w-5" /></span><span className="text-sm font-bold leading-tight">{translate(item.label.replace('Mi ', ''))}</span></Link>
+                    return <Link key={item.href} href={item.href} onClick={() => setMoreOpen(false)} aria-current={active ? 'page' : undefined} className={cn('flex min-h-20 min-w-0 flex-col items-start gap-2 rounded-2xl sm:flex-row sm:items-center sm:gap-3 border p-3 text-left transition active:scale-[0.98]', active ? 'border-gold bg-gold/10 text-navy shadow-sm' : 'border-slate-200 bg-white text-navy')}><span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-xl', active ? 'bg-gold text-navy' : 'bg-navy/7 text-navy')}><Icon className="h-5 w-5" /></span><span className="min-w-0 break-words text-sm font-bold leading-tight">{translate(item.label.replace('Mi ', ''))}</span></Link>
                 }))}
             </nav>
         </section>)}

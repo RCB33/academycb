@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import { toast } from 'sonner'
+import { useT } from '@/lib/i18n/client'
 
 export type CartItem = {
     id: string; // unique ID for the cart item (product_id + size)
@@ -28,6 +29,7 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
+    const translate = useT()
     const [items, setItems] = useState<CartItem[]>([])
     const [isCartOpen, setIsCartOpen] = useState(false)
     const [isMounted, setIsMounted] = useState(false)
@@ -53,22 +55,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }, [items, isMounted])
 
     const addToCart = (newItem: Omit<CartItem, 'id'>) => {
+        const id = `${newItem.product_id}-${newItem.size}`
+        const alreadyInCart = items.some(item => item.id === id)
         setItems(currentItems => {
-            // Generate unique ID based on product and size
-            const id = `${newItem.product_id}-${newItem.size}`
-            const existingItemIndex = currentItems.findIndex(i => i.id === id)
-
-            if (existingItemIndex > -1) {
-                // Item exists, increase quantity
-                const updatedItems = [...currentItems]
-                updatedItems[existingItemIndex].quantity += newItem.quantity
-                toast.success(`Añadida otra unidad al carrito.`)
-                return updatedItems
+            if (currentItems.some(item => item.id === id)) {
+                return currentItems.map(item => item.id === id
+                    ? { ...item, quantity: item.quantity + newItem.quantity }
+                    : item)
             }
-
-            toast.success(`${newItem.name} añadido al carrito.`)
             return [...currentItems, { ...newItem, id }]
         })
+        toast.success(translate(alreadyInCart
+            ? 'Añadida otra unidad al carrito.'
+            : `${translate(newItem.name)} añadido al carrito.`))
         setIsCartOpen(true) // Open drawer automatically
     }
 

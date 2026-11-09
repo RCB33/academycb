@@ -155,7 +155,7 @@ export default async function FamilyVideotecaPage() {
                                         ))}
                                         <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-100">
                                             <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                                                {translate(new Date(asset.created_at).toLocaleDateString())}
+                                                {translate(new Date(asset.created_at).toLocaleDateString(translate.locale))}
                                             </span>
                                             <span className="inline-flex h-8 items-center rounded-lg px-2 text-sm font-bold text-gold transition group-hover:bg-gold/10">
                                                 {translate("Ver Vídeo")}</span>

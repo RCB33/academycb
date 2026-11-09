@@ -24,7 +24,7 @@ export default async function ContactPage() {
     return (
         <div className="min-h-screen bg-navy text-white">
             <div className="container py-12 md:py-32">
-                <div className="grid md:grid-cols-2 gap-16 items-start">
+                <div className="grid min-w-0 md:grid-cols-2 gap-10 lg:gap-16 items-start">
                     <div className="space-y-12">
                         <div>
                             <h1 className="font-heading text-5xl md:text-6xl font-extrabold mb-6 text-white uppercase">{translate("Contacto")}</h1>
@@ -34,38 +34,38 @@ export default async function ContactPage() {
                         </div>
 
                         <div className="space-y-8">
-                            {translate(address && <div className="flex items-start gap-6 group">
-                                <div className="p-4 rounded-xl bg-navy-light border border-white/10 group-hover:border-gold/50 transition-colors">
+                            {translate(address && <div className="flex min-w-0 items-start gap-3 sm:gap-6 group">
+                                <div className="shrink-0 p-3 sm:p-4 rounded-xl bg-navy-light border border-white/10 group-hover:border-gold/50 transition-colors">
                                     <MapPin className="h-8 w-8 text-gold" />
                                 </div>
-                                <div>
+                                <div className="min-w-0 flex-1">
                                     <h3 className="font-heading text-2xl font-bold mb-2 text-white group-hover:text-gold transition-colors">{translate("Ubicación")}</h3>
-                                    <p className="text-gray-400 text-lg">{translate(address)}</p>
+                                    <p className="break-words text-gray-400 text-base sm:text-lg">{translate(address)}</p>
                                 </div>
                             </div>)}
-                            {translate(phone && <div className="flex items-start gap-6 group">
-                                <div className="p-4 rounded-xl bg-navy-light border border-white/10 group-hover:border-gold/50 transition-colors">
+                            {translate(phone && <div className="flex min-w-0 items-start gap-3 sm:gap-6 group">
+                                <div className="shrink-0 p-3 sm:p-4 rounded-xl bg-navy-light border border-white/10 group-hover:border-gold/50 transition-colors">
                                     <Phone className="h-8 w-8 text-gold" />
                                 </div>
-                                <div>
+                                <div className="min-w-0 flex-1">
                                     <h3 className="font-heading text-2xl font-bold mb-2 text-white group-hover:text-gold transition-colors">{translate("Teléfono / WhatsApp")}</h3>
-                                    <a className="text-gray-400 text-lg hover:text-gold" href={`tel:${phone}`}>{translate(phone)}</a>
+                                    <a className="break-words text-gray-400 text-base sm:text-lg hover:text-gold" href={`tel:${phone}`}>{translate(phone)}</a>
                                 </div>
                             </div>)}
-                            {translate(email && <div className="flex items-start gap-6 group">
-                                <div className="p-4 rounded-xl bg-navy-light border border-white/10 group-hover:border-gold/50 transition-colors">
+                            {translate(email && <div className="flex min-w-0 items-start gap-3 sm:gap-6 group">
+                                <div className="shrink-0 p-3 sm:p-4 rounded-xl bg-navy-light border border-white/10 group-hover:border-gold/50 transition-colors">
                                     <Mail className="h-8 w-8 text-gold" />
                                 </div>
-                                <div>
+                                <div className="min-w-0 flex-1">
                                     <h3 className="font-heading text-2xl font-bold mb-2 text-white group-hover:text-gold transition-colors">{translate("Email")}</h3>
-                                    <a className="text-gray-400 text-lg hover:text-gold" href={`mailto:${email}`}>{translate(email)}</a>
+                                    <a className="break-words text-gray-400 text-base sm:text-lg hover:text-gold" href={`mailto:${email}`}>{translate(email)}</a>
                                 </div>
                             </div>)}
                             {translate(!address && !phone && !email && <p className="text-gray-400">{translate("Utiliza el formulario y te responderemos lo antes posible.")}</p>)}
                         </div>
                     </div>
 
-                    <Card className="p-8 md:p-10 bg-navy-light border-white/10 shadow-2xl">
+                    <Card className="min-w-0 p-5 sm:p-8 md:p-10 bg-navy-light border-white/10 shadow-2xl">
                         <h2 className="font-heading text-3xl font-bold mb-8 text-white">{translate("Envíanos un mensaje")}</h2>
                         <ContactForm />
                     </Card>

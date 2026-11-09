@@ -42,7 +42,7 @@ export function ShareProfile({ token, childId, childName }: ShareProfileProps) {
         setTimeout(() => setCopied(false), 2000)
     }
 
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`Mira la ficha de ${childName} en Academy Costa Brava: ${publicUrl}`)}`
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(translate(`Mira la ficha de ${childName} en Academy Costa Brava: ${publicUrl}`))}`
 
     const handleRotate = async () => {
         if (!confirm(translate('El enlace anterior dejará de funcionar. ¿Quieres renovarlo?'))) return
@@ -58,7 +58,7 @@ export function ShareProfile({ token, childId, childName }: ShareProfileProps) {
     return (
         <Dialog>
             <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2 border-primary/20 hover:bg-primary/5 text-primary">
+                <Button variant="outline" size="sm" aria-label={translate("Compartir Ficha")} className="gap-2 border-primary/20 hover:bg-primary/5 text-primary">
                     <Share2 className="h-4 w-4" />
                     <span className="hidden sm:inline">{translate("Compartir Ficha")}</span>
                 </Button>
@@ -79,7 +79,7 @@ export function ShareProfile({ token, childId, childName }: ShareProfileProps) {
                             className="h-9"
                         />
                     </div>
-                    <Button type="submit" size="sm" className="px-3" onClick={handleCopy}>
+                    <Button type="button" size="sm" aria-label={translate("Copiar enlace")} className="px-3" onClick={handleCopy}>
                         {translate(copied ? (
                             <Check className="h-4 w-4" />
                         ) : (

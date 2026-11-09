@@ -156,12 +156,11 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
                                             <h3 className="font-bold text-slate-800 text-lg flex flex-wrap items-center gap-2 break-words">
                                                 {translate(tx.title)}
                                                 <span className={`text-[10px] uppercase font-black px-2 py-0.5 rounded-full tracking-wider ${tx.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                                                    {translate(tx.balance?.partial ? 'Pago parcial' : tx.status === 'paid' ? 'Pagado' : tx.status === 'cancelled' ? 'Anulado' : tx.status === 'refunded' ? 'Reembolsado' : 'Pendiente')}
-                                                    {translate(({ paid: 'Pagado', pending: 'Pendiente', failed: 'Fallido', cancelled: 'Cancelado', refunded: 'Reembolsado', shipped: 'Enviado', completed: 'Completado', overdue: 'Vencido' } as Record<string, string>)[tx.status] || 'Por revisar')}
+                                                    {translate(tx.balance?.partial ? 'Pago parcial' : ({ paid: 'Pagado', pending: 'Pendiente', failed: 'Fallido', cancelled: 'Anulado', refunded: 'Reembolsado', shipped: 'Enviado', completed: 'Completado', overdue: 'Vencido' } as Record<string, string>)[tx.status] || 'Por revisar')}
                                                 </span>
                                             </h3>
                                             <div className="flex flex-wrap items-center text-sm font-medium text-slate-500 mt-1 gap-x-4 gap-y-2">
-                                                <span className="flex items-center"><Calendar className="mr-1.5 h-4 w-4 text-slate-400"/> {translate(new Date(tx.date).toLocaleDateString())}</span>
+                                                <span className="flex items-center"><Calendar className="mr-1.5 h-4 w-4 text-slate-400"/> {translate(new Date(tx.date).toLocaleDateString(translate.locale))}</span>
                                                 <span className="flex items-center"><CreditCard className="mr-1.5 h-4 w-4 text-slate-400"/> {translate(" Método: ")}<span className="capitalize ml-1">{translate(tx.method)}</span></span>
                                             </div>
 

@@ -69,7 +69,7 @@ export function NotificationBell() {
 
     const formatDate = (dateString: string) => {
         const date = new Date(dateString)
-        return new Intl.DateTimeFormat('es-ES', {
+        return new Intl.DateTimeFormat(translate.locale, {
             hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short'
         }).format(date)
     }
@@ -77,7 +77,7 @@ export function NotificationBell() {
     return (
         <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
             <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative hover:bg-white/10 shrink-0">
+                <Button variant="ghost" size="icon" aria-label={translate("Notificaciones")} className="relative hover:bg-white/10 shrink-0">
                     <Bell className="h-5 w-5 md:h-6 md:w-6 transition-transform hover:scale-110" />
                     {translate(unreadCount > 0 && (
                         <span className="absolute
@@ -92,8 +92,8 @@ export function NotificationBell() {
                     ))}
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80 md:w-96 max-h-[80vh] overflow-hidden flex flex-col p-0 border-border/50 shadow-xl rounded-xl">
-                <div className="flex items-center justify-between p-4 border-b bg-muted/30">
+            <DropdownMenuContent align="end" className="w-80 max-w-[calc(100vw-1rem)] md:w-96 max-h-[80vh] overflow-hidden flex flex-col p-0 border-border/50 shadow-xl rounded-xl">
+                <div className="flex items-center justify-between gap-2 p-3 border-b bg-muted/30">
                     <DropdownMenuLabel className="font-semibold text-lg p-0">{translate("Notificaciones")}</DropdownMenuLabel>
                     {translate(unreadCount > 0 && (
                         <Button
