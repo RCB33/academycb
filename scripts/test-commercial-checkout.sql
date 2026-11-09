@@ -2,7 +2,8 @@
 -- EMPTY LOCAL DATABASE ONLY. Do not run these fixtures in Supabase production.
 begin;
 create role anon; create role authenticated; create role service_role;
-create schema auth;
+create schema auth; create schema private;
+create table public.manual_receipt_allocations(payment_id uuid,voided_at timestamptz);
 create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz);
 create function auth.uid() returns uuid language sql as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
 create function public.has_role(text[]) returns boolean language sql as $$select false$$;
@@ -17,6 +18,9 @@ create table public.academy_memberships(id uuid primary key,child_id uuid,plan_i
 \ir ../supabase/migrations/20260914193102_receipt_checkout_ledger.sql
 \ir ../supabase/migrations/20260914193103_academy_checkout_contracts.sql
 \ir ../supabase/migrations/20261109103323_protect_stripe_receipt_identity.sql
+\ir ../supabase/migrations/20261109112634_stripe_preserve_manual_history.sql
+create trigger block_allocated_checkout before insert on public.receipt_checkout_attempts for each row execute function private.block_allocated_checkout();
+create trigger block_allocated_contract before insert on public.academy_checkout_contracts for each row execute function private.block_allocated_checkout();
 do $$
 declare u uuid:=gen_random_uuid(); other_u uuid:=gen_random_uuid(); g uuid:=gen_random_uuid(); child uuid:=gen_random_uuid(); receipt uuid:=gen_random_uuid(); membership uuid:=gen_random_uuid(); plan uuid:=gen_random_uuid(); a public.receipt_checkout_attempts%rowtype; b public.receipt_checkout_attempts%rowtype; c public.academy_checkout_contracts%rowtype; snapshot_total bigint;
 begin
@@ -100,4 +104,15 @@ begin
  raise notice 'PASS: authenticated RLS isolates families and exposes only owned collection history.';
 end;
 $$;
+do $$
+declare p uuid:=gen_random_uuid(); u uuid; c uuid;
+begin
+ select id into u from auth.users where email='qa@example.com';
+ select cg.child_id into c from public.child_guardians cg join public.guardians g on g.id=cg.guardian_id where g.user_id=u limit 1;
+ insert into public.payments(id,type,child_id,amount,status) values(p,'other',c,25,'pending');
+ insert into public.manual_receipt_allocations values(p,now());
+ begin perform public.reserve_receipt_checkout(p,u,'live','https://example.com'); raise exception 'Voided history charged again'; exception when others then if sqlerrm='Voided history charged again' then raise; end if; end;
+ if exists(select 1 from public.receipt_checkout_attempts where payment_id=p) then raise exception 'Blocked attempt persisted'; end if;
+ raise notice 'PASS: voided manual history is protected before creating a card checkout.';
+end $$;
 rollback;

@@ -45,3 +45,9 @@ No hay que crear productos ni identificadores de precio manualmente en Stripe pa
 - PostgreSQL 17 local aislado: permisos y RLS, propiedad, importe, doble clic/evento, stock, plazas, confirmación de inscripción y bloqueo de pago manual/reasignación durante Checkout. Fixtures con rollback, nunca ejecutados en producción.
 - TypeScript, ESLint y build de Next.js. ESLint conserva advertencias preexistentes.
 - Las pruebas locales no acreditan un cobro real ni un ciclo mensual real en Stripe.
+
+## Comprobación contra Stripe TEST
+
+En Preview se han abierto y caducado sesiones reales de Stripe TEST para recibos, pago completo, autorización mensual, inscripción de Navidad aprobada y pedido de tienda. Se comprobó importe y reutilización con doble clic. No se introdujo tarjeta ni se confirmó dinero. Se eliminaron las familias, planes, pedidos e inscripciones temporales al terminar.
+
+El asesor de seguridad no añadió incidencias con las nuevas tablas y funciones. Las comprobaciones detectaron y corrigieron una consulta a `auth.users` sin permisos: la propiedad de pedidos utiliza ahora el correo verificado por `Auth.getUser()` dentro de la acción de servidor, y las funciones de escritura siguen limitadas a `service_role`.

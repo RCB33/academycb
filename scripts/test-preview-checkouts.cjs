@@ -48,14 +48,14 @@ async function action(name,args){
  if(token.startsWith('go-keyring-base64:'))token=Buffer.from(token.split(':')[1],'base64').toString()
  const response=await fetch('https://api.supabase.com/v1/projects/pnaitrnthhclyzfdvgbp/api-keys',{headers:{Authorization:`Bearer ${token}`}})
  const keys=await response.json();key=keys.find(k=>k.name==='service_role').api_key;const anon=keys.find(k=>k.name==='anon').api_key
- const email=`qa-checkout-${Date.now()}@example.com`,password=randomUUID()+'Aa9!'
+ const email=`qa-checkout-${Date.now()}-${randomUUID().slice(0,8)}@example.com`,password=randomUUID()+'Aa9!'
  try{
   stage='private fixtures'
   ids.user=(await sb('/auth/v1/admin/users','POST',{email,password,email_confirm:true,user_metadata:{password_set:true}})).id
   await sb('/rest/v1/guardians','POST',{id:ids.guardian,user_id:ids.user,full_name:'QA TEMPORAL — Pagos',phone:'000000000',email})
   await sb('/rest/v1/children','POST',{id:ids.child,full_name:'QA TEMPORAL — Pagos',birth_year:2015,archived_at:new Date().toISOString(),notes:'Temporary isolated integration test; no real player'})
   await sb('/rest/v1/child_guardians','POST',{child_id:ids.child,guardian_id:ids.guardian})
-  await sb('/rest/v1/membership_plans','POST',{id:ids.plan,name:'QA TEMPORAL — No publicar',duration_months:3,price:0,is_active:false})
+  await sb('/rest/v1/membership_plans','POST',{id:ids.plan,name:'QA TEMPORAL — No publicar '+ids.plan.slice(0,8),duration_months:3,price:0,is_active:false})
   await sb('/rest/v1/academy_memberships','POST',{id:ids.membership,child_id:ids.child,plan_id:ids.plan,status:'active',start_date:'2026-09-14',end_date:'2026-12-14'})
   await sb('/rest/v1/payments','POST',{id:ids.receipt,type:'other',child_id:ids.child,amount:1,status:'pending',description:'QA TEMPORAL — Checkout TEST'})
   const jar=new Map()

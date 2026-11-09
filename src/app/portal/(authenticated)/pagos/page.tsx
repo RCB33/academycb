@@ -59,7 +59,7 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
     // These order IDs already passed the caller's RLS and email filter. Only
     // resolve the receipt IDs here; the payment RPC independently checks ownership.
     const orderIds = (orders || []).map(o => o.id)
-    const { data: orderReceipts } = orderIds.length ? await createAdminClient().from('payments').select('id,ref_id,status,method').eq('type', 'shop').in('ref_id', orderIds) : { data: [] }
+    const { data: orderReceipts } = orderIds.length ? await createAdminClient().from('payments').select('id,ref_id,status,method,amount,manual_receipt_allocations(amount,paid_date,method,voided_at)').eq('type', 'shop').in('ref_id', orderIds) : { data: [] }
 
     // 4. Combine and sort
     const allTransactions = [
@@ -81,7 +81,8 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
             id: o.id,
             type: 'shop',
             title: `Pedido Tienda #${o.id.slice(0,8).toUpperCase()}`,
-            amount: o.total_amount,
+            amount: orderReceipts?.find(p => p.ref_id === o.id)?.amount ?? o.total_amount,
+            balance: orderReceipts?.find(p => p.ref_id === o.id) ? receiptBalance(orderReceipts.find(p => p.ref_id === o.id)!) : undefined,
             status: orderReceipts?.find(p => p.ref_id === o.id)?.status || o.status,
             date: o.created_at,
             method: orderReceipts?.find(p => p.ref_id === o.id)?.method || o.payment_method || 'Sin asignar',
