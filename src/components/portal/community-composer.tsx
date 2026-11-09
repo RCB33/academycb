@@ -1,4 +1,6 @@
 'use client'
+import { useT } from '@/lib/i18n/client'
+
 
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { CheckCircle2, ImagePlus, Loader2, LockKeyhole, Send, ShieldCheck, Sparkles, Video, X } from 'lucide-react'
@@ -32,6 +34,8 @@ function getMediaDetails(file: File): MediaDetails | null {
 }
 
 export function CommunityComposer({ players }: { players: Child[] }) {
+    const translate = useT()
+
     const formRef = useRef<HTMLFormElement>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
     const [pending, startTransition] = useTransition()
@@ -146,49 +150,49 @@ export function CommunityComposer({ players }: { players: Child[] }) {
     return <form ref={formRef} onSubmit={handleSubmit} className="overflow-hidden rounded-[1.75rem] border border-navy/10 bg-white shadow-xl shadow-navy/10">
         <div className="flex items-center gap-3 bg-navy px-5 py-4 text-white sm:px-6">
             <div className="rounded-2xl bg-gold p-2.5 text-navy shadow-lg shadow-black/15"><Sparkles className="h-5 w-5" /></div>
-            <div><p className="font-heading text-xl font-black uppercase leading-none">Comparte un logro</p><p className="mt-1 text-xs text-slate-300">Un momento bonito para la comunidad Academy.</p></div>
+            <div><p className="font-heading text-xl font-black uppercase leading-none">{translate("Comparte un logro")}</p><p className="mt-1 text-xs text-slate-300">{translate("Un momento bonito para la comunidad Academy.")}</p></div>
         </div>
         <div className="space-y-4 p-4 sm:p-6">
             <input type="hidden" name="child_id" value={selectedChildId} />
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 shadow-inner">
-                <Textarea name="body" required minLength={2} maxLength={1500} className="min-h-24 resize-none border-0 bg-transparent px-2 py-1 text-base shadow-none focus-visible:ring-0" placeholder="¿Qué logro quieres celebrar hoy? Por ejemplo: gran torneo, primera convocatoria, esfuerzo en los entrenos…" />
+                <Textarea name="body" required minLength={2} maxLength={1500} className="min-h-24 resize-none border-0 bg-transparent px-2 py-1 text-base shadow-none focus-visible:ring-0" placeholder={translate("¿Qué logro quieres celebrar hoy? Por ejemplo: gran torneo, primera convocatoria, esfuerzo en los entrenos…")} />
                 <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-slate-200 pt-3">
                     <input id="community-media-input" ref={fileInputRef} type="file" accept="image/*,video/*" className="sr-only" disabled={isBusy} onChange={(event) => selectFile(event.target.files?.[0] || null)} />
-                    <label htmlFor="community-media-input" className={`inline-flex min-h-11 cursor-pointer items-center rounded-xl px-3 text-sm font-medium text-navy transition hover:bg-gold/15 ${isBusy ? 'pointer-events-none opacity-50' : ''}`}><ImagePlus className="mr-2 h-4 w-4 text-gold" />Añadir foto o vídeo</label>
-                    <span className="text-xs text-slate-500">JPG, PNG, WEBP, MP4, WEBM o MOV · máx. 20 MB</span>
+                    <label htmlFor="community-media-input" className={`inline-flex min-h-11 cursor-pointer items-center rounded-xl px-3 text-sm font-medium text-navy transition hover:bg-gold/15 ${isBusy ? 'pointer-events-none opacity-50' : ''}`}><ImagePlus className="mr-2 h-4 w-4 text-gold" />{translate("Añadir foto o vídeo")}</label>
+                    <span className="text-xs text-slate-500">{translate("JPG, PNG, WEBP, MP4, WEBM o MOV · máx. 20 MB")}</span>
                 </div>
             </div>
 
-            {selectedFile && <div className="overflow-hidden rounded-2xl border border-gold/35 bg-gold/5">
+            {translate(selectedFile && <div className="overflow-hidden rounded-2xl border border-gold/35 bg-gold/5">
                 <div className="flex items-center justify-between gap-3 px-4 py-3">
                     <div className="flex min-w-0 items-center gap-2 text-sm font-semibold text-navy">
-                        {getMediaDetails(selectedFile)?.mediaType === 'video' ? <Video className="h-4 w-4 shrink-0 text-gold" /> : <ImagePlus className="h-4 w-4 shrink-0 text-gold" />}
-                        <span className="truncate">{selectedFile.name}</span>
+                        {translate(getMediaDetails(selectedFile)?.mediaType === 'video' ? <Video className="h-4 w-4 shrink-0 text-gold" /> : <ImagePlus className="h-4 w-4 shrink-0 text-gold" />)}
+                        <span className="truncate">{translate(selectedFile.name)}</span>
                     </div>
-                    <Button type="button" size="icon" variant="ghost" className="h-8 w-8 shrink-0 text-slate-500 hover:bg-white hover:text-red-600" aria-label="Quitar adjunto" onClick={clearFile}><X className="h-4 w-4" /></Button>
+                    <Button type="button" size="icon" variant="ghost" className="h-8 w-8 shrink-0 text-slate-500 hover:bg-white hover:text-red-600" aria-label={translate("Quitar adjunto")} onClick={clearFile}><X className="h-4 w-4" /></Button>
                 </div>
-                {previewUrl && (getMediaDetails(selectedFile)?.mediaType === 'image' ? <img src={previewUrl} alt="Vista previa de la publicación" className="max-h-72 w-full object-cover" /> : <video src={previewUrl} controls className="max-h-72 w-full bg-navy" />)}
-            </div>}
+                {translate(previewUrl && (getMediaDetails(selectedFile)?.mediaType === 'image' ? <img src={previewUrl} alt={translate("Vista previa de la publicación")} className="max-h-72 w-full object-cover" /> : <video src={previewUrl} controls className="max-h-72 w-full bg-navy" />))}
+            </div>)}
 
             <fieldset className="space-y-3">
-                <legend className="text-sm font-black text-navy">¿De quién es este logro?</legend>
+                <legend className="text-sm font-black text-navy">{translate("¿De quién es este logro?")}</legend>
                 <div className="grid gap-2 sm:grid-cols-2">
-                    {players.map((child) => {
+                    {translate(players.map((child) => {
                         const active = child.id === selectedChildId
                         return <button key={child.id} type="button" onClick={() => { setSelectedChildId(child.id); setMessage(null); setIsError(false) }} className={`flex items-center gap-3 rounded-2xl border p-3 text-left transition ${active ? 'border-gold bg-gold/10 ring-1 ring-gold/40' : 'border-slate-200 bg-white hover:border-gold/50'}`}>
-                            <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-heading font-black ${active ? 'bg-gold text-navy' : 'bg-navy/8 text-navy'}`}>{child.full_name.slice(0, 1).toUpperCase()}</span>
-                            <span className="min-w-0 flex-1"><span className="block truncate text-sm font-bold text-navy">{child.full_name}</span><span className={`mt-0.5 block text-xs ${child.can_share_media ? 'text-emerald-700' : 'text-slate-500'}`}>{child.can_share_media ? 'Foto y vídeo permitidos' : 'Solo publicación de texto'}</span></span>
-                            {active && <CheckCircle2 className="h-5 w-5 shrink-0 text-gold" />}
+                            <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-heading font-black ${active ? 'bg-gold text-navy' : 'bg-navy/8 text-navy'}`}>{translate(child.full_name.slice(0, 1).toUpperCase())}</span>
+                            <span className="min-w-0 flex-1"><span className="block truncate text-sm font-bold text-navy">{translate(child.full_name)}</span><span className={`mt-0.5 block text-xs ${child.can_share_media ? 'text-emerald-700' : 'text-slate-500'}`}>{translate(child.can_share_media ? 'Foto y vídeo permitidos' : 'Solo publicación de texto')}</span></span>
+                            {translate(active && <CheckCircle2 className="h-5 w-5 shrink-0 text-gold" />)}
                         </button>
-                    })}
+                    }))}
                 </div>
             </fieldset>
 
-            <div className="grid gap-3 sm:grid-cols-2"><label className="rounded-2xl border border-gold/45 bg-gold/10 p-3"><span className="flex items-center gap-2 text-sm font-bold text-navy"><input type="radio" name="visibility" value="community" defaultChecked className="accent-gold" />Comunidad Academy</span><span className="mt-1 block pl-6 text-xs text-slate-600">Lo ven las familias dentro del portal.</span></label><label className="rounded-2xl border border-slate-200 bg-white p-3"><span className="flex items-center gap-2 text-sm font-bold text-navy"><input type="radio" name="visibility" value="private" className="accent-gold" /><LockKeyhole className="h-3.5 w-3.5" />Solo mi familia</span><span className="mt-1 block pl-6 text-xs text-slate-600">Solo tu familia y Academy.</span></label></div>
+            <div className="grid gap-3 sm:grid-cols-2"><label className="rounded-2xl border border-gold/45 bg-gold/10 p-3"><span className="flex items-center gap-2 text-sm font-bold text-navy"><input type="radio" name="visibility" value="community" defaultChecked className="accent-gold" />{translate("Comunidad Academy")}</span><span className="mt-1 block pl-6 text-xs text-slate-600">{translate("Lo ven las familias dentro del portal.")}</span></label><label className="rounded-2xl border border-slate-200 bg-white p-3"><span className="flex items-center gap-2 text-sm font-bold text-navy"><input type="radio" name="visibility" value="private" className="accent-gold" /><LockKeyhole className="h-3.5 w-3.5" />{translate("Solo mi familia")}</span><span className="mt-1 block pl-6 text-xs text-slate-600">{translate("Solo tu familia y Academy.")}</span></label></div>
 
-            <div className="flex gap-2 rounded-xl border border-gold/25 bg-gold/5 p-3 text-xs leading-relaxed text-slate-600"><ShieldCheck className="h-4 w-4 shrink-0 text-gold" /><p>Academy puede retirar publicaciones para cuidar la comunidad. Las fotos y vídeos solo se permiten con la autorización interna activa.</p></div>
-            {message && <p className={`rounded-xl px-3 py-2 text-sm font-medium ${isError ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-800'}`} role="status">{message}</p>}
-            <Button disabled={isBusy} className="h-12 w-full rounded-xl bg-gold font-black text-navy shadow-lg shadow-gold/25 hover:bg-gold-light">{isBusy ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{uploading ? 'Subiendo archivo…' : 'Publicando…'}</> : <><Send className="mr-2 h-4 w-4" />Compartir en el muro</>}</Button>
+            <div className="flex gap-2 rounded-xl border border-gold/25 bg-gold/5 p-3 text-xs leading-relaxed text-slate-600"><ShieldCheck className="h-4 w-4 shrink-0 text-gold" /><p>{translate("Academy puede retirar publicaciones para cuidar la comunidad. Las fotos y vídeos solo se permiten con la autorización interna activa.")}</p></div>
+            {translate(message && <p className={`rounded-xl px-3 py-2 text-sm font-medium ${isError ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-800'}`} role="status">{translate(message)}</p>)}
+            <Button disabled={isBusy} className="h-12 w-full rounded-xl bg-gold font-black text-navy shadow-lg shadow-gold/25 hover:bg-gold-light">{translate(isBusy ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{translate(uploading ? 'Subiendo archivo…' : 'Publicando…')}</> : <><Send className="mr-2 h-4 w-4" />{translate("Compartir en el muro")}</>)}</Button>
         </div>
     </form>
 }

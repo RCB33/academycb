@@ -1,4 +1,6 @@
 "use client"
+import { useT } from '@/lib/i18n/client'
+
 
 import { useCart } from "@/context/cart-context"
 import { X, ShoppingBag, Trash2, Plus, Minus, ClipboardCheck, Loader2 } from "lucide-react"
@@ -12,6 +14,8 @@ import { toast } from "sonner"
 import Link from "next/link"
 
 export default function CartDrawer() {
+    const translate = useT()
+
     const {
         items: cart,
         isCartOpen,
@@ -50,15 +54,15 @@ export default function CartDrawer() {
             })
 
             if (result.success) {
-                toast.success("Solicitud de pedido recibida")
+                toast.success(translate("Solicitud de pedido recibida"))
                 clearCart()
                 setIsCartOpen(false)
                 setIsCheckout(false)
             } else {
-                toast.error(result.error || "Error al procesar el pedido")
+                toast.error(translate(result.error || "Error al procesar el pedido"))
             }
-        } catch (error) {
-            toast.error("Ocurrió un error inesperado")
+        } catch {
+            toast.error(translate("Ocurrió un error inesperado"))
         } finally {
             setLoading(false)
         }
@@ -80,7 +84,7 @@ export default function CartDrawer() {
                             <div className="flex items-center gap-2">
                                 <ShoppingBag className="h-5 w-5 text-primary" />
                                 <h2 className="text-xl font-heading font-bold text-navy uppercase tracking-tight">
-                                    {isCheckout ? 'Solicitar Pedido' : `Tu Carrito (${totalItems})`}
+                                    {translate(isCheckout ? 'Solicitar Pedido' : `Tu Carrito (${totalItems})`)}
                                 </h2>
                             </div>
                             <button
@@ -93,57 +97,56 @@ export default function CartDrawer() {
 
                         {/* Content */}
                         <div className="flex-1 overflow-y-auto py-6 px-6">
-                            {cart.length === 0 ? (
+                            {translate(cart.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center h-full text-center py-12">
                                     <div className="w-20 h-20 rounded-full bg-gray-50 flex items-center justify-center mb-4">
                                         <ShoppingBag className="h-10 w-10 text-gray-300" />
                                     </div>
-                                    <h3 className="text-xl font-heading font-bold text-navy uppercase mb-2">Tu carrito está vacío</h3>
-                                    <p className="text-gray-500 mb-8 max-w-[200px]">¡Añade algo de equipación para empezar!</p>
+                                    <h3 className="text-xl font-heading font-bold text-navy uppercase mb-2">{translate("Tu carrito está vacío")}</h3>
+                                    <p className="text-gray-500 mb-8 max-w-[200px]">{translate("¡Añade algo de equipación para empezar!")}</p>
                                     <Button
                                         onClick={() => setIsCartOpen(false)}
                                         className="bg-navy hover:bg-navy-light text-white font-heading font-bold uppercase px-8"
                                     >
-                                        Seguir comprando
-                                    </Button>
+                                        {translate("Seguir comprando")}</Button>
                                 </div>
                             ) : isCheckout ? (
                                 // CHECKOUT FORM
                                 <form id="checkout-form" onSubmit={handleCheckout} className="space-y-6">
                                     <div className="space-y-4">
                                         <div>
-                                            <Label htmlFor="name">Nombre Completo</Label>
+                                            <Label htmlFor="name">{translate("Nombre Completo")}</Label>
                                             <Input
                                                 id="name"
                                                 required
                                                 minLength={2}
                                                 maxLength={120}
-                                                placeholder="Ej. Juan Pérez"
+                                                placeholder={translate("Ej. Juan Pérez")}
                                                 value={formData.name}
                                                 onChange={e => setFormData({ ...formData, name: e.target.value })}
                                             />
                                         </div>
                                         <div>
-                                            <Label htmlFor="email">Email</Label>
+                                            <Label htmlFor="email">{translate("Email")}</Label>
                                             <Input
                                                 id="email"
                                                 type="email"
                                                 required
                                                 maxLength={200}
-                                                placeholder="juan@ejemplo.com"
+                                                placeholder={translate("juan@ejemplo.com")}
                                                 value={formData.email}
                                                 onChange={e => setFormData({ ...formData, email: e.target.value })}
                                             />
                                         </div>
                                         <div>
-                                            <Label htmlFor="phone">Teléfono</Label>
+                                            <Label htmlFor="phone">{translate("Teléfono")}</Label>
                                             <Input
                                                 id="phone"
                                                 type="tel"
                                                 required
                                                 minLength={6}
                                                 maxLength={30}
-                                                placeholder="+34 600 000 000"
+                                                placeholder={translate("+34 600 000 000")}
                                                 value={formData.phone}
                                                 onChange={e => setFormData({ ...formData, phone: e.target.value })}
                                             />
@@ -152,17 +155,17 @@ export default function CartDrawer() {
 
                                     <div className="bg-gray-50 p-4 rounded-lg space-y-2 text-sm text-gray-600">
                                         <div className="flex justify-between">
-                                            <span>Subtotal</span>
-                                            <span>{totalPrice.toFixed(2)}€</span>
+                                            <span>{translate("Subtotal")}</span>
+                                            <span>{translate(totalPrice.toFixed(2))}{translate("€")}</span>
                                         </div>
                                         <div className="flex justify-between font-bold text-navy text-base pt-2 border-t">
-                                            <span>Total estimado</span>
-                                            <span>{totalPrice.toFixed(2)}€</span>
+                                            <span>{translate("Total estimado")}</span>
+                                            <span>{translate(totalPrice.toFixed(2))}{translate("€")}</span>
                                         </div>
                                     </div>
                                     <label className="flex items-start gap-2 text-xs text-gray-600">
                                         <input type="checkbox" required className="mt-0.5 h-4 w-4" />
-                                        <span>He leído la <Link href="/privacidad" className="font-medium text-blue-700 underline">política de privacidad</Link> y las <Link href="/terminos" className="font-medium text-blue-700 underline">condiciones</Link>.</span>
+                                        <span>{translate("He leído la ")}<Link href="/privacidad" className="font-medium text-blue-700 underline">{translate("política de privacidad")}</Link> {translate(" y las ")}<Link href="/terminos" className="font-medium text-blue-700 underline">{translate("condiciones")}</Link>{translate(".")}</span>
                                     </label>
                                     <Button
                                         type="button"
@@ -170,26 +173,25 @@ export default function CartDrawer() {
                                         className="w-full"
                                         onClick={() => setIsCheckout(false)}
                                     >
-                                        Volver al carrito
-                                    </Button>
+                                        {translate("Volver al carrito")}</Button>
                                 </form>
                             ) : (
                                 // ITEMS LIST
                                 <div className="space-y-6">
-                                    {cart.map((item) => (
+                                    {translate(cart.map((item) => (
                                         <div key={item.id} className="flex gap-4 items-center">
                                             <div className="relative h-24 w-24 flex-shrink-0 rounded-2xl overflow-hidden bg-gray-100 border">
                                                 <Image
                                                     src={item.image_url || '/logo-academy.png'}
-                                                    alt={item.name}
+                                                    alt={translate(item.name)}
                                                     fill
                                                     className="object-cover"
                                                 />
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex justify-between mb-1">
-                                                    <h3 className="text-base font-heading font-bold text-navy uppercase truncate pr-4">{item.name}</h3>
-                                                    <span className="font-heading font-bold text-primary">{item.price.toFixed(2)}€</span>
+                                                    <h3 className="text-base font-heading font-bold text-navy uppercase truncate pr-4">{translate(item.name)}</h3>
+                                                    <span className="font-heading font-bold text-primary">{translate(item.price.toFixed(2))}{translate("€")}</span>
                                                 </div>
                                                 <div className="flex items-center gap-4 mt-3">
                                                     <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden h-8">
@@ -199,7 +201,7 @@ export default function CartDrawer() {
                                                         >
                                                             <Minus className="h-3 w-3" />
                                                         </button>
-                                                        <span className="px-3 text-sm font-bold text-navy w-8 text-center">{item.quantity}</span>
+                                                        <span className="px-3 text-sm font-bold text-navy w-8 text-center">{translate(item.quantity)}</span>
                                                         <button
                                                             onClick={() => updateQuantity(item.id, item.quantity + 1)}
                                                             className="px-2 hover:bg-gray-50 text-gray-500 border-l"
@@ -216,27 +218,26 @@ export default function CartDrawer() {
                                                 </div>
                                             </div>
                                         </div>
-                                    ))}
+                                    )))}
                                 </div>
-                            )}
+                            ))}
                         </div>
 
                         {/* Footer / Checkout */}
-                        {cart.length > 0 && (
+                        {translate(cart.length > 0 && (
                             <div className="bg-gray-50 px-6 py-6 border-t font-heading">
-                                {!isCheckout ? (
+                                {translate(!isCheckout ? (
                                     <>
                                         <div className="flex justify-between text-base font-bold text-navy mb-1 uppercase tracking-tight">
-                                            <span>Subtotal</span>
-                                            <span>{totalPrice.toFixed(2)}€</span>
+                                            <span>{translate("Subtotal")}</span>
+                                            <span>{translate(totalPrice.toFixed(2))}{translate("€")}</span>
                                         </div>
-                                        <p className="text-sm text-gray-500 mb-6 font-sans">Enviarás una solicitud. La academia confirmará disponibilidad, entrega y forma de pago.</p>
+                                        <p className="text-sm text-gray-500 mb-6 font-sans">{translate("Enviarás una solicitud. La academia confirmará disponibilidad, entrega y forma de pago.")}</p>
                                         <Button
                                             onClick={() => setIsCheckout(true)}
                                             className="w-full h-14 bg-navy hover:bg-navy-light text-white font-bold uppercase tracking-wider rounded-2xl shadow-xl flex items-center justify-center gap-3"
                                         >
-                                            <ClipboardCheck className="h-5 w-5" /> Solicitar pedido
-                                        </Button>
+                                            <ClipboardCheck className="h-5 w-5" /> {translate(" Solicitar pedido")}</Button>
                                     </>
                                 ) : (
                                     <Button
@@ -245,11 +246,11 @@ export default function CartDrawer() {
                                         disabled={loading}
                                         className="w-full h-14 bg-primary hover:bg-primary-dark text-white font-bold uppercase tracking-wider rounded-2xl shadow-xl flex items-center justify-center gap-3"
                                     >
-                                        {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Enviar solicitud"}
+                                        {translate(loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Enviar solicitud")}
                                     </Button>
-                                )}
+                                ))}
                             </div>
-                        )}
+                        ))}
                     </div>
                 </div>
             </div>

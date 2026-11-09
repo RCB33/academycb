@@ -1,4 +1,6 @@
 'use client'
+import { useT } from '@/lib/i18n/client'
+
 
 import { motion } from "framer-motion"
 import { profileImageUrl } from '@/lib/profile-image'
@@ -21,6 +23,8 @@ type FifaCardProps = {
 }
 
 export function FifaCard({ stats, child, ovr, className }: FifaCardProps) {
+    const translate = useT()
+
     // Calculate OVR if not provided
     if (!ovr) {
         const values = [stats.pace, stats.shooting, stats.passing, stats.dribbling, stats.defending, stats.physical]
@@ -47,13 +51,13 @@ export function FifaCard({ stats, child, ovr, className }: FifaCardProps) {
                     {/* Top Section: Rating & Position */}
                     <div className="flex justify-between items-start mb-2">
                         <div className="flex flex-col items-center leading-none">
-                            <span className="text-5xl font-[900] text-yellow-500 drop-shadow-[0_0_5px_rgba(234,179,8,0.5)]">{ovr}</span>
-                            <span className="text-lg font-bold text-white tracking-widest mt-1">OVR</span>
+                            <span className="text-5xl font-[900] text-yellow-500 drop-shadow-[0_0_5px_rgba(234,179,8,0.5)]">{translate(ovr)}</span>
+                            <span className="text-lg font-bold text-white tracking-widest mt-1">{translate("OVR")}</span>
                         </div>
                         <div className="flex flex-col items-center">
                             {/* Academy Logo */}
                             <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-sm border border-yellow-500/30 flex items-center justify-center overflow-hidden">
-                                <img src="/logo.jpg" className="w-full h-full object-cover opacity-90" alt="Academy Costa Brava" />
+                                <img src="/logo.jpg" className="w-full h-full object-cover opacity-90" alt={translate("Academy Costa Brava")} />
                             </div>
                         </div>
                     </div>
@@ -61,45 +65,45 @@ export function FifaCard({ stats, child, ovr, className }: FifaCardProps) {
                     {/* Player Image Area */}
                     <div className="relative flex-1 min-h-[160px] mx-auto w-full max-w-[200px] my-2">
                         <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent z-20"></div>
-                        {child?.avatar_url ? (
-                            <img src={profileImageUrl(child.avatar_url)} className="w-full h-full object-cover object-top rounded-t-xl mask-image-gradient" alt={child.full_name} />
+                        {translate(child?.avatar_url ? (
+                            <img src={profileImageUrl(child.avatar_url)} className="w-full h-full object-cover object-top rounded-t-xl mask-image-gradient" alt={translate(child.full_name)} />
                         ) : (
                             <UserCircleIcon className="w-full h-full text-slate-600" />
-                        )}
+                        ))}
                     </div>
 
                     {/* Player Name */}
                     <div className="text-center mb-4 relative">
                         <h2 className="text-2xl font-[900] text-white uppercase tracking-wider drop-shadow-md border-b-2 border-yellow-500/50 inline-block pb-1 px-4">
-                            {child?.full_name || 'JUGADOR'}
+                            {translate(child?.full_name || 'JUGADOR')}
                         </h2>
                     </div>
 
                     {/* Stats Grid */}
                     <div className="grid grid-cols-2 gap-x-4 gap-y-2 w-full font-bold text-lg tracking-wide uppercase px-2">
                         <div className="flex items-center gap-2">
-                            <span className="text-yellow-500 w-8 text-right">{stats.pace}</span>
-                            <span className="text-yellow-100/70 text-sm font-normal">PAC</span>
+                            <span className="text-yellow-500 w-8 text-right">{translate(stats.pace)}</span>
+                            <span className="text-yellow-100/70 text-sm font-normal">{translate("PAC")}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="text-yellow-500 w-8 text-right">{stats.dribbling}</span>
-                            <span className="text-yellow-100/70 text-sm font-normal">REG</span>
+                            <span className="text-yellow-500 w-8 text-right">{translate(stats.dribbling)}</span>
+                            <span className="text-yellow-100/70 text-sm font-normal">{translate("REG")}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="text-yellow-500 w-8 text-right">{stats.shooting}</span>
-                            <span className="text-yellow-100/70 text-sm font-normal">TIR</span>
+                            <span className="text-yellow-500 w-8 text-right">{translate(stats.shooting)}</span>
+                            <span className="text-yellow-100/70 text-sm font-normal">{translate("TIR")}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="text-yellow-500 w-8 text-right">{stats.defending}</span>
-                            <span className="text-yellow-100/70 text-sm font-normal">DEF</span>
+                            <span className="text-yellow-500 w-8 text-right">{translate(stats.defending)}</span>
+                            <span className="text-yellow-100/70 text-sm font-normal">{translate("DEF")}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="text-yellow-500 w-8 text-right">{stats.passing}</span>
-                            <span className="text-yellow-100/70 text-sm font-normal">PAS</span>
+                            <span className="text-yellow-500 w-8 text-right">{translate(stats.passing)}</span>
+                            <span className="text-yellow-100/70 text-sm font-normal">{translate("PAS")}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="text-yellow-500 w-8 text-right">{stats.physical}</span>
-                            <span className="text-yellow-100/70 text-sm font-normal">FIS</span>
+                            <span className="text-yellow-500 w-8 text-right">{translate(stats.physical)}</span>
+                            <span className="text-yellow-100/70 text-sm font-normal">{translate("FIS")}</span>
                         </div>
                     </div>
 
@@ -114,6 +118,8 @@ export function FifaCard({ stats, child, ovr, className }: FifaCardProps) {
 }
 
 function UserCircleIcon({ className }: { className?: string }) {
+
+
     return (
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
             <path fillRule="evenodd" d="M18.685 19.097A9.723 9.723 0 0021.75 12c0-5.385-4.365-9.75-9.75-9.75S2.25 6.615 2.25 12a9.723 9.723 0 003.065 7.097A9.716 9.716 0 0012 21.75a9.716 9.716 0 006.685-2.653zm-12.54-1.285A7.486 7.486 0 0112 15a7.486 7.486 0 015.855 2.812A8.224 8.224 0 0112 20.25a8.224 8.224 0 01-5.855-2.438zM15.75 9a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" clipRule="evenodd" />

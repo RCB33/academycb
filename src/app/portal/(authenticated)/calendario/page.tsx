@@ -1,3 +1,5 @@
+
+import { getT } from '@/lib/i18n/server'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { MonthlyCalendar, CalendarEvent } from '@/components/ui/monthly-calendar'
@@ -7,6 +9,8 @@ import { PortalPageHeader } from '@/components/portal/portal-page-header'
 export const dynamic = 'force-dynamic'
 
 export default async function FamilyCalendarPage() {
+    const translate = await getT()
+
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
@@ -60,21 +64,19 @@ export default async function FamilyCalendarPage() {
 
     return (
         <div className="max-w-6xl mx-auto space-y-6">
-            <PortalPageHeader icon={<CalendarDays className="h-6 w-6" />} title="Mi calendario" description="Entrenamientos, partidos, campus y torneos de tus jugadores en un único lugar." />
+            <PortalPageHeader icon={<CalendarDays className="h-6 w-6" />} title={translate("Mi calendario")} description={translate("Entrenamientos, partidos, campus y torneos de tus jugadores en un único lugar.")} />
 
-            {childIds.length === 0 ? (
+            {translate(childIds.length === 0 ? (
                 <div className="bg-white p-8 text-center rounded-xl border border-dashed text-slate-500">
-                    No tienes alumnos vinculados actualmente, por lo que el calendario está vacío.
-                </div>
+                    {translate("No tienes alumnos vinculados actualmente, por lo que el calendario está vacío.")}</div>
             ) : events.length === 0 ? (
                 <div className="bg-white p-8 text-center rounded-xl border border-dashed text-slate-500">
-                    No hay actividades publicadas para tu familia en este periodo.
-                </div>
+                    {translate("No hay actividades publicadas para tu familia en este periodo.")}</div>
             ) : (
                 <div className="bg-white p-4 md:p-6 rounded-xl border shadow-sm">
                     <MonthlyCalendar events={events} />
                 </div>
-            )}
+            ))}
         </div>
     )
 }

@@ -1,4 +1,6 @@
 'use client'
+import { useT } from '@/lib/i18n/client'
+
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -10,6 +12,8 @@ import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 
 export function PasswordForm() {
+    const translate = useT()
+
     const [loading, setLoading] = useState(false)
     const [password, setPassword] = useState('')
     const [confirmPassword, setConfirmPassword] = useState('')
@@ -19,12 +23,12 @@ export function PasswordForm() {
         e.preventDefault()
 
         if (password !== confirmPassword) {
-            toast.error('Las contraseñas no coinciden')
+            toast.error(translate('Las contraseñas no coinciden'))
             return
         }
 
         if (password.length < 6) {
-            toast.error('La contraseña debe tener al menos 6 caracteres')
+            toast.error(translate('La contraseña debe tener al menos 6 caracteres'))
             return
         }
 
@@ -36,14 +40,14 @@ export function PasswordForm() {
             })
 
             if (error) {
-                toast.error('Error al actualizar contraseña: ' + error.message)
+                toast.error(translate('Error al actualizar contraseña: ') + translate(error.message))
             } else {
-                toast.success('Contraseña actualizada correctamente')
+                toast.success(translate('Contraseña actualizada correctamente'))
                 setPassword('')
                 setConfirmPassword('')
             }
         } catch (error) {
-            toast.error('Ocurrió un error inesperado al actualizar la contraseña')
+            toast.error(translate('Ocurrió un error inesperado al actualizar la contraseña'))
         } finally {
             setLoading(false)
         }
@@ -52,15 +56,14 @@ export function PasswordForm() {
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Cambiar Contraseña</CardTitle>
+                <CardTitle>{translate("Cambiar Contraseña")}</CardTitle>
                 <CardDescription>
-                    Actualiza tu contraseña de acceso a Academy. Recibirás un aviso por email cuando se complete el cambio.
-                </CardDescription>
+                    {translate("Actualiza tu contraseña de acceso a Academy. Recibirás un aviso por email cuando se complete el cambio.")}</CardDescription>
             </CardHeader>
             <CardContent>
                 <form onSubmit={handlePasswordChange} className="space-y-4">
                     <div className="grid gap-2">
-                        <Label htmlFor="new_password">Nueva Contraseña</Label>
+                        <Label htmlFor="new_password">{translate("Nueva Contraseña")}</Label>
                         <Input
                             id="new_password"
                             type="password"
@@ -68,12 +71,12 @@ export function PasswordForm() {
                             minLength={6}
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            placeholder="******"
+                            placeholder={translate("******")}
                             required
                         />
                     </div>
                     <div className="grid gap-2">
-                        <Label htmlFor="confirm_password">Confirmar Contraseña</Label>
+                        <Label htmlFor="confirm_password">{translate("Confirmar Contraseña")}</Label>
                         <Input
                             id="confirm_password"
                             type="password"
@@ -81,14 +84,13 @@ export function PasswordForm() {
                             minLength={6}
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
-                            placeholder="******"
+                            placeholder={translate("******")}
                             required
                         />
                     </div>
                     <Button type="submit" className="w-full bg-gold font-bold text-navy hover:bg-gold-light" disabled={loading}>
-                        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Actualizar Contraseña
-                    </Button>
+                        {translate(loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />)}
+                        {translate("Actualizar Contraseña")}</Button>
                 </form>
             </CardContent>
         </Card>

@@ -1,13 +1,15 @@
-import { Settings } from "lucide-react"
+import { getT } from '@/lib/i18n/server'
+import { LanguageSwitcher } from '@/lib/i18n/client'
+import { Settings } from 'lucide-react'
+import { PortalPageHeader } from '@/components/portal/portal-page-header'
 
-export default function SettingsPage() {
-    return (
-        <div className="max-w-4xl mx-auto py-12 text-center text-slate-500">
-            <div className="bg-slate-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100 shadow-sm">
-                <Settings className="h-10 w-10 text-gold" />
-            </div>
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">Ajustes Proximamente</h2>
-            <p>Podrás modificar tus preferencias de notificaciones e idioma desde aquí.</p>
-        </div>
-    )
+export default async function SettingsPage() {
+    const translate = await getT()
+    return <div className="mx-auto max-w-4xl space-y-6">
+        <PortalPageHeader icon={<Settings className="h-6 w-6" />} title={translate('Preferencias')} description={translate('Elige el idioma de la web y del portal. Se conservará al navegar.')} />
+        <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border bg-white p-6">
+            <h2 className="text-xl font-bold text-navy">{translate('Idioma')}</h2>
+            <LanguageSwitcher />
+        </section>
+    </div>
 }

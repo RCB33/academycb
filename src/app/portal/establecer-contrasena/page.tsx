@@ -1,4 +1,6 @@
 'use client'
+import { LanguageSwitcher, useT } from '@/lib/i18n/client'
+
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -12,6 +14,8 @@ import { Label } from '@/components/ui/label'
 import { getRoleHome, isAppRole } from '@/lib/roles'
 
 export default function SetPasswordPage() {
+    const translate = useT()
+
     const [password, setPassword] = useState('')
     const [confirmation, setConfirmation] = useState('')
     const [loading, setLoading] = useState(false)
@@ -95,8 +99,8 @@ export default function SetPasswordPage() {
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault()
-        if (password.length < 6) return toast.error('Usa al menos 6 caracteres.')
-        if (password !== confirmation) return toast.error('Las contraseñas no coinciden.')
+        if (password.length < 6) return toast.error(translate('Usa al menos 6 caracteres.'))
+        if (password !== confirmation) return toast.error(translate('Las contraseñas no coinciden.'))
 
         setLoading(true)
         const { error } = await supabase.auth.updateUser({
@@ -105,7 +109,7 @@ export default function SetPasswordPage() {
         })
         setLoading(false)
 
-        if (error) return toast.error('No se pudo guardar la contraseña. Solicita un enlace nuevo.')
+        if (error) return toast.error(translate('No se pudo guardar la contraseña. Solicita un enlace nuevo.'))
 
         const { data: { user } } = await supabase.auth.getUser()
         const { data: profile } = await supabase
@@ -114,7 +118,7 @@ export default function SetPasswordPage() {
             .eq('id', user?.id)
             .maybeSingle()
 
-        toast.success('Contraseña establecida correctamente')
+        toast.success(translate('Contraseña establecida correctamente'))
         router.replace(getRoleHome(isAppRole(profile?.role) ? profile.role : null))
         router.refresh()
     }
@@ -125,7 +129,7 @@ export default function SetPasswordPage() {
                 <Card className="w-full max-w-md border-white/10 shadow-2xl">
                     <CardContent className="flex items-center justify-center gap-3 py-10">
                         <Loader2 className="h-5 w-5 animate-spin text-gold" />
-                        <p>Comprobando el enlace seguro…</p>
+                        <p>{translate("Comprobando el enlace seguro…")}</p>
                     </CardContent>
                 </Card>
             </main>
@@ -136,19 +140,18 @@ export default function SetPasswordPage() {
         return (
             <main className="flex min-h-screen items-center justify-center bg-navy p-4">
                 <Card className="w-full max-w-md border-white/10 shadow-2xl">
-                    <CardHeader className="text-center">
+                    <CardHeader className="text-center"><div className="mb-3 flex justify-end"><LanguageSwitcher /></div>
                         <KeyRound className="mx-auto mb-3 h-10 w-10 text-gold" />
-                        <CardTitle className="text-2xl">{linkError === 'expired' ? 'El enlace ha caducado' : 'El enlace no es válido'}</CardTitle>
+                        <CardTitle className="text-2xl">{translate(linkError === 'expired' ? 'El enlace ha caducado' : 'El enlace no es válido')}</CardTitle>
                         <CardDescription>
-                            {linkError === 'expired'
+                            {translate(linkError === 'expired'
                                 ? 'Por seguridad, este enlace ya no se puede utilizar. Solicita un correo nuevo para continuar.'
-                                : 'Puede que el enlace ya se haya utilizado. Solicita uno nuevo desde el acceso.'}
+                                : 'Puede que el enlace ya se haya utilizado. Solicita uno nuevo desde el acceso.')}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <Button className="w-full bg-gold text-navy" onClick={() => router.replace('/portal')}>
-                            Solicitar un enlace nuevo
-                        </Button>
+                            {translate("Solicitar un enlace nuevo")}</Button>
                     </CardContent>
                 </Card>
             </main>
@@ -158,29 +161,28 @@ export default function SetPasswordPage() {
     return (
         <main className="flex min-h-screen items-center justify-center bg-navy p-4">
             <Card className="w-full max-w-md border-white/10 shadow-2xl">
-                <CardHeader className="text-center">
+                <CardHeader className="text-center"><div className="mb-3 flex justify-end"><LanguageSwitcher /></div>
                     <KeyRound className="mx-auto mb-3 h-10 w-10 text-gold" />
-                    <CardTitle className="text-2xl">Establece tu contraseña</CardTitle>
+                    <CardTitle className="text-2xl">{translate("Establece tu contraseña")}</CardTitle>
                     <CardDescription>
-                        {isWorkerAccess
+                        {translate(isWorkerAccess
                             ? 'Elige una contraseña exclusiva para acceder a tu espacio profesional de Academy.'
-                            : 'Elige una contraseña exclusiva para acceder al portal de familias.'}
+                            : 'Elige una contraseña exclusiva para acceder al portal de familias.')}
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-5">
                         <div className="space-y-2">
-                            <Label htmlFor="password">Nueva contraseña</Label>
+                            <Label htmlFor="password">{translate("Nueva contraseña")}</Label>
                             <Input id="password" type="password" minLength={6} autoComplete="new-password" required value={password} onChange={(event) => setPassword(event.target.value)} />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="confirmation">Repite la contraseña</Label>
+                            <Label htmlFor="confirmation">{translate("Repite la contraseña")}</Label>
                             <Input id="confirmation" type="password" minLength={6} autoComplete="new-password" required value={confirmation} onChange={(event) => setConfirmation(event.target.value)} />
                         </div>
                         <Button className="w-full bg-gold text-navy" disabled={loading}>
-                            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Guardar y entrar
-                        </Button>
+                            {translate(loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />)}
+                            {translate("Guardar y entrar")}</Button>
                     </form>
                 </CardContent>
             </Card>

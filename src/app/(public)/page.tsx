@@ -1,3 +1,5 @@
+
+import { getT } from '@/lib/i18n/server'
 import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
@@ -7,6 +9,8 @@ import WhoWeAreSection from "./components/who-we-are-section"
 import { getPublicSettings } from "@/lib/public-settings"
 
 export default async function LandingPage() {
+    const translate = await getT()
+
     const settings = await getPublicSettings()
     return (
         <div className="flex flex-col min-h-screen font-sans text-foreground">
@@ -17,7 +21,7 @@ export default async function LandingPage() {
                 <div className="absolute inset-0 z-0">
                     <Image
                         src="/landing-hero-new.png"
-                        alt="Academy Costa Brava Training Facility at Dusk"
+                        alt={translate("Academy Costa Brava Training Facility at Dusk")}
                         fill
                         className="object-cover"
                         priority
@@ -30,26 +34,24 @@ export default async function LandingPage() {
                 <div className="container relative z-10 flex flex-col items-center text-center px-4">
                     <div className="inline-block animate-fade-in-up">
                         <span className="inline-flex items-center rounded-full border border-gold/30 bg-gold/10 px-4 py-1.5 text-sm font-bold text-gold backdrop-blur-md mb-8 tracking-wider">
-                            <Star className="mr-2 h-4 w-4 fill-gold" /> {settings.current_season ? `TEMPORADA ${settings.current_season}` : 'INSCRIPCIONES ABIERTAS'}
+                            <Star className="mr-2 h-4 w-4 fill-gold" /> {translate(settings.current_season ? `TEMPORADA ${settings.current_season}` : 'INSCRIPCIONES ABIERTAS')}
                         </span>
                     </div>
 
                     <h1 className="font-heading text-5xl md:text-7xl lg:text-9xl font-bold tracking-tighter text-white mb-6 uppercase leading-[0.9]">
-                        Academy <br className="hidden md:block" />
-                        <span className="text-gold">Costa Brava</span>
+                        {translate("Academy ")}<br className="hidden md:block" />
+                        <span className="text-gold">{translate("Costa Brava")}</span>
                     </h1>
 
                     <p className="max-w-2xl text-lg md:text-xl text-gray-200 mb-10 font-light leading-relaxed">
-                        Formación futbolística en la Costa Brava.
-                        Entrenamiento, seguimiento y valores dentro y fuera del campo.
-                    </p>
+                        {translate("Formación futbolística en la Costa Brava. Entrenamiento, seguimiento y valores dentro y fuera del campo.")}</p>
 
                     <div className="flex flex-col sm:flex-row gap-5 w-full sm:w-auto">
                         <Button size="lg" className="h-14 px-10 text-lg font-heading font-bold tracking-wide uppercase rounded-xl shadow-[0_0_20px_rgba(212,175,55,0.4)] hover:shadow-[0_0_30px_rgba(212,175,55,0.6)] transition-all bg-gold hover:bg-gold/90 text-navy border-none" asChild>
-                            <Link href="/inscripcion">Inscribirse <ArrowRight className="ml-2 h-5 w-5" /></Link>
+                            <Link href="/inscripcion">{translate("Inscribirse ")}<ArrowRight className="ml-2 h-5 w-5" /></Link>
                         </Button>
                         <Button size="lg" variant="outline" className="h-14 px-10 text-lg font-heading font-bold tracking-wide uppercase rounded-xl border-2 border-white/20 bg-white/5 text-white backdrop-blur-sm hover:bg-white/10 hover:border-white/40 shadow-lg" asChild>
-                            <Link href="/academia">Ver metodología</Link>
+                            <Link href="/academia">{translate("Ver metodología")}</Link>
                         </Button>
                     </div>
                 </div>
@@ -64,7 +66,7 @@ export default async function LandingPage() {
             <section className="py-5 md:py-12 bg-navy border-b border-white/5">
                 <div className="container">
                     <div className="grid grid-cols-4 gap-2 md:gap-8">
-                        {[
+                        {translate([
                             { label: "TÉCNICA", icon: Zap },
                             { label: "TÁCTICA", icon: TrendingUp },
                             { label: "EQUIPO", icon: Shield },
@@ -72,9 +74,9 @@ export default async function LandingPage() {
                         ].map((stat, i) => (
                             <div key={i} className="flex flex-col items-center justify-center py-2 md:p-4">
                                 <stat.icon className="h-6 w-6 md:h-8 md:w-8 text-secondary mb-2 md:mb-3 opacity-80" />
-                                <span className="text-[10px] md:text-xs font-bold tracking-wide md:tracking-widest text-gray-400 uppercase">{stat.label}</span>
+                                <span className="text-[10px] md:text-xs font-bold tracking-wide md:tracking-widest text-gray-400 uppercase">{translate(stat.label)}</span>
                             </div>
-                        ))}
+                        )))}
                     </div>
                 </div>
             </section>
@@ -89,25 +91,24 @@ export default async function LandingPage() {
                     <div className="flex flex-col md:flex-row gap-16 items-center">
                         <div className="flex-1 text-center md:text-left">
                             <h2 className="font-heading text-5xl md:text-7xl font-bold text-white mb-6 uppercase leading-tight">
-                                Tu camino <br />
-                                <span className="text-gold">Empieza Aquí</span>
+                                {translate("Tu camino ")}<br />
+                                <span className="text-gold">{translate("Empieza Aquí")}</span>
                             </h2>
                             <p className="text-xl text-gray-300 mb-8 max-w-lg">
-                                Cuéntanos qué estás buscando y el equipo de la academia te orientará sobre las opciones disponibles.
-                            </p>
+                                {translate("Cuéntanos qué estás buscando y el equipo de la academia te orientará sobre las opciones disponibles.")}</p>
 
                             <div className="flex flex-col gap-4">
                                 <div className="flex items-center gap-4 text-white/80">
                                     <div className="h-10 w-10 rounded-full bg-secondary/10 flex items-center justify-center">
                                         <div className="h-3 w-3 rounded-full bg-secondary animate-pulse" />
                                     </div>
-                                    <span className="font-medium">Respuesta personalizada</span>
+                                    <span className="font-medium">{translate("Respuesta personalizada")}</span>
                                 </div>
                                 <div className="flex items-center gap-4 text-white/80">
                                     <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                                         <Star className="h-5 w-5 text-primary" />
                                     </div>
-                                    <span className="font-medium">Plan personalizado</span>
+                                    <span className="font-medium">{translate("Plan personalizado")}</span>
                                 </div>
                             </div>
                         </div>

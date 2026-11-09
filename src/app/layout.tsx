@@ -1,11 +1,13 @@
 import type { Metadata, Viewport } from 'next';
+import { getLocale } from '@/lib/i18n/server';
+import { LocaleProvider } from '@/lib/i18n/client';
 import './globals.css';
 import { Toaster } from 'sonner';
 import { Providers } from '@/app/providers';
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
     metadataBase: new URL(siteUrl),
     title: 'Academy Costa Brava',
     description: 'Gestión integral de academia de fútbol, campus y seguimiento de jugadores.',
@@ -26,6 +28,15 @@ export const metadata: Metadata = {
     twitter: { card: 'summary_large_image' },
 };
 
+export async function generateMetadata(): Promise<Metadata> {
+    const locale = await getLocale();
+    return {
+        ...baseMetadata,
+        description: locale === 'ca' ? 'Gestió integral de l’acadèmia de futbol, campus i seguiment de jugadors.' : baseMetadata.description,
+        openGraph: { ...baseMetadata.openGraph, locale: locale === 'ca' ? 'ca_ES' : 'es_ES' },
+    };
+}
+
 export const viewport: Viewport = {
     width: 'device-width',
     initialScale: 1,
@@ -33,18 +44,19 @@ export const viewport: Viewport = {
     themeColor: '#102a4d',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
+    const locale = await getLocale();
     return (
-        <html lang="es">
+        <html lang={locale}>
             <body className="font-sans antialiased">
-                <Providers>
+                <LocaleProvider locale={locale}><Providers>
                     {children}
                     <Toaster position="top-center" richColors />
-                </Providers>
+                </Providers></LocaleProvider>
             </body>
         </html>
     );

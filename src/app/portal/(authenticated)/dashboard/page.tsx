@@ -1,3 +1,5 @@
+
+import { getT } from '@/lib/i18n/server'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
@@ -6,6 +8,8 @@ import { Button } from "@/components/ui/button"
 import { ArrowRight, UserCircle, UsersRound } from "lucide-react"
 
 export default async function DashboardPage() {
+    const translate = await getT()
+
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
@@ -19,8 +23,8 @@ export default async function DashboardPage() {
     if (!guardian) {
         return (
             <div className="text-center py-20">
-                <h2 className="text-2xl font-bold mb-4">Cuenta no vinculada</h2>
-                <p className="text-muted-foreground">Tu usuario no está asociado a ningún tutor. Contacta con la academia.</p>
+                <h2 className="text-2xl font-bold mb-4">{translate("Cuenta no vinculada")}</h2>
+                <p className="text-muted-foreground">{translate("Tu usuario no está asociado a ningún tutor. Contacta con la academia.")}</p>
             </div>
         )
     }
@@ -43,41 +47,41 @@ export default async function DashboardPage() {
                 <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-gold text-navy">
                     <UsersRound className="h-6 w-6" />
                 </div>
-                <h1 className="font-heading text-3xl font-black tracking-tight">Mis jugadores</h1>
-                <p className="mt-2 max-w-xl text-sm leading-relaxed text-white/75 sm:text-base">Elige la ficha que quieres consultar. Podrás cambiar de jugador en cualquier momento desde el selector del portal.</p>
+                <h1 className="font-heading text-3xl font-black tracking-tight">{translate("Mis jugadores")}</h1>
+                <p className="mt-2 max-w-xl text-sm leading-relaxed text-white/75 sm:text-base">{translate("Elige la ficha que quieres consultar. Podrás cambiar de jugador en cualquier momento desde el selector del portal.")}</p>
             </div>
 
             <div className="grid md:grid-cols-2 gap-6">
-                {children.map((child: any) => (
+                {translate(children.map((child: any) => (
                     <Card key={child.id} className="group border-primary/20 transition-all hover:-translate-y-0.5 hover:shadow-lg">
                         <CardHeader className="flex flex-row items-center gap-4">
                             <div className="h-16 w-16 bg-primary/10 rounded-full flex items-center justify-center text-primary">
                                 <UserCircle className="h-10 w-10" />
                             </div>
                             <div>
-                                <CardTitle className="text-xl">{child.full_name}</CardTitle>
-                                <CardDescription>Año {child.birth_year} • {child.category?.name || 'Sin Categoría'}</CardDescription>
+                                <CardTitle className="text-xl">{translate(child.full_name)}</CardTitle>
+                                <CardDescription>{translate("Año ")}{translate(child.birth_year)} {translate(" • ")}{translate(child.category?.name || 'Sin Categoría')}</CardDescription>
                             </div>
                         </CardHeader>
                         <CardContent>
                             <div className="flex justify-between items-center text-sm text-muted-foreground">
-                                <span>Progreso, calendario y documentos</span>
+                                <span>{translate("Progreso, calendario y documentos")}</span>
                                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                             </div>
                         </CardContent>
                         <CardFooter>
                             <Link href={`/portal/${child.id}`} className="w-full">
-                                <Button className="w-full">Ver Ficha de Jugador</Button>
+                                <Button className="w-full">{translate("Ver Ficha de Jugador")}</Button>
                             </Link>
                         </CardFooter>
                     </Card>
-                ))}
+                )))}
 
-                {children.length === 0 && (
+                {translate(children.length === 0 && (
                     <Card className="col-span-full p-8 text-center bg-muted/50 border-dashed">
-                        <p className="text-muted-foreground">No hay alumnos asociados a tu cuenta.</p>
+                        <p className="text-muted-foreground">{translate("No hay alumnos asociados a tu cuenta.")}</p>
                     </Card>
-                )}
+                ))}
             </div>
         </div>
     )

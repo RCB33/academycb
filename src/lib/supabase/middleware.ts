@@ -15,6 +15,7 @@ const PUBLIC_ROUTES = [
   '/portal/establecer-contrasena',
   '/terminos',
   '/aviso-legal',
+  '/autorizacion-imagen',
   '/privacidad',
   '/cookies',
   '/robots.txt',

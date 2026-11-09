@@ -1,3 +1,5 @@
+
+import { getT } from '@/lib/i18n/server'
 import { createClient } from "@/lib/supabase/server"
 import { Video, PlayCircle, GraduationCap, Tent, Trophy, Users, UserCircle } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
@@ -15,6 +17,8 @@ const CONTEXT_CFG: Record<string, { label: string, color: string }> = {
 }
 
 export default async function FamilyVideotecaPage() {
+    const translate = await getT()
+
     const supabase = await createClient()
 
     const { data: { user } } = await supabase.auth.getUser()
@@ -84,23 +88,22 @@ export default async function FamilyVideotecaPage() {
 
     return (
         <div className="space-y-6 max-w-7xl mx-auto">
-            <PortalPageHeader icon={<Video className="h-6 w-6" />} title="Videoteca" description="Entrenamientos, partidos y momentos destacados de los equipos de tus jugadores." />
+            <PortalPageHeader icon={<Video className="h-6 w-6" />} title={translate("Videoteca")} description={translate("Entrenamientos, partidos y momentos destacados de los equipos de tus jugadores.")} />
 
-            {assets.length === 0 ? (
+            {translate(assets.length === 0 ? (
                 <Card className="border-dashed shadow-sm bg-slate-50/50">
                     <CardContent className="flex flex-col items-center justify-center p-12 text-center">
                         <div className="h-20 w-20 bg-white shadow-sm rounded-full flex items-center justify-center mb-6">
                             <Video className="h-10 w-10 text-slate-300" />
                         </div>
-                        <h3 className="text-xl font-bold text-slate-900 mb-2">No hay vídeos disponibles</h3>
+                        <h3 className="text-xl font-bold text-slate-900 mb-2">{translate("No hay vídeos disponibles")}</h3>
                         <p className="text-muted-foreground max-w-sm">
-                            Aún no se han subido vídeos para el equipo de tus hijos. Cuando los entrenadores suban resúmenes o partidos, aparecerán aquí.
-                        </p>
+                            {translate("Aún no se han subido vídeos para el equipo de tus hijos. Cuando los entrenadores suban resúmenes o partidos, aparecerán aquí.")}</p>
                     </CardContent>
                 </Card>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {assets.map((asset) => {
+                    {translate(assets.map((asset) => {
                         const vId = getYoutubeId(asset.video_url)
                         const thumb = asset.thumbnail_url || (vId ? `https://img.youtube.com/vi/${vId}/maxresdefault.jpg` : null)
                         const ctx = CONTEXT_CFG[asset.context || 'academia'] || CONTEXT_CFG.academia
@@ -110,9 +113,9 @@ export default async function FamilyVideotecaPage() {
                             <Link href={asset.video_url} target="_blank" rel="noopener noreferrer" key={asset.id} className="block group">
                                 <Card className="overflow-hidden border-none shadow-md hover:shadow-xl transition-all duration-300 transform group-hover:-translate-y-1 bg-white">
                                     <div className="relative aspect-video bg-slate-900 overflow-hidden">
-                                        {thumb ? (
+                                        {translate(thumb ? (
                                             <div className="w-full h-full relative opacity-90 group-hover:opacity-100 transition-opacity duration-300">
-                                                <Image src={thumb} alt={asset.title} fill className="object-cover group-hover:scale-105 transition-transform duration-700" />
+                                                <Image src={thumb} alt={translate(asset.title)} fill className="object-cover group-hover:scale-105 transition-transform duration-700" />
                                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
                                                 <div className="absolute inset-0 flex items-center justify-center">
                                                     <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-white/50 bg-gold/90 shadow-[0_0_20px_rgba(212,175,55,0.45)] backdrop-blur-sm transition-all duration-300 group-hover:scale-110 group-hover:bg-gold-light">
@@ -124,48 +127,46 @@ export default async function FamilyVideotecaPage() {
                                             <div className="flex h-full items-center justify-center bg-navy">
                                                 <PlayCircle className="h-16 w-16 text-gold/50" />
                                             </div>
-                                        )}
+                                        ))}
                                         <div className="absolute top-3 left-3 flex gap-1.5 flex-wrap">
                                             <Badge className={`${ctx.color} text-white border-none font-bold text-[9px] uppercase tracking-widest shadow-sm`}>
-                                                {ctx.label}
+                                                {translate(ctx.label)}
                                             </Badge>
-                                            {asset.categories?.name && (
+                                            {translate(asset.categories?.name && (
                                                 <Badge className="bg-white/10 backdrop-blur-md text-white border-none font-bold shadow-sm">
-                                                    {asset.categories.name}
+                                                    {translate(asset.categories.name)}
                                                 </Badge>
-                                            )}
-                                            {isIndividual && (
+                                            ))}
+                                            {translate(isIndividual && (
                                                 <Badge className="border-none bg-gold text-[9px] font-bold text-navy shadow-sm">
                                                     <UserCircle className="h-2.5 w-2.5 mr-1" />
-                                                    Para ti
-                                                </Badge>
-                                            )}
+                                                    {translate("Para ti")}</Badge>
+                                            ))}
                                         </div>
                                     </div>
                                     <CardContent className="p-5">
                                         <h3 className="mb-2 line-clamp-2 text-lg font-black leading-tight text-slate-900 transition-colors group-hover:text-gold">
-                                            {asset.title}
+                                            {translate(asset.title)}
                                         </h3>
-                                        {asset.description && (
+                                        {translate(asset.description && (
                                             <p className="text-sm text-slate-500 line-clamp-2 mb-4">
-                                                {asset.description}
+                                                {translate(asset.description)}
                                             </p>
-                                        )}
+                                        ))}
                                         <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-100">
                                             <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                                                {new Date(asset.created_at).toLocaleDateString()}
+                                                {translate(new Date(asset.created_at).toLocaleDateString())}
                                             </span>
                                             <span className="inline-flex h-8 items-center rounded-lg px-2 text-sm font-bold text-gold transition group-hover:bg-gold/10">
-                                                Ver Vídeo
-                                            </span>
+                                                {translate("Ver Vídeo")}</span>
                                         </div>
                                     </CardContent>
                                 </Card>
                             </Link>
                         )
-                    })}
+                    }))}
                 </div>
-            )}
+            ))}
         </div>
     )
 }

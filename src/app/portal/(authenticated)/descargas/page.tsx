@@ -1,3 +1,5 @@
+
+import { getT } from '@/lib/i18n/server'
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent } from "@/components/ui/card"
 import { Download, FileText, FileSpreadsheet, Image as ImageIcon, Film, File, FolderOpen } from "lucide-react"
@@ -40,6 +42,8 @@ function formatSize(bytes: number) {
 }
 
 export default async function DescargasPage() {
+    const translate = await getT()
+
     const supabase = await createClient()
 
     // List files from the 'downloads' bucket
@@ -67,23 +71,22 @@ export default async function DescargasPage() {
 
     return (
         <div className="space-y-6">
-            <PortalPageHeader icon={<Download className="h-6 w-6" />} title="Descargas" description="Documentos, plantillas y recursos de Academy disponibles para tu familia." />
+            <PortalPageHeader icon={<Download className="h-6 w-6" />} title={translate("Descargas")} description={translate("Documentos, plantillas y recursos de Academy disponibles para tu familia.")} />
 
-            {filesWithUrls.length === 0 ? (
+            {translate(filesWithUrls.length === 0 ? (
                 <Card className="border-2 border-dashed border-slate-200 shadow-sm">
                     <CardContent className="py-16 text-center">
                         <div className="bg-slate-50 h-20 w-20 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100">
                             <FolderOpen className="h-10 w-10 text-slate-300" />
                         </div>
-                        <h2 className="text-xl font-bold text-slate-700 mb-2">Sin Archivos Disponibles</h2>
+                        <h2 className="text-xl font-bold text-slate-700 mb-2">{translate("Sin Archivos Disponibles")}</h2>
                         <p className="text-sm text-slate-500 max-w-md mx-auto">
-                            La academia aún no ha subido archivos para descargar. Cuando lo hagan, aparecerán automáticamente aquí.
-                        </p>
+                            {translate("La academia aún no ha subido archivos para descargar. Cuando lo hagan, aparecerán automáticamente aquí.")}</p>
                     </CardContent>
                 </Card>
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filesWithUrls.map((file) => (
+                    {translate(filesWithUrls.map((file) => (
                         <a
                             key={file.id || file.name}
                             href={file.url}
@@ -95,20 +98,20 @@ export default async function DescargasPage() {
                                 <CardContent className="p-0">
                                     <div className="flex items-center gap-4 p-5">
                                         <div className={`p-3 rounded-xl border shrink-0 group-hover:scale-110 transition-transform ${getFileColor(file.name)}`}>
-                                            {getFileIcon(file.name)}
+                                            {translate(getFileIcon(file.name))}
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <p className="truncate text-sm font-bold text-slate-900 transition-colors group-hover:text-gold">
-                                                {file.name.replace(/\.[^/.]+$/, '').replace(/_/g, ' ')}
+                                                {translate(file.name.replace(/\.[^/.]+$/, '').replace(/_/g, ' '))}
                                             </p>
                                             <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium mt-1">
-                                                <span className="uppercase">{file.name.split('.').pop()}</span>
-                                                {file.metadata?.size && (
+                                                <span className="uppercase">{translate(file.name.split('.').pop())}</span>
+                                                {translate(file.metadata?.size && (
                                                     <>
-                                                        <span>•</span>
-                                                        <span>{formatSize(file.metadata.size)}</span>
+                                                        <span>{translate("•")}</span>
+                                                        <span>{translate(formatSize(file.metadata.size))}</span>
                                                     </>
-                                                )}
+                                                ))}
                                             </div>
                                         </div>
                                         <div className="shrink-0 rounded-lg bg-gold/10 p-2 text-gold opacity-0 transition-opacity group-hover:opacity-100">
@@ -118,9 +121,9 @@ export default async function DescargasPage() {
                                 </CardContent>
                             </Card>
                         </a>
-                    ))}
+                    )))}
                 </div>
-            )}
+            ))}
         </div>
     )
 }

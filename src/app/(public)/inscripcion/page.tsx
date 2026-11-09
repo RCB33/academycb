@@ -1,3 +1,6 @@
+
+import { getT } from '@/lib/i18n/server'
+import { translateMetadata } from '@/lib/i18n/translate'
 import { CalendarDays, ClipboardCheck, Clock3, ExternalLink, FileText, MapPin, ShieldCheck } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { redirect } from 'next/navigation'
@@ -10,12 +13,17 @@ function parseService(value: string | undefined): EnrollmentService {
     return value === 'campus' || value === 'tournament' ? value : 'academy'
 }
 
-export const metadata = {
+export async function generateMetadata() {
+    const translate = await getT()
+    return translateMetadata({
     title: 'Inscripción',
     description: 'Solicita plaza en Academy Costa Brava.',
+}, translate)
 }
 
 export default async function InscripcionPage({ searchParams }: { searchParams: SearchParams }) {
+    const translate = await getT()
+
     const params = await searchParams
     if (params.service === 'campus' && !params.activity) redirect('/campus/inscripcion')
     const supabase = await createClient()
@@ -49,21 +57,21 @@ export default async function InscripcionPage({ searchParams }: { searchParams: 
 
                 <div className="container relative z-10 max-w-5xl">
                     <div className="mx-auto max-w-3xl text-center">
-                        <span className="inline-flex items-center gap-2 rounded-full border border-gold/35 bg-gold/10 px-4 py-2 text-sm font-bold text-gold backdrop-blur-sm"><ClipboardCheck className="h-4 w-4" /> INSCRIPCIONES ACADEMY</span>
-                        <h1 className="mt-6 font-heading text-5xl font-black uppercase leading-[0.9] tracking-tight text-white md:text-7xl">Reserva <span className="text-gold">tu plaza</span></h1>
-                        <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-slate-200 md:text-lg">Da el primer paso. Envía los datos básicos y secretaría confirmará disponibilidad, condiciones y siguientes pasos. <span className="font-semibold text-white">No se realiza ningún cargo ahora.</span></p>
+                        <span className="inline-flex items-center gap-2 rounded-full border border-gold/35 bg-gold/10 px-4 py-2 text-sm font-bold text-gold backdrop-blur-sm"><ClipboardCheck className="h-4 w-4" /> {translate(" INSCRIPCIONES ACADEMY")}</span>
+                        <h1 className="mt-6 font-heading text-5xl font-black uppercase leading-[0.9] tracking-tight text-white md:text-7xl">{translate("Reserva ")}<span className="text-gold">{translate("tu plaza")}</span></h1>
+                        <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-slate-200 md:text-lg">{translate("Da el primer paso. Envía los datos básicos y secretaría confirmará disponibilidad, condiciones y siguientes pasos. ")}<span className="font-semibold text-white">{translate("No se realiza ningún cargo ahora.")}</span></p>
                     </div>
 
                     <div className="mt-12 grid gap-4 md:grid-cols-3">
-                        <Info icon={<ClipboardCheck className="h-5 w-5" />} title="Sin pago ahora" text="Enviar la solicitud no genera ningún cargo ni compromiso." />
-                        <Info icon={<CalendarDays className="h-5 w-5" />} title="Atención personal" text="Secretaría te orienta sobre grupo, horario y disponibilidad." />
-                        <Info icon={<ShieldCheck className="h-5 w-5" />} title="Plaza confirmada" text="Solo formalizamos la inscripción cuando la plaza está validada." />
+                        <Info icon={<ClipboardCheck className="h-5 w-5" />} title={translate("Sin pago ahora")} text="Enviar la solicitud no genera ningún cargo ni compromiso." />
+                        <Info icon={<CalendarDays className="h-5 w-5" />} title={translate("Atención personal")} text="Secretaría te orienta sobre grupo, horario y disponibilidad." />
+                        <Info icon={<ShieldCheck className="h-5 w-5" />} title={translate("Plaza confirmada")} text="Solo formalizamos la inscripción cuando la plaza está validada." />
                     </div>
                 </div>
             </section>
 
             <div className="container relative z-10 -mt-14 max-w-5xl pb-16 md:-mt-20 md:pb-24">
-                {parseService(params.service) === 'academy' && <AcademyEnrollmentInfo />}
+                {translate(parseService(params.service) === 'academy' && <AcademyEnrollmentInfo />)}
                 <EnrollmentForm
                     campuses={campuses}
                     tournaments={tournaments}
@@ -77,7 +85,9 @@ export default async function InscripcionPage({ searchParams }: { searchParams: 
     )
 }
 
-function AcademyEnrollmentInfo() {
+async function AcademyEnrollmentInfo() {
+    const translate = await getT()
+
     const plans = [
         { title: 'Una sesión semanal', price: '75 €', suffix: '/ mes', detail: 'Una sesión de entrenamiento por semana.' },
         { title: 'Dos sesiones semanales', price: '140 €', suffix: '/ mes', detail: 'Una sesión de lunes a viernes y otra el domingo.', featured: true },
@@ -88,34 +98,36 @@ function AcademyEnrollmentInfo() {
         <section className="mb-8 rounded-3xl border border-white/15 bg-navy p-6 text-white shadow-2xl shadow-navy/20 md:mb-10 md:p-10" aria-labelledby="academy-enrollment-title">
             <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-end">
                 <div>
-                    <p className="text-xs font-bold tracking-[0.18em] text-gold uppercase">Información Academy</p>
-                    <h2 id="academy-enrollment-title" className="mt-2 font-heading text-4xl font-black uppercase leading-none md:text-5xl">Precios, horarios y <span className="text-gold">dossier</span></h2>
-                    <p className="mt-4 max-w-2xl text-sm leading-relaxed text-slate-300 md:text-base">Consulta todo antes de reservar. Los grupos se organizan por edad y nivel; secretaría confirma el grupo y horario definitivo.</p>
+                    <p className="text-xs font-bold tracking-[0.18em] text-gold uppercase">{translate("Información Academy")}</p>
+                    <h2 id="academy-enrollment-title" className="mt-2 font-heading text-4xl font-black uppercase leading-none md:text-5xl">{translate("Precios, horarios y ")}<span className="text-gold">{translate("dossier")}</span></h2>
+                    <p className="mt-4 max-w-2xl text-sm leading-relaxed text-slate-300 md:text-base">{translate("Consulta todo antes de reservar. Los grupos se organizan por edad y nivel; secretaría confirma el grupo y horario definitivo.")}</p>
                 </div>
-                <a href="/dossier-tecnificacion-2026-27.pdf" target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center justify-center rounded-xl border border-gold/45 bg-gold/10 px-5 text-sm font-bold text-gold transition hover:bg-gold hover:text-navy"><FileText className="mr-2 h-4 w-4" /> Ver dossier PDF <ExternalLink className="ml-2 h-4 w-4" /></a>
+                <a href="/dossier-tecnificacion-2026-27.pdf" target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center justify-center rounded-xl border border-gold/45 bg-gold/10 px-5 text-sm font-bold text-gold transition hover:bg-gold hover:text-navy"><FileText className="mr-2 h-4 w-4" /> {translate(" Ver dossier PDF ")}<ExternalLink className="ml-2 h-4 w-4" /></a>
             </div>
 
             <div className="mt-8 grid gap-3 md:grid-cols-3">
-                {plans.map((plan) => (
+                {translate(plans.map((plan) => (
                     <article key={plan.title} className={`rounded-2xl border p-5 ${plan.featured ? 'border-gold bg-gold text-navy' : 'border-white/15 bg-white/5'}`}>
                         <CalendarDays className={`h-5 w-5 ${plan.featured ? 'text-navy' : 'text-gold'}`} />
-                        <h3 className="mt-3 font-heading text-2xl font-bold uppercase">{plan.title}</h3>
-                        <p className={`mt-2 min-h-10 text-xs leading-relaxed ${plan.featured ? 'text-navy/80' : 'text-slate-300'}`}>{plan.detail}</p>
-                        <p className="mt-4 border-t border-current/20 pt-3"><span className="font-heading text-4xl font-black">{plan.price}</span><span className="ml-1 text-xs font-bold uppercase">{plan.suffix}</span></p>
+                        <h3 className="mt-3 font-heading text-2xl font-bold uppercase">{translate(plan.title)}</h3>
+                        <p className={`mt-2 min-h-10 text-xs leading-relaxed ${plan.featured ? 'text-navy/80' : 'text-slate-300'}`}>{translate(plan.detail)}</p>
+                        <p className="mt-4 border-t border-current/20 pt-3"><span className="font-heading text-4xl font-black">{translate(plan.price)}</span><span className="ml-1 text-xs font-bold uppercase">{translate(plan.suffix)}</span></p>
                     </article>
-                ))}
+                )))}
             </div>
 
             <div className="mt-4 grid gap-3 border-t border-white/10 pt-4 text-sm sm:grid-cols-2">
-                <div className="flex gap-3 rounded-xl bg-black/15 p-4"><Clock3 className="mt-0.5 h-5 w-5 shrink-0 text-gold" /><p className="leading-relaxed text-slate-300"><strong className="block text-white">Sesiones de grupos</strong>Martes a viernes, con sesiones de domingo según grupo.</p></div>
-                <div className="flex gap-3 rounded-xl bg-black/15 p-4"><MapPin className="mt-0.5 h-5 w-5 shrink-0 text-gold" /><p className="leading-relaxed text-slate-300"><strong className="block text-white">Tecnificación de porteros</strong>Martes y miércoles en Santa Cristina d&apos;Aro. Consulta todos los horarios en el dossier.</p></div>
+                <div className="flex gap-3 rounded-xl bg-black/15 p-4"><Clock3 className="mt-0.5 h-5 w-5 shrink-0 text-gold" /><p className="leading-relaxed text-slate-300"><strong className="block text-white">{translate("Sesiones de grupos")}</strong>{translate("Martes a viernes, con sesiones de domingo según grupo.")}</p></div>
+                <div className="flex gap-3 rounded-xl bg-black/15 p-4"><MapPin className="mt-0.5 h-5 w-5 shrink-0 text-gold" /><p className="leading-relaxed text-slate-300"><strong className="block text-white">{translate("Tecnificación de porteros")}</strong>{translate("Martes y miércoles en Santa Cristina d'Aro. Consulta todos los horarios en el dossier.")}</p></div>
             </div>
 
-            <p className="mt-4 text-center text-xs text-slate-400">Plan Plus: suplemento de 50 € con recuperación de sesiones y beneficios Academy. Consulta sus condiciones en el dossier.</p>
+            <p className="mt-4 text-center text-xs text-slate-400">{translate("Plan Plus: suplemento de 50 € con recuperación de sesiones y beneficios Academy. Consulta sus condiciones en el dossier.")}</p>
         </section>
     )
 }
 
-function Info({ icon, title, text }: { icon: ReactNode; title: string; text: string }) {
-    return <div className="rounded-2xl border border-white/15 bg-white/8 p-5 text-left shadow-lg shadow-navy/15 backdrop-blur-sm"><div className="mb-3 text-gold">{icon}</div><h2 className="font-bold text-white">{title}</h2><p className="mt-1 text-sm leading-relaxed text-slate-300">{text}</p></div>
+async function Info({ icon, title, text }: { icon: ReactNode; title: string; text: string }) {
+    const translate = await getT()
+
+    return <div className="rounded-2xl border border-white/15 bg-white/8 p-5 text-left shadow-lg shadow-navy/15 backdrop-blur-sm"><div className="mb-3 text-gold">{translate(icon)}</div><h2 className="font-bold text-white">{translate(title)}</h2><p className="mt-1 text-sm leading-relaxed text-slate-300">{translate(text)}</p></div>
 }

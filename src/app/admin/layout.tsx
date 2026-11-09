@@ -1,3 +1,4 @@
+import { LocaleProvider } from '@/lib/i18n/client'
 import Link from 'next/link'
 import { LogOut } from "lucide-react"
 import { createClient as createServerClient } from '@/lib/supabase/server'
@@ -43,7 +44,7 @@ export default async function AdminLayout({
     }
 
     return (
-        <div className="flex h-[100dvh] w-full flex-1 flex-col overflow-hidden bg-slate-50 md:h-screen md:flex-row">
+        <LocaleProvider locale="es"><div lang="es" className="flex h-[100dvh] w-full flex-1 flex-col overflow-hidden bg-slate-50 md:h-screen md:flex-row">
             <MobileAdminNav isAdmin={isAdmin} isStaff={isStaff} isFinance={isFinance} isMarketing={isMarketing} />
             <AdminDesktopSidebar isAdmin={isAdmin} isStaff={isStaff} isFinance={isFinance} isMarketing={isMarketing} roleLabel={getRoleLabel(role)} signOut={signOut} />
 
@@ -83,6 +84,6 @@ export default async function AdminLayout({
                     <div className="h-2 w-full shrink-0 md:h-8" />
                 </main>
             </div>
-        </div>
+        </div></LocaleProvider>
     )
 }

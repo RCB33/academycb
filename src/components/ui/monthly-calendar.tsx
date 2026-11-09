@@ -1,4 +1,6 @@
 'use client'
+import { useT } from '@/lib/i18n/client'
+
 
 import { useState } from 'react'
 import {
@@ -14,7 +16,7 @@ import {
     addDays,
     parseISO
 } from 'date-fns'
-import { es } from 'date-fns/locale'
+import { ca, es } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -38,19 +40,21 @@ interface MonthlyCalendarProps {
 }
 
 export function MonthlyCalendar({ events, onDateClick, onEventClick }: MonthlyCalendarProps) {
+    const translate = useT()
+
     const [currentMonth, setCurrentMonth] = useState(new Date())
 
     const renderHeader = () => {
         return (
             <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl md:text-2xl font-bold text-navy capitalize">
-                    {format(currentMonth, 'MMMM yyyy', { locale: es })}
+                    {translate(format(currentMonth, 'MMMM yyyy', { locale: translate.locale === 'ca-ES' ? ca : es }))}
                 </h2>
                 <div className="flex gap-2">
-                    <Button variant="outline" size="icon" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
+                    <Button variant="outline" size="icon" aria-label={translate("Mes anterior")} onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
                         <ChevronLeft className="h-4 w-4" />
                     </Button>
-                    <Button variant="outline" size="icon" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
+                    <Button variant="outline" size="icon" aria-label={translate("Mes siguiente")} onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
                         <ChevronRight className="h-4 w-4" />
                     </Button>
                 </div>
@@ -65,11 +69,11 @@ export function MonthlyCalendar({ events, onDateClick, onEventClick }: MonthlyCa
         for (let i = 0; i < 7; i++) {
             days.push(
                 <div key={i} className="text-center font-semibold text-sm text-slate-500 py-2 capitalize">
-                    {format(addDays(startDate, i), 'EEEE', { locale: es }).slice(0, 3)}
+                    {translate(format(addDays(startDate, i), 'EEEE', { locale: translate.locale === 'ca-ES' ? ca : es }).slice(0, 3))}
                 </div>
             )
         }
-        return <div className="grid grid-cols-7 mb-2">{days}</div>
+        return <div className="grid grid-cols-7 mb-2">{translate(days)}</div>
     }
 
     const renderCells = () => {
@@ -111,11 +115,11 @@ export function MonthlyCalendar({ events, onDateClick, onEventClick }: MonthlyCa
                                 "text-xs font-medium w-6 h-6 flex items-center justify-center rounded-full",
                                 isSameDay(day, new Date()) ? "bg-navy text-white" : "text-slate-700"
                             )}>
-                                {formattedDate}
+                                {translate(formattedDate)}
                             </span>
                         </div>
                         <div className="flex-1 overflow-y-auto scrollbar-hide space-y-1 mt-1">
-                            {dayEvents.map((evt) => (
+                            {translate(dayEvents.map((evt) => (
                                 <div
                                     key={evt.id}
                                     onClick={(e) => {
@@ -124,15 +128,15 @@ export function MonthlyCalendar({ events, onDateClick, onEventClick }: MonthlyCa
                                     }}
                                     className="text-white text-[10px] md:text-xs rounded-md px-1.5 py-1 truncate cursor-pointer hover:brightness-90 transition-all border-l-2 border-white/20"
                                     style={{ backgroundColor: evt.color || '#1e3a8a' }}
-                                    title={evt.title}
+                                    title={translate(evt.title)}
                                 >
-                                    <div className="font-semibold truncate">{evt.title}</div>
+                                    <div className="font-semibold truncate">{translate(evt.title)}</div>
                                     <div className="flex justify-between mt-0.5 opacity-90 truncate">
-                                        <span className="truncate">{evt.is_all_day ? 'Todo el día' : format(parseISO(evt.start_date), 'HH:mm')}</span>
-                                        {evt.category_name && <span className="font-mono bg-black/20 px-1 rounded truncate ml-1">{evt.category_name}</span>}
+                                        <span className="truncate">{translate(evt.is_all_day ? 'Todo el día' : format(parseISO(evt.start_date), 'HH:mm'))}</span>
+                                        {translate(evt.category_name && <span className="font-mono bg-black/20 px-1 rounded truncate ml-1">{translate(evt.category_name)}</span>)}
                                     </div>
                                 </div>
-                            ))}
+                            )))}
                         </div>
                     </div>
                 )
@@ -140,19 +144,19 @@ export function MonthlyCalendar({ events, onDateClick, onEventClick }: MonthlyCa
             }
             rows.push(
                 <div className="grid grid-cols-7" key={day.toString()}>
-                    {days}
+                    {translate(days)}
                 </div>
             )
             days = []
         }
-        return <div className="border border-slate-100 rounded-lg overflow-hidden shadow-sm">{rows}</div>
+        return <div className="border border-slate-100 rounded-lg overflow-hidden shadow-sm">{translate(rows)}</div>
     }
 
     return (
         <div className="w-full">
-            {renderHeader()}
-            {renderDays()}
-            {renderCells()}
+            {translate(renderHeader())}
+            {translate(renderDays())}
+            {translate(renderCells())}
         </div>
     )
 }

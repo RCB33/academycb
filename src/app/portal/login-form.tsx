@@ -1,4 +1,6 @@
 'use client'
+import { useT } from '@/lib/i18n/client'
+
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -13,6 +15,8 @@ import { Loader2 } from 'lucide-react'
 import { getRoleHome, isAppRole } from '@/lib/roles'
 
 export function LoginForm() {
+    const translate = useT()
+
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [loading, setLoading] = useState(false)
@@ -60,7 +64,7 @@ export function LoginForm() {
             })
 
             if (error) {
-                toast.error("Error al iniciar sesión: " + error.message)
+                toast.error(translate("Error al iniciar sesión: ") + translate(error.message))
             } else {
                 // Check role
                 const { data: { user } } = await supabase.auth.getUser()
@@ -70,13 +74,13 @@ export function LoginForm() {
                     .eq('id', user?.id)
                     .single()
 
-                toast.success("Bienvenido")
+                toast.success(translate("Bienvenido"))
                 router.refresh()
 
                 router.push(getRoleHome(isAppRole(profile?.role) ? profile.role : null))
             }
         } catch {
-            toast.error("Ha ocurrido un error inesperado")
+            toast.error(translate("Ha ocurrido un error inesperado"))
         } finally {
             setLoading(false)
         }
@@ -85,7 +89,7 @@ export function LoginForm() {
     const handlePasswordReset = async () => {
         const normalizedEmail = email.trim()
         if (!normalizedEmail) {
-            toast.error('Escribe primero tu correo electrónico.')
+            toast.error(translate('Escribe primero tu correo electrónico.'))
             return
         }
 
@@ -95,11 +99,11 @@ export function LoginForm() {
         setResettingPassword(false)
 
         if (error) {
-            toast.error('No se pudo enviar el enlace. Inténtalo de nuevo en unos minutos.')
+            toast.error(translate('No se pudo enviar el enlace. Inténtalo de nuevo en unos minutos.'))
             return
         }
 
-        toast.success('Te hemos enviado un enlace para crear o recuperar tu contraseña.')
+        toast.success(translate('Te hemos enviado un enlace para crear o recuperar tu contraseña.'))
     }
 
     return (
@@ -107,11 +111,11 @@ export function LoginForm() {
             <CardContent className="pt-6">
                 <form onSubmit={handleLogin} className="space-y-4">
                     <div className="space-y-2">
-                        <Label htmlFor="email" className="text-white">Email</Label>
+                        <Label htmlFor="email" className="text-white">{translate("Email")}</Label>
                         <Input
                             id="email"
                             type="email"
-                            placeholder="tu@email.com"
+                            placeholder={translate("tu@email.com")}
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required
@@ -120,7 +124,7 @@ export function LoginForm() {
                     </div>
                     <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                            <Label htmlFor="password" className="text-white">Contraseña</Label>
+                            <Label htmlFor="password" className="text-white">{translate("Contraseña")}</Label>
                         </div>
                         <Input
                             id="password"
@@ -132,13 +136,12 @@ export function LoginForm() {
                         />
                     </div>
                     <Button type="submit" className="w-full font-bold" style={{ backgroundColor: '#D4AF37', color: '#0C2241' }} disabled={loading}>
-                        {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                        Entrar
-                    </Button>
+                        {translate(loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null)}
+                        {translate("Entrar")}</Button>
                 </form>
             </CardContent>
             <CardFooter className="flex-col gap-2 border-t border-white/10 p-4 text-center">
-                <p className="text-xs text-gray-300">¿Primera vez o has olvidado la contraseña?</p>
+                <p className="text-xs text-gray-300">{translate("¿Primera vez o has olvidado la contraseña?")}</p>
                 <Button
                     type="button"
                     variant="link"
@@ -146,9 +149,8 @@ export function LoginForm() {
                     onClick={handlePasswordReset}
                     disabled={loading || resettingPassword}
                 >
-                    {resettingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Crear o recuperar contraseña
-                </Button>
+                    {translate(resettingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />)}
+                    {translate("Crear o recuperar contraseña")}</Button>
             </CardFooter>
         </Card>
     )

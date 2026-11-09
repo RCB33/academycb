@@ -1,3 +1,6 @@
+
+import { LanguageSwitcher } from '@/lib/i18n/client'
+import { getT } from '@/lib/i18n/server'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -14,6 +17,8 @@ export default async function AuthenticatedLayout({
 }: {
     children: React.ReactNode
 }) {
+    const translate = await getT()
+
     const supabase = await createClient()
 
     const {
@@ -66,9 +71,10 @@ export default async function AuthenticatedLayout({
                 <div className="flex min-h-16 items-center justify-between px-4 pt-[env(safe-area-inset-top)]">
                     <Link href="/portal/dashboard" className="flex items-center space-x-2 font-bold">
                         <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gold text-navy"><Trophy className="h-5 w-5" /></span>
-                        <span><span className="block font-heading text-base font-black uppercase tracking-wide">Academy</span><span className="block text-[9px] uppercase tracking-[0.16em] text-slate-300">Familias</span></span>
+                        <span className="hidden min-[360px]:block"><span className="block font-heading text-base font-black uppercase tracking-wide">{translate("Academy")}</span><span className="block text-[9px] uppercase tracking-[0.16em] text-slate-300">{translate("Familias")}</span></span>
                     </Link>
                     <div className="flex items-center gap-2">
+                        <LanguageSwitcher />
                         <NotificationBell />
                         <form action={signOut}>
                             <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 hover:text-white"><LogOut className="h-5 w-5" /></Button>
@@ -85,7 +91,7 @@ export default async function AuthenticatedLayout({
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:h-screen">
                 <main className="relative h-full flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] [-webkit-overflow-scrolling:touch] md:p-6 xl:p-8">
                     <div className="mx-auto w-full max-w-7xl">
-                        {children}
+                        {translate(children)}
                     </div>
                     <div className="h-4 shrink-0 w-full md:h-8" />
                 </main>

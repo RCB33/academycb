@@ -1,7 +1,11 @@
-import { LoginForm } from "./login-form"
-import Image from "next/image"
 
-export default function LoginPage() {
+import { LanguageSwitcher } from '@/lib/i18n/client'
+import { getT } from '@/lib/i18n/server'
+import { LoginForm } from "./login-form"
+
+export default async function LoginPage() {
+    const translate = await getT()
+
     return (
         <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-navy relative overflow-hidden">
             {/* Background Decorations */}
@@ -11,20 +15,19 @@ export default function LoginPage() {
             </div>
 
             <div className="w-full max-w-md space-y-8 relative z-10">
+                <div className="flex justify-end"><LanguageSwitcher /></div>
                 <div className="text-center">
                     <h2 className="mt-6 text-4xl font-heading font-bold tracking-tight text-white uppercase">
-                        Portal <span className="text-primary">Familias</span>
+                        {translate("Portal ")}<span className="text-primary">{translate("Familias")}</span>
                     </h2>
                     <p className="mt-2 text-sm text-gray-300">
-                        Accede para ver el progreso y novedades de tu hijo/a
-                    </p>
+                        {translate("Accede para ver el progreso y novedades de tu hijo/a")}</p>
                 </div>
 
                 <LoginForm />
 
                 <div className="text-center text-xs text-white/40">
-                    &copy; {new Date().getFullYear()} Academy Costa Brava.
-                </div>
+                    {translate("© ")}{translate(new Date().getFullYear())} {translate(" Academy Costa Brava.")}</div>
             </div>
         </div>
     )

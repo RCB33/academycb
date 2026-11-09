@@ -1,4 +1,6 @@
 "use client"
+import { useT } from '@/lib/i18n/client'
+
 
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
@@ -8,6 +10,8 @@ import Link from "next/link"
 import type { StoreProduct } from "@/lib/public-catalog"
 
 export default function ShopSection({ products }: { products: StoreProduct[] }) {
+    const translate = useT()
+
     const { addToCart } = useCart()
 
     return (
@@ -16,32 +20,30 @@ export default function ShopSection({ products }: { products: StoreProduct[] }) 
                 <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
                     <div className="max-w-2xl">
                         <span className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-sm font-bold text-primary backdrop-blur-md mb-4 tracking-widest uppercase">
-                            Equipación oficial
-                        </span>
+                            {translate("Equipación oficial")}</span>
                         <h2 className="font-heading text-5xl md:text-7xl font-bold text-navy mb-4 uppercase">
-                            Nuestra <span className="text-primary">Tienda</span>
+                            {translate("Nuestra ")}<span className="text-primary">{translate("Tienda")}</span>
                         </h2>
                         <p className="text-xl text-gray-600">
-                            Viste los colores de la academia. Productos de alta calidad diseñados para el máximo rendimiento.
-                        </p>
+                            {translate("Viste los colores de la academia. Productos de alta calidad diseñados para el máximo rendimiento.")}</p>
                     </div>
                     <Button asChild variant="outline" className="hidden md:flex border-2 border-primary text-primary hover:bg-primary hover:text-white font-heading font-bold uppercase tracking-wider h-12 px-8">
-                        <Link href="/tienda">Ver Catálogo Completo <ArrowRight className="ml-2 h-5 w-5" /></Link>
+                        <Link href="/tienda">{translate("Ver Catálogo Completo ")}<ArrowRight className="ml-2 h-5 w-5" /></Link>
                     </Button>
                 </div>
 
-                {products.length === 0 ? (
+                {translate(products.length === 0 ? (
                     <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 px-6 py-16 text-center">
-                        <h3 className="font-heading text-2xl font-bold text-navy uppercase">Catálogo en preparación</h3>
-                        <p className="mt-2 text-slate-500">Publicaremos aquí los productos disponibles cuando estén confirmados.</p>
+                        <h3 className="font-heading text-2xl font-bold text-navy uppercase">{translate("Catálogo en preparación")}</h3>
+                        <p className="mt-2 text-slate-500">{translate("Publicaremos aquí los productos disponibles cuando estén confirmados.")}</p>
                     </div>
                 ) : <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                    {products.map((product) => (
+                    {translate(products.map((product) => (
                         <div key={product.id} className="group flex flex-col bg-gray-50 rounded-3xl overflow-hidden border border-gray-100 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300">
                             <div className="relative aspect-square overflow-hidden bg-gray-200">
                                 <Image
                                     src={product.image_url || '/logo-academy.png'}
-                                    alt={product.name}
+                                    alt={translate(product.name)}
                                     fill
                                     className="object-cover group-hover:scale-110 transition-transform duration-500"
                                 />
@@ -58,28 +60,26 @@ export default function ShopSection({ products }: { products: StoreProduct[] }) 
                             </div>
                             <div className="p-6 flex-1 flex flex-col">
                                 <div className="flex justify-between items-start mb-2">
-                                    <h3 className="font-heading text-xl font-bold text-navy uppercase leading-tight">{product.name}</h3>
+                                    <h3 className="font-heading text-xl font-bold text-navy uppercase leading-tight">{translate(product.name)}</h3>
                                     <span className="font-heading text-xl font-bold text-primary">
-                                        {product.price.toFixed(2)}€
-                                    </span>
+                                        {translate(product.price.toFixed(2))}{translate("€")}</span>
                                 </div>
                                 <p className="text-gray-500 text-sm mb-6 flex-1">
-                                    {product.description}
+                                    {translate(product.description)}
                                 </p>
                                 <Button
                                     onClick={() => addToCart({ product_id: product.id, name: product.name, price: product.price, size: product.sizes?.[0] || 'Única', quantity: 1, image_url: product.image_url || '/logo-academy.png' })}
                                     className="w-full bg-navy hover:bg-navy-light text-white font-heading font-bold uppercase tracking-wider rounded-xl h-11"
                                 >
-                                    <ShoppingCart className="mr-2 h-4 w-4" /> Añadir al carrito
-                                </Button>
+                                    <ShoppingCart className="mr-2 h-4 w-4" /> {translate(" Añadir al carrito")}</Button>
                             </div>
                         </div>
-                    ))}
-                </div>}
+                    )))}
+                </div>)}
 
                 <div className="mt-16 md:hidden">
                     <Button asChild className="w-full h-14 bg-primary text-white font-heading font-bold uppercase tracking-wider rounded-2xl">
-                        <Link href="/tienda">Ver Catálogo Completo</Link>
+                        <Link href="/tienda">{translate("Ver Catálogo Completo")}</Link>
                     </Button>
                 </div>
             </div>
