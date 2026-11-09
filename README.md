@@ -45,7 +45,7 @@ No habilites políticas `using (true)` para tablas privadas. Los documentos, fir
 
 El proyecto es una aplicación Next.js estándar. En Vercel u otro proveedor compatible configura las cuatro variables de `.env.example`, usa `npm run build` como comando de construcción y sirve la aplicación con `npm run start` si el proveedor lo requiere.
 
-No hay pago online integrado: la tienda registra solicitudes de pedido pendientes para su gestión manual. No debe anunciarse como compra pagada hasta integrar una pasarela y sus webhooks.
+La integración Stripe está disponible detrás de controles de activación. La tienda registra pedidos pendientes y el portal permite pagar sus recibos cuando los cobros están habilitados. Consulta `docs/STRIPE-PRODUCTION.md` para credenciales, webhooks y comprobaciones pendientes.
 
 ## Revisión de Karen (12 de octubre de 2026)
 

@@ -3,6 +3,7 @@
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { requireAdmin, requireUser } from '@/lib/auth'
+import { stripeCheckoutMode } from '@/lib/stripe-availability'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { tournamentRegistrationSchema, tournamentQuote, tournamentIds } from '@/lib/christmas-tournaments'
 
@@ -34,7 +35,9 @@ export async function getEventFamily() {
   const { data: registrations, error: registrationError } = await db.from('event_registrations').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
   if (registrationError) throw new Error('Las inscripciones todavía no están disponibles. Inténtalo más tarde.')
   const { data: bank } = await db.from('event_campaign_settings').select('bank_holder,iban').eq('id', 'christmas-2026').single()
-  return { guardian, children, registrations: registrations || [], email: user.email, bank }
+  const checkoutMode = await stripeCheckoutMode()
+  const { data: checkoutAttempts } = await db.from('event_checkout_attempts').select('id,registration_id,mode,state').eq('owner_id',user.id).order('created_at',{ascending:false}).limit(100)
+  return { guardian, children, registrations: registrations || [], email: user.email, bank, checkoutMode, checkoutAttempts: checkoutAttempts || [] }
 }
 
 export async function submitEventRegistration(input: unknown) {

@@ -13,7 +13,8 @@
     "test:karen": "npm run test:payments && node scripts/test-karen-access.cjs && node scripts/test-karen-reminders.cjs && node scripts/test-billing-dates.cjs && node scripts/test-private-images.cjs && node scripts/test-family-plans.cjs",
     "test": "npm run lint && npm run typecheck",
     "verify": "npm run test && npm run build",
-    "production:check": "node scripts/check-production.mjs"
+    "production:check": "node scripts/check-production.mjs",
+    "test:stripe": "node scripts/test-payment-rules.cjs && node scripts/test-academy-pricing.cjs && node scripts/test-stripe-return-origin.cjs && node scripts/test-stripe-webhook.cjs && node scripts/test-academy-stripe-contract.cjs"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.15",
@@ -44,7 +45,8 @@
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0",
     "tailwindcss-animate": "^1.0.7",
-    "zod": "4.6.6"
+    "zod": "4.6.6",
+    "stripe": "22.6.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

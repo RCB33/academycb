@@ -5,11 +5,14 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { getEventFamily, submitEventRegistration } from '@/app/actions/event-registrations'
 import { christmasTournaments, registrationStatuses, tournamentQuote } from '@/lib/christmas-tournaments'
+import { PayReceiptButton } from '@/app/portal/(authenticated)/pagos/pay-button'
+import { CancelCheckout } from '@/app/portal/(authenticated)/pagos/cancel-checkout'
+import { ConfirmationRefresh } from '@/app/admin/stripe/confirmation-refresh'
 import { EventRegistrationFiles } from '@/components/event-registration-files'
 
 type Family = Awaited<ReturnType<typeof getEventFamily>>
 const field = 'mt-1 block w-full rounded-lg border border-slate-300 bg-white p-3 text-base'
-export function EventRegistrationForm({ family, initialTournament }: { family: Family; initialTournament?: string }) {
+export function EventRegistrationForm({ family, initialTournament, returnedAttempt }: { family: Family; initialTournament?: string; returnedAttempt?: string }) {
   const [selectedChild, setSelectedChild] = useState('')
   const [selected, setSelected] = useState<string[]>(christmasTournaments.some(t => t.id === initialTournament) ? [initialTournament!] : [])
   const [ownsKit, setOwnsKit] = useState(true)
@@ -37,6 +40,8 @@ export function EventRegistrationForm({ family, initialTournament }: { family: F
       {r.admin_note && <p className="mt-3 rounded-lg bg-blue-50 p-3 text-sm">Academy: {r.admin_note}</p>}
       {r.status === 'requested' && <p className="mt-3 text-sm text-amber-800">Pendiente de revisión de categoría, equipo y disponibilidad. Todavía no hagas la transferencia.</p>}
       {r.status === 'awaiting_payment' && <div className="mt-4 rounded-xl bg-amber-50 p-4 text-sm"><strong>Transferencia bancaria</strong><p className="mt-2">Titular: {family.bank?.bank_holder}</p><p className="mt-2 break-all font-mono">{family.bank?.iban}</p><p className="mt-2">Concepto: NAVIDAD {r.id.slice(0, 8).toUpperCase()} · {r.details.child_name}</p><p className="mt-2">Fecha límite: {r.due_date}. Revisa los datos del beneficiario que te muestre tu banco antes de confirmar. Después adjunta el justificante aquí.</p></div>}
+      {family.checkoutMode && r.status === 'awaiting_payment' && !family.checkoutAttempts.some(a=>a.registration_id===r.id && a.mode===family.checkoutMode && a.state==='paid') && <PayReceiptButton paymentId={r.id} event test={family.checkoutMode==='test'} />}
+      {family.checkoutAttempts.filter(a=>a.registration_id===r.id && a.mode===family.checkoutMode).map(a=><div key={a.id}>{a.state==='open' && <CancelCheckout kind="event" id={a.id} />}{a.id===returnedAttempt && <><ConfirmationRefresh pending={['creating','open'].includes(a.state)} />{a.state==='paid' && <p role="status" className="mt-3 text-sm text-green-700">{a.mode==='test' ? 'Prueba confirmada. La inscripción real sigue pendiente.' : 'Pago con tarjeta confirmado.'}</p>}</>}</div>)}
       {r.status === 'proof_review' && <p className="mt-3 text-sm">Justificante recibido. Academy comprobará el ingreso antes de confirmar la plaza. No repitas la transferencia.</p>}
       <EventRegistrationFiles id={r.id} status={r.status} />
     </article>)}</div></section>}
