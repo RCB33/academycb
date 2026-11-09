@@ -2,7 +2,9 @@
 
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
+import { stripeSalesConfigured } from '@/lib/stripe-availability'
 import { requireAdmin, requireFinanceAccess } from '@/lib/auth'
+import { AcademyCheckoutSchema } from '@/lib/academy-pricing'
 
 const optionalText = (max = 500) => z.string().trim().max(max)
 const optionalUrl = z.string().trim().max(500).refine(
@@ -81,7 +83,7 @@ const SettingsUpdateSchema = z.object({
         || value.payment_transfer_enabled !== undefined
         || value.payment_card_enabled !== undefined
     if (!methodKeysPresent) return
-    if (value.payment_card_enabled === 'true') {
+    if (value.payment_card_enabled === 'true' && stripeSalesConfigured() !== 'live') {
         context.addIssue({ code: 'custom', message: 'No se puede activar tarjeta hasta completar la integración real con Stripe', path: ['payment_card_enabled'] })
     }
     const enabled = {
@@ -118,7 +120,7 @@ const PlanSchema = z.object({
     message: 'Un plan trimestral debe durar un múltiplo de 3 meses', path: ['duration_months'],
 }).refine(value => value.frequency !== 'anual' || value.duration_months % 12 === 0, {
     message: 'Usa Temporada para un pago único de duración distinta de 12 meses', path: ['duration_months'],
-})
+}).and(AcademyCheckoutSchema)
 
 const CategorySchema = z.object({
     name: z.string().trim().min(2, 'El nombre es obligatorio').max(80),
@@ -140,6 +142,10 @@ export type MembershipPlan = {
     price: number
     enrollment_fee: number
     frequency: 'mensual' | 'trimestral' | 'anual' | 'temporada'
+    full_payment_enabled: boolean
+    full_payment_price: number | null
+    monthly_payment_enabled: boolean
+    monthly_payment_price: number | null
     is_active: boolean
     sort_order: number
     created_at: string
@@ -246,7 +252,7 @@ export async function getPlans(includeInactive = false): Promise<MembershipPlan[
     const { supabase } = await requireAdmin()
     let query = supabase
         .from('membership_plans')
-        .select('id, name, description, duration_months, price, enrollment_fee, frequency, is_active, sort_order, created_at, updated_at')
+        .select('id, name, description, duration_months, price, enrollment_fee, frequency, is_active, sort_order, created_at, updated_at, full_payment_enabled, full_payment_price, monthly_payment_enabled, monthly_payment_price')
         .order('sort_order')
         .order('name')
     if (!includeInactive) query = query.eq('is_active', true)
@@ -262,6 +268,8 @@ export async function getPlans(includeInactive = false): Promise<MembershipPlan[
         ...plan,
         price: Number(plan.price || 0),
         enrollment_fee: Number(plan.enrollment_fee || 0),
+        full_payment_price: plan.full_payment_price === null ? null : Number(plan.full_payment_price),
+        monthly_payment_price: plan.monthly_payment_price === null ? null : Number(plan.monthly_payment_price),
         membership_count: (memberships || []).filter((item) => item.plan_id === plan.id).length,
         active_membership_count: (memberships || []).filter((item) => item.plan_id === plan.id && item.status === 'active').length,
     })) as MembershipPlan[]
@@ -479,7 +487,7 @@ export async function getSettingsOverview(settingsInput?: Record<string, string>
         uncategorizedChildren: uncategorizedChildren.count || 0,
         uncategorizedTeams: uncategorizedTeams.count || 0,
         whatsappConfigured: Boolean(whatsapp.data?.greenapi_id_instance && whatsapp.data?.greenapi_api_token_instance),
-        stripeConfigured: false,
+        stripeConfigured: stripeSalesConfigured() === 'live',
         audit: (audit.data || []) as SettingsOverview['audit'],
     }
 }
