@@ -7,6 +7,20 @@ import { receiptBalance } from '@/lib/receipt-balance'
 
 const createClient = async () => (await requireAdmin()).supabase
 
+const CampusSchema = z.object({
+    name: z.string().trim().min(2).max(160),
+    year: z.number().int().min(2020).max(2100),
+    type: z.enum(['verano', 'invierno', 'tecnificacion', 'semana_santa']),
+    start_date: z.iso.date(), end_date: z.iso.date(),
+    price: z.number().finite().min(0).max(1_000_000).multipleOf(0.01).nullable().optional(),
+    capacity: z.number().int().min(0).max(10000),
+    status: z.enum(['draft', 'published', 'closed']).default('draft'),
+    location: z.string().trim().max(300).nullable().optional(),
+    description: z.string().trim().max(5000).nullable().optional(),
+    schedule: z.string().trim().max(500).nullable().optional(),
+}).refine(c => c.end_date >= c.start_date, { message: 'La fecha final debe ser posterior al inicio' })
+  .refine(c => c.status !== 'published' || c.capacity > 0, { message: 'Confirma un aforo mayor que 0 antes de publicar el campus' })
+
 export type Campus = {
     id: string
     name: string
@@ -84,6 +98,9 @@ export async function createCampus(data: {
     schedule?: string | null
 }) {
     const supabase = await createClient()
+    const parsed = CampusSchema.safeParse(data)
+    if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
+    data = parsed.data
 
     const { error } = await supabase
         .from('campuses')
@@ -126,10 +143,15 @@ export async function updateCampus(id: string, data: Partial<{
     schedule: string | null
 }>) {
     const supabase = await createClient()
+    if (!z.uuid().safeParse(id).success) return { success: false, error: 'Campus no válido' }
+    const { data: current, error: loadError } = await supabase.from('campuses').select('*').eq('id', id).single()
+    if (loadError || !current) return { success: false, error: 'No se pudo cargar el campus' }
+    const parsed = CampusSchema.safeParse({ ...current, ...data })
+    if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
 
     const { error } = await supabase
         .from('campuses')
-        .update(data)
+        .update(parsed.data)
         .eq('id', id)
 
     if (error) {

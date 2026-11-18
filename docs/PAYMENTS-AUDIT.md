@@ -1,5 +1,23 @@
 # Pagos — auditoría y diseño de implementación
 
+## Cierre operativo — 18 noviembre 2026, segunda revisión
+
+- Catálogo cargado desde el dossier: una sesión semanal 75 €/mes, dos sesiones 140 €/mes, matrícula 30 € solo nuevos jugadores. Temporada 15/09/2026–31/05/2027. Se respeta el horario web confirmado por el dueño: 17:30–19:00.
+- Planes de temporada fija: las altas tardías generan solo meses completos restantes hasta mayo, no nueve meses desde cualquier fecha. Septiembre parcial queda fuera de automatización, sin inventar prorrateo. No se han asignado planes ni generado recibos para alumnos existentes.
+- Modalidades online del nuevo catálogo desactivadas. La tarifa anual total y la periodicidad del Plus +50 € no aparecen definidas; no se inventan. El asistente permite un extra individual único expresamente acordado, por defecto 0.
+- Contactos, temporada y cuenta bancaria confirmados cargados en ajustes. No se presupone que el titular bancario sea la identidad fiscal de la empresa.
+- Corregido `ON CONFLICT(key)` de ajustes: el índice parcial anterior no era compatible con el upsert de PostgREST. Índice único normal, mantiene múltiples NULL del legado; no se cambia contenido histórico.
+- Campus Navidad preparado como borrador: fechas, horario, ubicación y tarifas por semanas/pack. Aforo 0 significa pendiente; no se puede publicar con aforo 0. Eliminado el valor 30 inventado por defecto en el editor.
+- SMTP de Auth comprobado: `smtp.resend.com`, remitente `info@academycostabrava.com`; confirmación de correo requerida. OTP reducido de 86400 a 1800 segundos y verificado por lectura posterior. La protección de contraseñas filtradas devuelve HTTP 402: exige Supabase Pro. No se contrata ningún plan.
+- Migraciones: `20261118182118_academy_season_readiness`, `20261118182158_settings_upsert_key`. Datos confirmados reproducibles con `scripts/seed-confirmed-2026-27.sql` (idempotente, no sobrescribe ajustes existentes no vacíos).
+- Prueba conectada `scripts/test-season-readiness.sql` con ROLLBACK: noviembre→mayo, 7 cuotas de 75 € + matrícula 30 €, total 555 €, reintento sin duplicados, rechazo de septiembre parcial/junio, rechazo no-admin, upsert y bloqueo de campus sin aforo. También repetidas las pruebas SQL de actividades, campus, reutilización de hijos y cola de correo.
+- TypeScript, ESLint, build y suites `test:karen`, `test:events`, `test:stripe`, `test:notifications`, actividades e i18n: correctas. Las pruebas Stripe con SDK simulado NO acreditan el ciclo completo del proveedor.
+- Integridad: 11 pagos, digest `e9b3ce77d682aabd79e1097a68a22b23`, igual al inicio. Stripe Production sigue sin claves ni activación. No se crea cuenta de trabajador.
+
+Pendientes reales: aforo; identidad fiscal/NIF/dirección; buzón controlado para probar alta y recuperación con recepción real; decisión sobre Supabase Pro; periodicidad del Plus y cualquier tarifa de pago anual que se quiera ofrecer. Stripe TEST aún necesita prueba completa de primera factura, siguiente cuota, fallo y fin con Test Clock, y diseño de fechas para el catálogo de temporada fija antes de permitir suscripciones. Las claves Preview existentes son sensibles/no recuperables por la API de Vercel; no se copian a producción ni se muestran.
+
+Esta sección sustituye los pendientes desactualizados de las auditorías históricas siguientes.
+
 ## Recuperación del 18 de noviembre de 2026
 
 La publicación anterior procedía de una copia local antigua. Se ha recuperado `origin/main` (9204450), conservando la gestión completa de torneos/campus, formularios, planes familiares y traducciones, además de la muestra de bienvenida de la copia publicada. Camping no forma parte de Academy.
@@ -13,9 +31,9 @@ Las tres fichas antiguas de Navidad se redirigen a la campaña completa y no se 
 
 Pendiente, no confundir con funciones ya verificadas:
 
-1. Karen: catálogo definitivo de planes (mensual/trimestral/anual según modalidad), matrícula, duración; aforo del campus; nombre fiscal, NIF y dirección. No inventar ni activar planes sin esos datos.
+1. Catálogo mensual, matrícula y temporada resueltos en la segunda revisión (arriba). Siguen pendientes aforo y datos fiscales; no inventar tarifas trimestrales/anuales ni periodicidad Plus.
 2. Resend probado con su buzón oficial de pruebas: envío aceptado desde `info@academycostabrava.com`. También se ha probado POST real al formulario de campus → solicitud guardada → correo aceptado y registrado, con datos ficticios, sin plaza/pago, limpiados después. Esto no prueba una bandeja de entrada real. Sigue pendiente una dirección controlada por el usuario para alta/recuperación de cuenta y recepción real; verificar SMTP de Supabase. [Buzones de prueba de Resend](https://resend.com/changelog/sending-test-emails).
-3. Auth: aplicar caducidad OTP de 30 minutos (script corregido; configuración remota todavía pendiente) y protección de contraseñas filtradas. Requiere acceso a los ajustes Auth del proyecto. [Guía de seguridad](https://supabase.com/docs/guides/platform/going-into-prod#security).
+3. Auth: OTP de 30 minutos aplicado y SMTP comprobado en la segunda revisión. Protección de contraseñas filtradas bloqueada por plan gratuito; exige Pro, sin contratarlo. [Guía de seguridad](https://supabase.com/docs/guides/platform/going-into-prod#security).
 4. Stripe LIVE sigue desactivado, sin cambios en claves, flags ni pagos. El ciclo real TEST de mensualidades, fallos y finalización continúa pendiente antes de activarlo; ver `STRIPE-PRODUCTION.md`.
 5. Los avisos de funciones SECURITY DEFINER intencionales y optimizaciones de índices requieren revisión independiente; no se han eliminado permisos funcionales ni índices a ciegas. [Asesor de base de datos](https://supabase.com/docs/guides/database/database-linter).
 

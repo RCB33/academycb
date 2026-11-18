@@ -53,10 +53,11 @@ export function FamilyPlanAssignment({ childId, childName, plans, teams, default
                     <label className="block text-sm font-medium">1. Actividad y tarifa
                         <select className={field} value={planId} onChange={e=>{setPlanId(e.target.value);setDiscount(0);setEnrollment(false)}}>
                             <option value="">Selecciona un plan</option>
-                            {plans.map(p=><option key={p.id} value={p.id}>{p.name} · {euro(p.price)} · {p.frequency} · {p.duration_months} meses</option>)}
+                            {plans.map(p=><option key={p.id} value={p.id}>{p.name} · {euro(p.price)} · {p.frequency} · {p.season_end ? `hasta ${p.season_end}` : `${p.duration_months} meses`}</option>)}
                         </select>
                     </label>
                     {plan && <p className="text-sm text-slate-600">{plan.description || 'La duración y el precio se guardarán con esta asignación, aunque después cambie la tarifa.'}</p>}
+                    {plan?.season_end && <p className="rounded-lg bg-blue-50 p-3 text-sm text-blue-900">Temporada {plan.season_start} → {plan.season_end}. Solo se generan las mensualidades restantes, nunca meses posteriores al final del curso.</p>}
                     <div className="grid grid-cols-2 gap-3">
                         <label className="text-sm font-medium">2. Primer mes completo<input type="month" className={field} value={month} onChange={e=>setMonth(e.target.value)} /></label>
                         <label className="text-sm font-medium">Día de vencimiento<input type="number" min="1" max="28" className={field} value={due} onChange={e=>setDue(Number(e.target.value))}/></label>
@@ -70,17 +71,17 @@ export function FamilyPlanAssignment({ childId, childName, plans, teams, default
                     </label>
                     <div className="grid grid-cols-2 gap-3">
                         <label className="text-sm font-medium">Descuento por periodo (€)<input type="number" min="0" step="0.01" className={field} value={discount} onChange={e=>setDiscount(Number(e.target.value))}/></label>
-                        <label className="text-sm font-medium">Plan Plus · pago único (€)<input type="number" min="0" step="0.01" className={field} value={plus} onChange={e=>setPlus(Number(e.target.value))}/></label>
+                        <label className="text-sm font-medium">Extra Plus acordado · una vez (€)<input type="number" min="0" step="0.01" className={field} value={plus} onChange={e=>setPlus(Number(e.target.value))}/></label>
                     </div>
                     {discount>0 && <label className="block text-sm font-medium">Motivo de la promoción<input maxLength={200} className={field} value={promotion} onChange={e=>setPromotion(e.target.value)}/></label>}
                     <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={enrollment} onChange={e=>setEnrollment(e.target.checked)}/> Añadir matrícula una sola vez ({euro(plan?.enrollment_fee||0)})</label>
-                    <p className="text-xs text-slate-500">No añadas matrícula ni Plan Plus si ya están pagados. Equipación, campus y torneos se registran como conceptos independientes.</p>
+                    <p className="text-xs text-slate-500">Matrícula: solo para nuevos jugadores y si no está pagada. El dossier anuncia Plus +50 €, pero su periodicidad está pendiente de confirmar: déjalo a 0 salvo acuerdo individual de un pago único. Equipación, campus y torneos son conceptos independientes.</p>
                     {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
                     <Button className="w-full" disabled={!preview || (discount>0&&!promotion.trim())} onClick={()=>setReview(true)}>Ver calendario e importes</Button>
                 </div> : preview && plan && <div className="space-y-4">
                     <div className="rounded-lg bg-slate-50 p-4 text-sm">
                         <p className="font-bold">{plan.name}</p>
-                        <p>{month} → {preview.endDate} · {plan.duration_months} meses</p>
+                        <p>{month} → {preview.endDate} · {preview.durationMonths} meses</p>
                         <p>Precio por periodo: {euro(plan.price)} · Descuento: {euro(discount)}</p>
                         <p>Matrícula: {euro(preview.enrollmentFee)} · Plus: {euro(plus)}</p>
                         <p className="mt-2 text-lg font-bold">Total del plan: {euro(preview.total)}</p>

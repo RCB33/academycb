@@ -484,7 +484,7 @@ function CampusDialog({ open, onOpenChange, campus }: {
             // A campus can legitimately be free. Empty means "without price";
             // 0 must remain 0 instead of becoming null through a truthy fallback.
             price: priceValue === '' ? null : Number(priceValue),
-            capacity: parseInt(fd.get('capacity') as string) || 30,
+            capacity: Number(fd.get('capacity')),
             status: fd.get('status') as string || 'draft',
             location: (fd.get('location') as string) || null,
             description: (fd.get('description') as string) || null,
@@ -555,7 +555,8 @@ function CampusDialog({ open, onOpenChange, campus }: {
                         </div>
                         <div className="space-y-2">
                             <Label className="text-slate-700 font-bold uppercase text-xs tracking-wider">Plazas</Label>
-                            <Input name="capacity" type="number" defaultValue={campus?.capacity || 30} min={1} className="bg-white" />
+                            <Input name="capacity" type="number" defaultValue={campus?.capacity ?? 0} min={0} required className="bg-white" />
+                            <p className="mt-1 text-xs text-slate-500">0 = aforo pendiente, solo borrador. Confirma el aforo antes de publicar.</p>
                         </div>
                         <div className="space-y-2">
                             <Label className="text-slate-700 font-bold uppercase text-xs tracking-wider">Estado</Label>

@@ -26,6 +26,16 @@ assert.throws(()=>previewFamilyPlan(plan,'2026-13',5,0,false,0))
 assert.throws(()=>previewFamilyPlan(plan,'2026-09',29,0,false,0))
 assert.throws(()=>previewFamilyPlan(plan,'2026-09',5,76,false,0))
 assert.equal(previewFamilyPlan(plan,'2026-09',5,75,false,0).total,0)
+const season={...plan,duration_months:9,season_start:'2026-09-15',season_end:'2027-05-31'}
+for(const [month,count] of [['2026-10',8],['2026-11',7],['2027-01',5],['2027-05',1]]) {
+ const p=previewFamilyPlan(season,month,5,0,true,0)
+ assert.equal(p.durationMonths,count)
+ assert.equal(p.rows.length,count)
+ assert.equal(p.endDate,'2027-05-31')
+ assert.equal(p.total,count*75+30)
+}
+for(const month of ['2026-08','2026-09','2027-06']) assert.throws(()=>previewFamilyPlan(season,month,5,0,false,0),/temporada/)
+assert.throws(()=>previewFamilyPlan({...season,season_end:'2027-05-15'},'2026-11',5,0,false,0),/último día/)
 const action = fs.readFileSync('src/app/actions/family-plans.ts','utf8')
 assert.ok(action.indexOf("legacy?.some") < action.indexOf("supabase.rpc('assign_family_plan'"))
 assert.ok(action.includes(".is('covered_month',null)"))

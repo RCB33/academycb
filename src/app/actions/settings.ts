@@ -116,11 +116,19 @@ const PlanSchema = z.object({
     frequency: z.enum(['mensual', 'trimestral', 'anual', 'temporada']),
     is_active: z.boolean().default(true),
     sort_order: z.number().int().min(0).max(999).default(0),
+    season_start: z.iso.date().nullable().optional(),
+    season_end: z.iso.date().nullable().optional(),
+}).refine(value => (!value.season_start && !value.season_end) || (
+    !!value.season_start && !!value.season_end && value.season_start <= value.season_end && value.frequency === 'mensual'
+), {
+    message: 'Indica ambas fechas de temporada y usa frecuencia mensual', path: ['season_end'],
 }).refine(value => value.frequency !== 'trimestral' || value.duration_months % 3 === 0, {
     message: 'Un plan trimestral debe durar un múltiplo de 3 meses', path: ['duration_months'],
 }).refine(value => value.frequency !== 'anual' || value.duration_months % 12 === 0, {
     message: 'Usa Temporada para un pago único de duración distinta de 12 meses', path: ['duration_months'],
-}).and(AcademyCheckoutSchema)
+}).and(AcademyCheckoutSchema).refine(value => !value.season_start || (!value.full_payment_enabled && !value.monthly_payment_enabled), {
+    message: 'Los planes de temporada fija se asignan con recibos manuales. La suscripción online sigue pendiente de validación; no actives estas casillas.', path: ['monthly_payment_enabled'],
+})
 
 const CategorySchema = z.object({
     name: z.string().trim().min(2, 'El nombre es obligatorio').max(80),
@@ -139,6 +147,8 @@ export type MembershipPlan = {
     name: string
     description: string
     duration_months: number
+    season_start: string | null
+    season_end: string | null
     price: number
     enrollment_fee: number
     frequency: 'mensual' | 'trimestral' | 'anual' | 'temporada'
@@ -252,7 +262,7 @@ export async function getPlans(includeInactive = false): Promise<MembershipPlan[
     const { supabase } = await requireAdmin()
     let query = supabase
         .from('membership_plans')
-        .select('id, name, description, duration_months, price, enrollment_fee, frequency, is_active, sort_order, created_at, updated_at, full_payment_enabled, full_payment_price, monthly_payment_enabled, monthly_payment_price')
+        .select('id, name, description, duration_months, season_start, season_end, price, enrollment_fee, frequency, is_active, sort_order, created_at, updated_at, full_payment_enabled, full_payment_price, monthly_payment_enabled, monthly_payment_price')
         .order('sort_order')
         .order('name')
     if (!includeInactive) query = query.eq('is_active', true)

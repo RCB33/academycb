@@ -360,6 +360,8 @@ function PlanDialog({ open, plan, onClose, onSaved }: { open: boolean; plan: Mem
             price: Number(fd.get('price')), enrollment_fee: Number(fd.get('enrollment_fee')),
             frequency: String(fd.get('frequency')) as MembershipPlan['frequency'],
             duration_months: Number(fd.get('duration_months')), sort_order: Number(fd.get('sort_order')),
+            season_start: String(fd.get('season_start') || '') || null,
+            season_end: String(fd.get('season_end') || '') || null,
             is_active: fd.get('is_active') === 'true',
             full_payment_enabled: fd.get('full_payment_enabled') === 'on',
             full_payment_price: String(fd.get('full_payment_price') || '').trim() ? Number(fd.get('full_payment_price')) : null,
@@ -378,12 +380,17 @@ function PlanDialog({ open, plan, onClose, onSaved }: { open: boolean; plan: Mem
                 <Field label="Nombre" name="name" value={plan?.name} required />
                 <TextField label="Descripción" name="description" value={plan?.description} />
                 <div className="grid grid-cols-2 gap-3">
+                    <Field label="Inicio de temporada (opcional)" name="season_start" value={plan?.season_start || ''} type="date" />
+                    <Field label="Final de temporada (opcional)" name="season_end" value={plan?.season_end || ''} type="date" />
+                </div>
+                <p className="text-xs text-slate-500">Con fechas de temporada, la asignación mensual termina al final del curso aunque el alumno se incorpore más tarde. Los meses parciales requieren un importe revisado; no se prorratean automáticamente.</p>
+                <div className="grid grid-cols-2 gap-3">
                     <Field label="Duración (meses)" name="duration_months" value={String(plan?.duration_months ?? 1)} type="number" min="1" max="60" required />
                     <Field label="Matrícula única (€)" name="enrollment_fee" value={String(plan?.enrollment_fee ?? 0)} type="number" min="0" step="0.01" />
                 </div>
                 <fieldset className="space-y-3 rounded-xl border border-yellow-300 bg-yellow-50/50 p-4">
                     <legend className="px-1 text-sm font-bold">Opciones de pago online</legend>
-                    <p className="text-xs text-slate-600">Configura una opción o ambas. La matrícula se añade una sola vez al primer pago. Preparación en pruebas: esto no activa cobros reales.</p>
+                    <p className="text-xs text-slate-600">Configura una opción o ambas solo en planes sin fechas fijas. Los planes de temporada usan recibos manuales hasta validar la suscripción online. La matrícula se añade una sola vez al primer pago. Esto no activa cobros reales.</p>
                     <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-semibold"><input type="checkbox" name="full_payment_enabled" defaultChecked={plan?.full_payment_enabled ?? false} className="h-5 w-5 accent-yellow-600" /> Permitir pago completo</label>
                     <Field label="Precio completo, sin matrícula (€)" name="full_payment_price" value={String(plan?.full_payment_price ?? '')} type="number" min="0.50" max="1000000" step="0.01" />
                     <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-semibold"><input type="checkbox" name="monthly_payment_enabled" defaultChecked={plan?.monthly_payment_enabled ?? false} className="h-5 w-5 accent-yellow-600" /> Permitir mensualidades</label>
