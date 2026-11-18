@@ -18,6 +18,8 @@ Pendientes reales: aforo; identidad fiscal/NIF/dirección; buzón controlado par
 
 Esta sección sustituye los pendientes desactualizados de las auditorías históricas siguientes.
 
+Comprobación posterior al despliegue `dpl_3wuZjsav1EtVL623TY8L4sjjVBip` (commit `4ec2190`): dominios Academy apuntando a la nueva versión; academia/torneos/formulario campus HTTP 200, camping 404 y webhook LIVE 503 por estar desactivado. Ocho rutas administrativas devuelven 200 con usuario QA autenticado; la misma cuenta como familia no accede a dashboard/finanzas/inscripciones de torneos. Usuario temporal eliminado. Diagnóstico en Preview: lectura Stripe TEST de Checkout y recursos de suscripción correcta. No se confirmó ninguna factura. El plugin Stripe está disponible y se ha sugerido conectarlo para continuar en TEST, todavía no conectado. Digest final de los 11 pagos: sin cambios; no quedan cuentas QA de estas pruebas.
+
 ## Recuperación del 18 de noviembre de 2026
 
 La publicación anterior procedía de una copia local antigua. Se ha recuperado `origin/main` (9204450), conservando la gestión completa de torneos/campus, formularios, planes familiares y traducciones, además de la muestra de bienvenida de la copia publicada. Camping no forma parte de Academy.
