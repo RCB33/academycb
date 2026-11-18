@@ -1,5 +1,26 @@
 # Pagos — auditoría y diseño de implementación
 
+## Recuperación del 18 de noviembre de 2026
+
+La publicación anterior procedía de una copia local antigua. Se ha recuperado `origin/main` (9204450), conservando la gestión completa de torneos/campus, formularios, planes familiares y traducciones, además de la muestra de bienvenida de la copia publicada. Camping no forma parte de Academy.
+
+Las tres fichas antiguas de Navidad se redirigen a la campaña completa y no se duplican como «Próximamente». No se eliminan sus registros ni su historial administrativo. `/camping` devuelve 404 y no figura en navegación/sitemap.
+
+- Pruebas actuales: `test:karen`, `test:events`, `test:stripe`, `test:notifications`, `test-admin-activities.cjs`, `test-i18n.cjs`, TypeScript, ESLint sin errores y build correcto. Auditoría npm de dependencias de producción: 0 vulnerabilidades.
+- Pruebas en la base conectada, todas dentro de BEGIN/ROLLBACK y con datos ficticios: solicitudes de torneos, reutilización de hijos, gestión administrativa, asignación de campus y nueva cola de correos. No se envían emails desde SQL. Se comprueba el digest de los 11 pagos existentes antes/después: sin cambios.
+- Nueva cola privada de notificaciones transaccionales y panel `/admin/actividades/correos`. Solo administradores pueden leer destinatarios; el envío requiere servicio de servidor. Reintentos con bloqueo, límite por destinatario, idempotencia y sin reenvío histórico. No se envían salud/documentos. Una aceptación por Resend no equivale a entrega final.
+- Las pruebas SQL que requieren un PostgreSQL local vacío no se han repetido en esta sesión: solo está instalado el cliente libpq, no el servidor. Nunca ejecutarlas contra producción.
+
+Pendiente, no confundir con funciones ya verificadas:
+
+1. Karen: catálogo definitivo de planes (mensual/trimestral/anual según modalidad), matrícula, duración; aforo del campus; nombre fiscal, NIF y dirección. No inventar ni activar planes sin esos datos.
+2. Resend probado con su buzón oficial de pruebas: envío aceptado desde `info@academycostabrava.com`. También se ha probado POST real al formulario de campus → solicitud guardada → correo aceptado y registrado, con datos ficticios, sin plaza/pago, limpiados después. Esto no prueba una bandeja de entrada real. Sigue pendiente una dirección controlada por el usuario para alta/recuperación de cuenta y recepción real; verificar SMTP de Supabase. [Buzones de prueba de Resend](https://resend.com/changelog/sending-test-emails).
+3. Auth: aplicar caducidad OTP de 30 minutos (script corregido; configuración remota todavía pendiente) y protección de contraseñas filtradas. Requiere acceso a los ajustes Auth del proyecto. [Guía de seguridad](https://supabase.com/docs/guides/platform/going-into-prod#security).
+4. Stripe LIVE sigue desactivado, sin cambios en claves, flags ni pagos. El ciclo real TEST de mensualidades, fallos y finalización continúa pendiente antes de activarlo; ver `STRIPE-PRODUCTION.md`.
+5. Los avisos de funciones SECURITY DEFINER intencionales y optimizaciones de índices requieren revisión independiente; no se han eliminado permisos funcionales ni índices a ciegas. [Asesor de base de datos](https://supabase.com/docs/guides/database/database-linter).
+
+No se ha creado el acceso especial del responsable de torneos, ni se ha cambiado la web separada de Costa Brava Cup.
+
 Estado actualizado: integración recuperada y adaptada en `feat/stripe-production`. Consulta `STRIPE-PRODUCTION.md` para el estado de noviembre y las comprobaciones pendientes. El resto del archivo conserva la auditoría histórica de septiembre.
 
 ## Estado actual — integración comercial del 14 de septiembre

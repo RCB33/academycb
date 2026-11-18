@@ -1,5 +1,13 @@
 import { z } from 'zod'
 
+// Historical catalogue entries remain in the database for administration/history.
+// Public visitors must use the complete campaign, not the old coming-soon pages.
+export const legacyChristmasTournamentTargets: Record<string, string> = {
+  'e43de8fe-90e5-4ac0-9033-c2caf26fbd2a': '231',
+  'a0669aad-6d88-4411-9d52-0ecd729201ec': 'champions',
+  'd878b33f-17e0-442a-91e1-4072cc780c94': 'costa-brava',
+}
+
 export const christmasTournaments = [
   { id: '231', name: '231 Cup', date: '27 diciembre 2026', location: 'Santa Coloma de Farners y Sils', categories: ['S9', 'S10', 'S11', 'S12'], image: '/academy-gallery-6.jpg', description: 'Representa a Academy en la Winter Edition: fútbol, nuevos compañeros y una jornada para disfrutar compitiendo.', includes: 'Welcome pack, agua, fruta y premios deportivos.', dates: '27 de diciembre. Horario y campo por concretar.' },
   { id: 'champions', name: 'Champions Dream', date: '27, 28 y 29 diciembre 2026', location: 'Zona Garraf y Baix Llobregat', categories: ['S7', 'S8', 'S9', 'S10', 'S11', 'S12'], image: '/academy-gallery-1.jpg', description: 'Vive el torneo de tus sueños con Academy. Fase de grupos, oro y plata, con partidos de 20 minutos.', includes: 'Seguro de accidentes, agua y fruta. Ropa del torneo opcional, sin selección de talla; se devuelve al finalizar.', dates: '27: prebenjamines 2020/2019 y Primera 2018–2015. 28: Preferente 2018/2017. 29: Preferente 2016/2015. Horarios y campos por concretar.' },

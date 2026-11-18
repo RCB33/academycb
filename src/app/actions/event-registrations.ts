@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { requireAdmin, requireUser } from '@/lib/auth'
 import { stripeCheckoutMode } from '@/lib/stripe-availability'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { deliverRegistrationEmails } from '@/lib/registration-email'
 import { tournamentRegistrationSchema, tournamentQuote, tournamentIds } from '@/lib/christmas-tournaments'
 
 async function verifiedUser() {
@@ -56,6 +57,7 @@ export async function submitEventRegistration(input: unknown) {
     const quote = tournamentQuote(parsed.data.tournaments, parsed.data.owns_kit)
     const { data, error } = await createAdminClient().rpc('submit_event_registration', { actor: user.id, payload: parsed.data, quote: quote.total })
     if (error) return { error: error.message }
+    await deliverRegistrationEmails('event', data as string)
     revalidatePath('/admin/torneos/inscripciones')
     revalidatePath('/torneos/inscripcion')
     return { id: data as string }
@@ -116,6 +118,7 @@ export async function reviewEventRegistration(form: FormData) {
     const deadline = operation === 'approve' ? z.string().regex(/^\d{4}-\d{2}-\d{2}$/).parse(form.get('deadline')) : null
     const { error } = await db.rpc('review_event_registration', { registration: id, actor: user.id, operation, selections, amount, deadline, note })
     if (error) throw new Error(error.message)
+    await deliverRegistrationEmails('event', id)
     revalidatePath('/admin/torneos/inscripciones'); revalidatePath('/torneos/inscripcion'); revalidatePath('/admin/finanzas')
     return { success: true }
   } catch (e) { return { error: e instanceof Error ? e.message : 'No se pudo actualizar la inscripción.' } }

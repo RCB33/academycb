@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getPublicSettings } from '@/lib/public-settings'
 import { Button } from '@/components/ui/button'
 import { ChristmasTournaments } from '@/components/christmas-tournaments'
+import { legacyChristmasTournamentTargets } from '@/lib/christmas-tournaments'
 
 export async function generateMetadata() {
     const translate = await getT()
@@ -59,7 +60,7 @@ export default async function TorneosPage() {
         getPublicSettings()
     ])
     // Retirada de la convocatoria pública; conservamos el registro y su historial.
-    const tournaments = (data || []).filter(tournament => !/iber\s*cup/i.test(tournament.title))
+    const tournaments = (data || []).filter(tournament => !/iber\s*cup/i.test(tournament.title) && !legacyChristmasTournamentTargets[tournament.id])
     const resultsUrl = settings.tournaments_url || ''
 
     return (

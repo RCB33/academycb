@@ -18,6 +18,7 @@ const PUBLIC_ROUTES = [
   '/autorizacion-imagen',
   '/privacidad',
   '/cookies',
+  '/bienvenida',
   '/robots.txt',
   '/sitemap.xml',
   '/manifest.webmanifest',

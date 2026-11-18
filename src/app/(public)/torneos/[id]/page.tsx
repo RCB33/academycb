@@ -3,7 +3,8 @@ import { getT } from '@/lib/i18n/server'
 import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowLeft, CalendarDays, CheckCircle2, ExternalLink, MapPin, Target, Trophy, Users } from 'lucide-react'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
+import { legacyChristmasTournamentTargets } from '@/lib/christmas-tournaments'
 import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 
@@ -19,6 +20,7 @@ export default async function TournamentDetailPage({ params }: { params: Promise
     const translate = await getT()
 
     const { id } = await params
+    if (legacyChristmasTournamentTargets[id]) redirect(`/torneos#${legacyChristmasTournamentTargets[id]}`)
     const supabase = await createClient()
     const { data: tournament } = await supabase
         .from('tournaments_internal')

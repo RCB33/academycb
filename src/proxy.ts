@@ -1,7 +1,11 @@
-import { type NextRequest } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 
 export async function proxy(request: NextRequest) {
+  // Camping belongs to the separate Costa Brava Cup site, never to Academy.
+  if (request.nextUrl.pathname === '/camping' || request.nextUrl.pathname.startsWith('/camping/')) {
+    return new NextResponse(null, { status: 404 })
+  }
   return await updateSession(request)
 }
 

@@ -2,6 +2,7 @@ import 'server-only'
 
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { deliverRegistrationEmails } from '@/lib/registration-email'
 
 const serviceSchema = z.enum(['academy', 'campus', 'tournament'])
 
@@ -80,6 +81,7 @@ export async function createEnrollmentRequest(payload: unknown): Promise<Enrollm
         const activity = await resolveActivity(child.service, child.activity_id || undefined)
         if (!activity) return { success: false, error: `La actividad de ${child.child_name} ya no está disponible. Elige otra opción.` }
         rows.push({
+            id: crypto.randomUUID(),
             service: child.service,
             activity_id: activity.id || null,
             activity_name: activity.name,
@@ -102,6 +104,8 @@ export async function createEnrollmentRequest(payload: unknown): Promise<Enrollm
         console.error('Enrollment request error:', error)
         return { success: false, error: 'No se pudo enviar la solicitud. Inténtalo de nuevo o contacta con la academia.' }
     }
+
+    await Promise.all(rows.map(row => deliverRegistrationEmails('enrollment', row.id)))
 
     return {
         success: true,

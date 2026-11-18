@@ -4,6 +4,7 @@ const ts = require('typescript')
 const moduleValue = { exports: {} }
 new Function('module','exports','require',ts.transpileModule(fs.readFileSync('src/lib/christmas-tournaments.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText)(moduleValue,moduleValue.exports,require)
 const {tournamentQuote:q,tournamentRegistrationSchema:s}=moduleValue.exports
+assert.equal(Object.keys(moduleValue.exports.legacyChristmasTournamentTargets).length,3,'Legacy Christmas cards route to the full campaign')
 assert.equal(q(['champions'],false).total,65)
 assert.equal(q(['231'],false).total,120)
 assert.equal(q(['231','costa-brava'],false).total,175)

@@ -92,7 +92,7 @@ function buildAuthConfig() {
         if (template.notificationKey) currentConfig[template.notificationKey] = true
         return currentConfig
     }, {})
-    config.mailer_otp_exp = 86400
+    config.mailer_otp_exp = 1800
     return config
 }
 

@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { requireAdmin, requireMarketingAccess } from '@/lib/auth'
 import { createEnrollmentRequest } from '@/lib/enrollment'
+import { deliverRegistrationEmails } from '@/lib/registration-email'
 
 export type EnrollmentState = {
     success?: boolean
@@ -57,6 +58,7 @@ export async function convertEnrollmentRequest(id: string) {
         if(!request.activity_id || request.campus_details)return {success:false,error:'Revisa y acepta esta solicitud desde Campus → Solicitudes, indicando su edición y el importe de las semanas.'}
         const {data:enrollmentId,error}=await supabase.rpc('accept_campus_request',{request_uuid:parsedId.data})
         if(error)return {success:false,error:error.message}
+        await deliverRegistrationEmails('enrollment', parsedId.data)
         const {data:enrollment}=await supabase.from('campus_enrollments').select('child_id').eq('id',enrollmentId).single()
         for(const path of ['/admin/leads','/admin/campus','/admin/campus/solicitudes','/admin/actividades','/admin/crm/alumnos','/admin/crm/tutores','/admin/finanzas'])revalidatePath(path)
         return {success:true,childId:enrollment?.child_id}
@@ -66,6 +68,7 @@ export async function convertEnrollmentRequest(id: string) {
         request_uuid: parsedId.data,
     })
     if (error) return { success: false, error: error.message }
+    await deliverRegistrationEmails('enrollment', parsedId.data)
 
     revalidatePath('/admin/leads')
     revalidatePath('/admin/crm/alumnos')

@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { requireAdmin } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { deliverRegistrationEmails } from '@/lib/registration-email'
 
 export async function acceptCampusRequest(id: string, assignment?: {campusId:string;amount:number}) {
   const { supabase } = await requireAdmin()
@@ -14,6 +15,7 @@ export async function acceptCampusRequest(id: string, assignment?: {campusId:str
     ? await supabase.rpc('assign_and_accept_campus_request',{request_uuid:id,selected_campus:assignment.campusId,validated_amount:assignment.amount})
     : await supabase.rpc('accept_campus_request', { request_uuid: id })
   if (error) return { error: error.message }
+  await deliverRegistrationEmails('enrollment', id)
   for (const path of ['/admin/campus', '/admin/campus/solicitudes', '/admin/actividades', '/admin/leads', '/admin/crm/alumnos', '/admin/finanzas']) revalidatePath(path)
   return { success: true, enrollmentId: data as string }
 }

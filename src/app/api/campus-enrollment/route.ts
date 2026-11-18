@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { deliverRegistrationEmails } from '@/lib/registration-email'
 import { campusRegistrationSchema, campusPrice, campusWeeks, CAMPUS_VERSION } from '@/lib/campus-registration'
 export async function POST(request: Request) {
     if (new Date() > new Date('2027-01-07T13:00:00Z')) return NextResponse.json({ error: 'Esta edición ya ha finalizado.' }, { status: 400 })
@@ -20,7 +21,9 @@ export async function POST(request: Request) {
         'Pago: pendiente de comprobación. Plaza: pendiente de confirmación.',
     ].join('\n')
     const supabase = await createClient()
-    const { error } = await supabase.from('enrollment_requests').insert({ service: 'campus', activity_name: 'Campus Navidad 2026–2027', child_name: d.child_name, birth_date: d.birth_date, guardian_name: d.guardian_name, email: d.email.toLowerCase(), phone: d.phone, notes: details, campus_details: d, status: 'new' })
+    const id = crypto.randomUUID()
+    const { error } = await supabase.from('enrollment_requests').insert({ id, service: 'campus', activity_name: 'Campus Navidad 2026–2027', child_name: d.child_name, birth_date: d.birth_date, guardian_name: d.guardian_name, email: d.email.toLowerCase(), phone: d.phone, notes: details, campus_details: d, status: 'new' })
     if (error) return NextResponse.json({ error: 'No se ha podido guardar la inscripción. Inténtalo de nuevo o llama al 691 17 96 00.' }, { status: 500 })
+    await deliverRegistrationEmails('enrollment', id)
     return NextResponse.json({ success: true }, { status: 201 })
 }
