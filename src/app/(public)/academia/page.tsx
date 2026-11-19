@@ -6,7 +6,6 @@ import Image from "next/image"
 import Link from "next/link"
 import { CarouselCustom } from "@/components/ui/carousel-custom"
 import { Button } from "@/components/ui/button"
-import WhoWeAreSection from "../components/who-we-are-section"
 
 export async function generateMetadata() {
     const translate = await getT()
@@ -67,8 +66,6 @@ export default async function AcademyPage() {
                     <div className="mt-8 flex flex-col gap-3 sm:flex-row"><Button asChild size="lg" className="min-h-14 bg-gold px-7 font-bold uppercase text-navy hover:bg-gold-light"><Link href="/inscripcion?service=academy">{translate("Reserva tu plaza")}</Link></Button><Button asChild variant="outline" size="lg" className="min-h-14 border-white/30 bg-white/5 px-7 font-bold text-white hover:bg-white/10 hover:text-white"><a href="/dossier-tecnificacion-2026-27.pdf" target="_blank" rel="noreferrer"><FileText className="mr-2 h-4 w-4" /> {translate(" Ver dossier PDF")}</a></Button></div>
                 </div></div>
             </section>
-
-            <WhoWeAreSection />
 
             <div className="container py-20 md:py-28">
                 <section className="grid items-center gap-10 lg:grid-cols-[.9fr_1.1fr] lg:gap-16" aria-labelledby="nuestra-academia-title">
