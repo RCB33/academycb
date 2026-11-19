@@ -54,7 +54,7 @@ async function sb(path, method='GET', body) {
    console.log('PASS: anonymous, foreign-origin and family diagnostic access denied')
    return
   }
-  for(const path of ['/admin/gestion','/admin/gestion/academia','/admin/gestion/campus','/admin/gestion/torneos','/admin/dashboard','/admin/ajustes','/admin/academia','/admin/campus','/admin/campus/solicitudes','/admin/torneos/inscripciones','/admin/finanzas','/admin/actividades/correos']) {
+  for(const path of ['/admin/gestion','/admin/gestion/academia','/admin/gestion/campus','/admin/gestion/torneos','/admin/dashboard','/admin/solicitudes','/admin/crm/alumnos','/admin/crm/alumnos/archivo','/admin/ajustes','/admin/academia','/admin/campus','/admin/campus/solicitudes','/admin/torneos/inscripciones','/admin/finanzas','/admin/actividades/correos']) {
    const page=await fetch(origin+path,{headers,redirect:'manual'}),html=await page.text()
    assert.equal(page.status,200,`${path} HTTP ${page.status}`)
    assert.ok(!html.includes('NEXT_REDIRECT')&&!html.includes('"digest":'),`${path} server error or redirect`)
@@ -70,10 +70,16 @@ async function sb(path, method='GET', body) {
    console.log('PASS: deployed LIVE card checkout enabled; recurring stays disabled. Account charging capability still requires Stripe confirmation when restricted key cannot read it.')
   }
   await sb('/rest/v1/profiles?id=eq.'+userId,'PATCH',{role:'guardian'})
-  for(const path of ['/admin/gestion','/admin/gestion/academia','/admin/gestion/campus','/admin/gestion/torneos','/admin/dashboard','/admin/finanzas','/admin/torneos/inscripciones']) {
+  for(const path of ['/admin/gestion','/admin/gestion/academia','/admin/gestion/campus','/admin/gestion/torneos','/admin/dashboard','/admin/solicitudes','/admin/crm/alumnos','/admin/finanzas','/admin/torneos/inscripciones']) {
    const page=await fetch(origin+path,{headers,redirect:'manual'}),html=await page.text()
    assert.ok([303,307,308].includes(page.status)||html.includes('NEXT_REDIRECT'),`Family accessed ${path}`)
    console.log(`PASS: family denied ${path}`)
+  }
+  for(const path of ['/portal/actividades','/portal/campus/inscripcion']) {
+   const page=await fetch(origin+path,{headers,redirect:'manual'}),html=await page.text()
+   assert.equal(page.status,200,`Family route ${path}`)
+   assert.ok(!html.includes('NEXT_REDIRECT')&&!html.includes('\"digest\":'),`${path} server error`)
+   console.log(`PASS: authenticated family route ${path}`)
   }
  } finally {
   if(client) await client.auth.signOut({scope:'global'})

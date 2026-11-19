@@ -34,7 +34,7 @@ export default function AdminLeadsPage() {
         ])
         if (leadResult.data) setLeads(leadResult.data)
         if (contactResult.data) setContacts(contactResult.data)
-        if (enrollmentResult.data) setEnrollmentRequests(enrollmentResult.data)
+        if (enrollmentResult.data) {const selected=new URLSearchParams(window.location.search).get('request');setEnrollmentRequests(enrollmentResult.data.filter(r=>!selected||r.id===selected))}
     }
 
     async function updateStatus(id: string, newStatus: string) {
@@ -96,7 +96,7 @@ export default function AdminLeadsPage() {
                 <p className="text-sm text-muted-foreground">Solicitudes estructuradas de Academia, Campus o Torneos. La plaza no está confirmada hasta que secretaría la revise.</p>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {enrollmentRequests.map((request) => (
-                        <Card key={request.id} className={`border-l-4 ${request.status === 'new' ? 'border-l-blue-500' : request.status === 'contacted' ? 'border-l-yellow-500' : request.status === 'enrolled' ? 'border-l-green-500' : 'border-l-slate-300'}`}>
+                        <Card id={`request-${request.id}`} key={request.id} className={`border-l-4 ${request.status === 'new' ? 'border-l-blue-500' : request.status === 'contacted' ? 'border-l-yellow-500' : request.status === 'enrolled' ? 'border-l-green-500' : 'border-l-slate-300'}`}>
                             <CardHeader className="pb-2">
                                 <div className="flex justify-between gap-3"><Badge variant={request.status === 'new' ? 'default' : 'secondary'} className="uppercase text-[10px]">{request.status === 'new' ? 'Nueva' : request.status}</Badge><span className="text-xs text-muted-foreground flex items-center"><Clock className="mr-1 h-3 w-3" />{new Date(request.created_at).toLocaleDateString('es-ES')}</span></div>
                                 <CardTitle className="text-lg">{request.child_name}</CardTitle>

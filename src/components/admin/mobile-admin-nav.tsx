@@ -31,8 +31,8 @@ export function MobileAdminNav({ isAdmin, isStaff, isFinance, isMarketing }: { i
     const primary: Item[] = isAdmin ? [
         { href: '/admin/dashboard', label: 'Inicio', icon: <LayoutDashboard className="h-5 w-5" /> },
         { href: '/admin/crm/alumnos', label: 'Jugadores', icon: <Users className="h-5 w-5" /> },
-        { href: '/admin/calendario', label: 'Calendario', icon: <CalendarDays className="h-5 w-5" /> },
-        { href: '/admin/muro', label: 'Muro', icon: <MessageSquareHeart className="h-5 w-5" /> },
+        { href: '/admin/solicitudes', label: 'Solicitudes', icon: <MessageSquare className="h-5 w-5" /> },
+        { href: '/admin/finanzas', label: 'Finanzas', icon: <CreditCard className="h-5 w-5" /> },
     ] : isStaff ? [{ href: '/admin/calendario', label: 'Calendario', icon: <CalendarDays className="h-5 w-5" /> }]
         : isFinance ? [{ href: '/admin/finanzas', label: 'Finanzas', icon: <CreditCard className="h-5 w-5" /> }]
             : [{ href: '/admin/leads', label: 'Solicitudes', icon: <MessageSquare className="h-5 w-5" /> }]
@@ -48,6 +48,8 @@ export function MobileAdminNav({ isAdmin, isStaff, isFinance, isMarketing }: { i
             { href: '/admin/leads', label: 'Solicitudes web', icon: <MessageSquare className="h-5 w-5" /> },
         ] }] : []),
         ...(isAdmin ? [{ label: 'Operativa', items: [
+            {href:'/admin/calendario',label:'Calendario',icon:<CalendarDays className="h-5 w-5"/>},
+            {href:'/admin/muro',label:'Muro Academy',icon:<MessageSquareHeart className="h-5 w-5"/>},
             { href: '/admin/gestion', label: 'Gestión de Academia', icon: <Activity className="h-5 w-5" /> },
             { href: '/admin/videoteca', label: 'Videoteca', icon: <Video className="h-5 w-5" /> },
             { href: '/admin/tienda', label: 'Tienda', icon: <ShoppingBag className="h-5 w-5" /> },

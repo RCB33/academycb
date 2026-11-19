@@ -48,7 +48,7 @@ export function FamilyPlanAssignment({ childId, childName, plans, teams, default
         <Dialog open={open} onOpenChange={value=>{if(!busy)setOpen(value)}}>
             <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-xl">
                 <DialogHeader><DialogTitle>{review?'Revisar asignación':'Asignar plan'} · {childName}</DialogTitle></DialogHeader>
-                <p className="text-sm text-slate-600">El plan pertenece a este hijo, no a toda la familia. Genera cuotas pendientes; no cobra tarjetas automáticamente. La familia podrá pagar sus recibos desde el portal cuando la tarjeta esté habilitada.</p>
+                <p className="text-sm text-slate-600">El plan pertenece a este hijo, no a toda la familia. Genera cuotas pendientes; no cobra tarjetas automáticamente. El pago inicial se realiza por transferencia. Solo las mensualidades de Academia podrán usar suscripción cuando esté habilitada.</p>
                 {!plans.length ? <p className="rounded-lg bg-amber-50 p-4 text-sm">Primero crea las tarifas en <Link className="font-bold underline" href="/admin/ajustes">Ajustes → Planes</Link>. Define actividad, precio, frecuencia y duración. No hay precios inventados.</p> : !review ? <div className="space-y-4">
                     <label className="block text-sm font-medium">1. Actividad y tarifa
                         <select className={field} value={planId} onChange={e=>{setPlanId(e.target.value);setDiscount(0);setEnrollment(false)}}>

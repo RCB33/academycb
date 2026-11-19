@@ -609,6 +609,7 @@ function EnrollDialog({ open, onOpenChange, campusId, campusName, availableChild
     const [loading, setLoading] = useState(false)
     const [selectedChild, setSelectedChild] = useState<string>('')
     const [search, setSearch] = useState('')
+    useEffect(()=>{if(open){const id=new URLSearchParams(window.location.search).get('child');if(id&&availableChildren.some(c=>c.id===id))handleSelectChild(id)}},[open,availableChildren])
     const [emergencyContact, setEmergencyContact] = useState('')
     const [emergencyPhone, setEmergencyPhone] = useState('')
 

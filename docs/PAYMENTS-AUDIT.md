@@ -1,5 +1,15 @@
 # Pagos — auditoría y diseño de implementación
 
+## Dashboard visual y portal de actividades — 19 noviembre 2026
+
+- Inicio administrativo con marca azul marino/dorado, tarjetas de plazas únicas, solicitudes, vencimientos y cobrado; buscador de jugador/tutor, filtros por actividad y categoría, próximos pasos y resumen de gastos. El selector mensual cambia el resumen económico; no reconstruye un balance histórico de deuda (usa saldos actuales con corte de vencimiento).
+- Navegación principal reducida a Inicio, Jugadores, Solicitudes, Gestión de Academia, Cobros y finanzas y Trabajadores. Las herramientas anteriores siguen disponibles en «Más herramientas»; archivo/restauración conservados en Jugadores → Archivo y herramientas.
+- Bandeja única de solicitudes con accesos a la revisión existente de cada rama. Aceptar no marca pagos como cobrados. Justificantes y «esperando pago» de esta bandeja corresponden a Torneos; los recibos aceptados de Academia/Campus se gestionan en Finanzas.
+- La ficha del jugador abre en información general y acerca la asignación de plan, Campus, equipos de Torneos y pagos. Alta manual pide nombre/correo/teléfono del tutor y reutiliza su ficha por correo, sin sobrescribirla. Después dirige a elegir actividad. **El asignador manual de planes sigue siendo el anterior de meses completos**; se explicita el primer mes parcial por separado. El prorrateo automático acordado pertenece al flujo de solicitud/aceptación de Academia, no se ha reescrito la contabilidad manual.
+- Portal «Mis actividades»: ofrece Academia, Campus y Torneos; muestra inscripciones y solicitudes enviadas con una cuenta verificada. Campus reutiliza hijo, tutor y contacto, y pide nuevas autorizaciones. Cambiar de hijo limpia campos y consentimientos. El servidor valida propiedad del hijo, normaliza identidad/email y rechaza una solicitud existente; las solicitudes públicas antiguas no se atribuyen retroactivamente por coincidencia de correo.
+- Comprobación visual interactiva de componentes reales con datos ficticios: escritorio/móvil, búsqueda por tutor, filtro Campus y justificantes. Lectura real del loader: 16 jugadores, 12 solicitudes, relaciones correctas y proyección sin datos médicos. Pruebas simuladas de saldos parciales, abonos anulados, céntimos, cuotas futuras, fechas ausentes, propiedad del hijo, duplicados, versión obsoleta y origen ajeno. No envían correos ni crean pagos.
+- Sin cambios de esquema, registros de pago, acceso de trabajadores ni activación Stripe LIVE. Siguen pendientes los ensayos completos del proveedor, entrega efectiva de correos a buzón y las revisiones históricas indicadas abajo. Publicación y comprobaciones de permisos: pendientes de cerrar en esta entrega.
+
 ## Gestión conectada — 19 noviembre 2026
 
 ### Oferta publicada y solicitud

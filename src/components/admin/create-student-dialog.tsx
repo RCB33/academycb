@@ -31,6 +31,8 @@ export function CreateStudentDialog({ onUpdate }: { onUpdate?: () => void }) {
         birth_date: '',
         email: '', // Optional for student, but maybe useful for guardian logic later
         guardian_email: '',
+        guardian_name: '',
+        guardian_phone: '',
         position: '',
         preferred_foot: '',
         shirt_size: '',
@@ -48,6 +50,7 @@ export function CreateStudentDialog({ onUpdate }: { onUpdate?: () => void }) {
             const fullName = formData.full_name.trim()
             const birthYear = new Date(`${formData.birth_date}T00:00:00`).getFullYear()
             const jerseyNumber = formData.jersey_number ? Number(formData.jersey_number) : null
+            if (!formData.guardian_name.trim()||!formData.guardian_email.trim()||!/^\+?[0-9\s()-]{9,20}$/.test(formData.guardian_phone)) throw new Error('Completa el nombre, correo y teléfono del tutor.')
             if (!fullName) throw new Error('Introduce el nombre completo del alumno.')
             if (!Number.isInteger(birthYear)) throw new Error('Introduce una fecha de nacimiento válida.')
             if (jerseyNumber !== null && (!Number.isInteger(jerseyNumber) || jerseyNumber < 1 || jerseyNumber > 99)) {
@@ -86,9 +89,9 @@ export function CreateStudentDialog({ onUpdate }: { onUpdate?: () => void }) {
                 const { data: createdGuardian, error: guardianCreateError } = existingGuardian
                     ? { data: existingGuardian, error: null }
                     : await supabase.from('guardians').insert({
-                        full_name: 'Tutor pendiente de completar',
+                        full_name: formData.guardian_name.trim(),
                         email: guardianEmail,
-                        phone: '',
+                        phone: formData.guardian_phone.trim(),
                     }).select('id').single()
                 if (guardianCreateError || !createdGuardian) {
                     await supabase.from('children').delete().eq('id', child.id)
@@ -108,19 +111,22 @@ export function CreateStudentDialog({ onUpdate }: { onUpdate?: () => void }) {
                 }
             }
 
-            toast.success("Alumno creado correctamente")
+            toast.success("Jugador y tutor vinculados. Ya puedes elegir su actividad desde la ficha.")
             setOpen(false)
             setFormData({
                 full_name: '',
                 birth_date: '',
                 email: '',
                 guardian_email: '',
+                guardian_name: '',
+                guardian_phone: '',
                 position: '',
                 preferred_foot: '',
                 shirt_size: '',
                 jersey_number: '',
             })
             if (onUpdate) onUpdate()
+            router.push(`/admin/crm/alumnos/${child.id}?setup=true`)
             router.refresh()
         } catch (error) {
             const message = error instanceof Error && error.message ? error.message : 'No se ha podido crear el alumno. Inténtalo de nuevo.'
@@ -134,14 +140,14 @@ export function CreateStudentDialog({ onUpdate }: { onUpdate?: () => void }) {
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <Button>
-                    <Plus className="mr-2 h-4 w-4" /> Nuevo Alumno
+                    <Plus className="mr-2 h-4 w-4" /> Nuevo jugador
                 </Button>
             </DialogTrigger>
             <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[600px]">
                 <DialogHeader>
-                    <DialogTitle>Registrar Nuevo Alumno</DialogTitle>
+                    <DialogTitle>Registrar nuevo jugador</DialogTitle>
                     <DialogDescription>
-                        Añade un nuevo jugador a la base de datos.
+                        Primero creamos la ficha familiar. Después eliges la actividad y revisas su tarifa.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -169,16 +175,19 @@ export function CreateStudentDialog({ onUpdate }: { onUpdate?: () => void }) {
                         />
                     </div>
                     <div className="grid gap-2">
-                        <Label htmlFor="guardian_email">Email del Tutor (Opcional)</Label>
+                        <Label htmlFor="guardian_name">Nombre y apellidos del tutor</Label><Input id="guardian_name" name="guardian_name" value={formData.guardian_name} onChange={handleChange} required autoComplete="name"/>
+                        <Label htmlFor="guardian_phone">Teléfono del tutor</Label><Input id="guardian_phone" name="guardian_phone" type="tel" value={formData.guardian_phone} onChange={handleChange} required autoComplete="tel"/>
+                        <Label htmlFor="guardian_email">Correo del tutor</Label>
                         <Input
                             id="guardian_email"
                             name="guardian_email"
+                            required
                             type="email"
                             value={formData.guardian_email}
                             onChange={handleChange}
                             placeholder="tutor@ejemplo.com"
                         />
-                        <p className="text-[10px] text-muted-foreground">Si el email coincide con un usuario existente, se vinculará automáticamente.</p>
+                        <p className="text-[10px] text-muted-foreground">Si ya existe una ficha de tutor con este correo, la reutilizamos. El acceso al portal se gestiona desde su ficha.</p>
                     </div>
 
                     <div className="space-y-3 border-t pt-4">
@@ -257,7 +266,7 @@ export function CreateStudentDialog({ onUpdate }: { onUpdate?: () => void }) {
                             className="bg-[#0C2241] hover:bg-[#1a365d] text-white"
                         >
                             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Crear Alumno
+                            Crear ficha y continuar
                         </Button>
                     </DialogFooter>
                 </form>

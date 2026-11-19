@@ -33,6 +33,7 @@ import { toast } from "sonner"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { FifaCard } from "@/components/fifa-card"
 import { EditStudentDialog } from "@/components/admin/edit-student-dialog"
+import {FamilyPlanAssignment} from '@/components/admin/family-plan-assignment'
 import { PaymentsList } from "@/components/admin/payments-list"
 import { getStudentPayments } from "@/app/actions/payments"
 import { ManageAchievementsDialog } from "@/components/admin/manage-achievements-dialog"
@@ -53,6 +54,8 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
     const [achievements, setAchievements] = useState<any[]>([])
     const [paymentsData, setPaymentsData] = useState<{ memberships: any[], payments: any[] }>({ memberships: [], payments: [] })
     const [plans, setPlans] = useState<any[]>([])
+    const [assignmentTeams,setAssignmentTeams]=useState<{id:string;name:string}[]>([])
+    const [activeTab,setActiveTab]=useState('overview')
     const [studentAchievements, setStudentAchievements] = useState<any[]>([])
     const [signatures, setSignatures] = useState<any[]>([])
     const [attendanceStats, setAttendanceStats] = useState({ total: 0, present: 0, percentage: "0" })
@@ -137,6 +140,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
 
             const { data: allPlans } = await supabase.from('membership_plans').select('*').eq('is_active', true).order('sort_order').order('name')
             setPlans(allPlans || [])
+            const {data:groups}=await supabase.from('teams').select('id,name').eq('status','active').order('name');setAssignmentTeams(groups||[])
 
             // 6. Fetch Signatures
             if (studentData.guardians && studentData.guardians.length > 0) {
@@ -285,6 +289,10 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
 
     return (
         <div className="space-y-6">
+            <section id="inscripciones" className="mb-6 rounded-3xl border border-gold/25 bg-gradient-to-r from-amber-50 to-white p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-widest text-amber-800">Ficha única del jugador</p><h2 className="mt-2 text-lg font-bold text-navy">Familia, actividades y pagos</h2><p className="mt-2 text-sm text-slate-600">Revisa el tutor y elige la actividad. La inscripción y el ingreso se gestionan por separado.</p></div><Link href="/admin/solicitudes" className="rounded-xl border bg-white px-4 py-2 text-xs font-bold">Solicitudes de familias →</Link></div>
+                <div className="mt-4 flex flex-wrap gap-2"><FamilyPlanAssignment childId={childId} childName={student.full_name} plans={plans} teams={assignmentTeams} defaultTeamId={student.team_id||''} onComplete={fetchStudentData}/><button onClick={()=>{setActiveTab('finance');document.getElementById('player-tabs')?.scrollIntoView({behavior:'smooth'})}} className="rounded-xl bg-navy px-4 py-3 text-sm font-bold text-white">Ver pagos</button><Link href={`/admin/campus?child=${childId}`} className="rounded-xl border bg-white px-4 py-3 text-sm font-bold text-navy">Campus · inscribir</Link><Link href="/admin/torneos" className="rounded-xl border bg-white px-4 py-3 text-sm font-bold text-navy">Torneos · equipos</Link></div>
+            </section>
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
@@ -512,7 +520,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
 
                 {/* Main Content Areas */}
                 <div className="lg:col-span-3">
-                    <Tabs defaultValue="performance" className="space-y-6">
+                    <Tabs id="player-tabs" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
                         <TabsList className="bg-white p-1 rounded-xl shadow-sm border border-slate-200 flex overflow-x-auto scrollbar-hide">
                             <TabsTrigger value="performance" className="rounded-lg data-[state=active]:bg-slate-900 data-[state=active]:text-white data-[state=active]:shadow-md font-bold text-xs uppercase px-6 h-9">
                                 Rendimiento

@@ -12,6 +12,7 @@ import { PortalPlayerSwitcher } from '@/components/portal/player-switcher'
 
 const NAV_ITEMS = [
     { href: '/portal/dashboard', label: 'Inicio', icon: Home },
+    { href: '/portal/actividades', label: 'Mis actividades', icon: Trophy },
     { href: '/portal/comunicados', label: 'Comunicados', icon: MessageSquare },
     { href: '/portal/muro', label: 'Muro Academy', icon: Heart },
     { href: '/portal/profile', label: 'Mi Perfil', icon: User },
@@ -25,7 +26,7 @@ const NAV_ITEMS = [
 ]
 
 const MOBILE_PRIMARY_ITEMS = NAV_ITEMS.filter((item) => [
-    '/portal/dashboard', '/portal/comunicados', '/portal/muro', '/portal/calendario',
+    '/portal/dashboard', '/portal/actividades', '/portal/calendario', '/portal/pagos',
 ].includes(item.href))
 const MOBILE_MORE_ITEMS = NAV_ITEMS.filter((item) => !MOBILE_PRIMARY_ITEMS.includes(item))
 
