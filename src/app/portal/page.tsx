@@ -18,7 +18,7 @@ export default async function LoginPage() {
                 <div className="flex justify-end"><LanguageSwitcher /></div>
                 <div className="text-center">
                     <h2 className="mt-6 text-4xl font-heading font-bold tracking-tight text-white uppercase">
-                        {translate("Portal ")}<span className="text-primary">{translate("Familias")}</span>
+                        {translate("Portal Familias")}
                     </h2>
                     <p className="mt-2 text-sm text-gray-300">
                         {translate("Accede para ver el progreso y novedades de tu hijo/a")}</p>

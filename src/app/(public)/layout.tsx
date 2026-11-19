@@ -4,7 +4,8 @@ import { translateMetadata } from '@/lib/i18n/translate'
 import Link from "next/link"
 import { LanguageSwitcher } from "@/lib/i18n/client"
 import { Button } from "@/components/ui/button"
-import { Instagram, Menu } from "lucide-react"
+import { Instagram } from "lucide-react"
+import MobileNavigation from "./components/mobile-navigation"
 import HeaderCart from "./components/header-cart"
 import CartDrawer from "./components/cart-drawer"
 import { getPublicSettings } from "@/lib/public-settings"
@@ -48,9 +49,9 @@ export default async function PublicLayout({
     return (
         <div className="flex min-h-screen flex-col">
             <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-navy shadow-lg shadow-navy/20">
-                    <div className="container flex h-16 gap-2 items-center justify-between">
+                    <div className="container flex h-16 gap-1 items-center justify-between px-2 sm:gap-2 sm:px-8">
                         <Link href="/" className="flex items-center space-x-3 font-bold text-xl tracking-tight">
-                            <div className="relative h-12 w-12">
+                            <div className="relative h-10 w-10 shrink-0 sm:h-12 sm:w-12">
                                 {/* The logo is configurable by the business and may use its own CDN. */}
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img
@@ -58,7 +59,7 @@ export default async function PublicLayout({
                                     alt={translate(`${academyName} Logo`)}
                                     width={48}
                                     height={48}
-                                    className="h-12 w-12 object-contain"
+                                    className="h-10 w-10 object-contain sm:h-12 sm:w-12"
                                 />
                             </div>
                             <span className="hidden xs:inline font-heading text-white uppercase">{translate(academyName)}</span>
@@ -81,16 +82,13 @@ export default async function PublicLayout({
                             <Link href="/inscripcion" className="hidden xl:block">
                                 <Button size="sm" className="bg-gold text-white hover:bg-gold-light hover:text-white">{translate("Inscribirse")}</Button>
                             </Link>
-                            <details className="relative xl:hidden">
-                                <summary aria-label={translate("Abrir menú")} className="flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-md border border-white/20 text-white [&::-webkit-details-marker]:hidden">
-                                    <Menu className="h-5 w-5" />
-                                </summary>
+                            <MobileNavigation>
                                 <nav className="absolute right-0 top-12 w-56 rounded-xl border border-white/10 bg-navy p-3 shadow-2xl">
                                     {translate(navigation.map(([label, href]) => <Link key={href} href={href} className="block rounded-lg px-4 py-3 text-sm font-medium text-white hover:bg-white/10 hover:text-gold">{translate(label)}</Link>))}
                                     <Link href="/inscripcion" className="mt-2 block rounded-lg bg-gold px-4 py-3 text-center text-sm font-bold text-navy">{translate("Inscribirse")}</Link>
                                     <Link href="/portal" className="mt-2 block rounded-lg border border-white/15 px-4 py-3 text-center text-sm font-bold text-white">{translate("Acceso familias")}</Link>
                                 </nav>
-                            </details>
+                            </MobileNavigation>
                         </div>
                     </div>
                 </header>
