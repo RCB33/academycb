@@ -16,7 +16,7 @@ import {
     addDays,
     parseISO
 } from 'date-fns'
-import { ca, es } from 'date-fns/locale'
+import { ca, es, enGB } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -48,7 +48,7 @@ export function MonthlyCalendar({ events, onDateClick, onEventClick }: MonthlyCa
         return (
             <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl md:text-2xl font-bold text-navy capitalize">
-                    {translate(format(currentMonth, 'MMMM yyyy', { locale: translate.locale === 'ca-ES' ? ca : es }))}
+                    {translate(format(currentMonth, 'MMMM yyyy', { locale: translate.locale === 'ca-ES' ? ca : translate.locale === 'en-GB' ? enGB : es }))}
                 </h2>
                 <div className="flex gap-2">
                     <Button variant="outline" size="icon" aria-label={translate("Mes anterior")} onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
@@ -69,7 +69,7 @@ export function MonthlyCalendar({ events, onDateClick, onEventClick }: MonthlyCa
         for (let i = 0; i < 7; i++) {
             days.push(
                 <div key={i} className="text-center font-semibold text-sm text-slate-500 py-2 capitalize">
-                    {translate(format(addDays(startDate, i), 'EEEE', { locale: translate.locale === 'ca-ES' ? ca : es }).slice(0, 3))}
+                    {translate(format(addDays(startDate, i), 'EEEE', { locale: translate.locale === 'ca-ES' ? ca : translate.locale === 'en-GB' ? enGB : es }).slice(0, 3))}
                 </div>
             )
         }

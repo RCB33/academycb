@@ -22,7 +22,7 @@ export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
     // Reload the current URL so server-rendered text and metadata use the same locale.
     window.location.reload()
   }
-  return <div role="group" aria-label="Idioma" className={`inline-flex shrink-0 rounded-lg border border-white/25 bg-navy p-0.5 text-xs font-bold ${compact ? 'flex-col' : ''}`}>
-    {(['es', 'ca'] as const).map(value => <button key={value} type="button" lang={value} aria-label={value === 'es' ? 'Castellano' : 'Català'} aria-pressed={locale === value} onClick={() => changeLanguage(value)} className={`min-h-10 min-w-10 rounded-md px-2 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold ${locale === value ? 'bg-gold text-navy' : 'text-white hover:bg-white/10'}`}>{value.toUpperCase()}</button>)}
+  return <div role="group" aria-label={createTranslator(locale)('Idioma')} className={`inline-flex shrink-0 rounded-lg border border-white/25 bg-navy p-0.5 text-xs font-bold ${compact ? 'flex-col' : ''}`}>
+    {(['es', 'ca', 'en'] as const).map(value => <button key={value} type="button" lang={value} aria-label={{ es: 'Castellano', ca: 'Català', en: 'English' }[value]} aria-pressed={locale === value} onClick={() => changeLanguage(value)} className={`min-h-10 min-w-10 rounded-md px-2 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold ${locale === value ? 'bg-gold text-navy' : 'text-white hover:bg-white/10'}`}>{value.toUpperCase()}</button>)}
   </div>
 }

@@ -30,7 +30,7 @@ export function PlayerEvolutionChart({ metricsHistory }: { metricsHistory: any[]
     const data = [...metricsHistory].reverse().map(m => {
         const ovr = Math.round((m.pace + m.shooting + m.passing + m.dribbling + m.defending + m.physical) / 6)
         return {
-            date: new Date(m.recorded_at).toLocaleDateString('es-ES', { month: 'short', year: '2-digit' }),
+            date: new Date(m.recorded_at).toLocaleDateString(translate.locale, { month: 'short', year: '2-digit' }),
             ovr,
             pace: m.pace,
             shooting: m.shooting,

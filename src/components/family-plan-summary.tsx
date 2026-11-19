@@ -16,11 +16,11 @@ export type FamilyPayment = {
     description: string | null; due_date: string | null; covered_month: string | null
     manual_receipt_allocations: ReceiptAllocation[]
 }
-const euro = (n: number) => n.toLocaleString('es-ES',{style:'currency',currency:'EUR'})
 export function FamilyPlanSummary({students, memberships, payments}: {
     students: {id:string;full_name:string}[]; memberships: FamilyMembership[]; payments: FamilyPayment[]
 }) {
     const translate = useT()
+    const euro = (n: number) => n.toLocaleString(translate.locale, { style: 'currency', currency: 'EUR' })
 
     const pending = payments.reduce((sum,p)=>sum+receiptBalance(p).remaining,0)
     return <section className="space-y-4">

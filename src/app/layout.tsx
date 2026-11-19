@@ -32,8 +32,8 @@ export async function generateMetadata(): Promise<Metadata> {
     const locale = await getLocale();
     return {
         ...baseMetadata,
-        description: locale === 'ca' ? 'Gestió integral de l’acadèmia de futbol, campus i seguiment de jugadors.' : baseMetadata.description,
-        openGraph: { ...baseMetadata.openGraph, locale: locale === 'ca' ? 'ca_ES' : 'es_ES' },
+        description: locale === 'ca' ? 'Gestió integral de l’acadèmia de futbol, campus i seguiment de jugadors.' : locale === 'en' ? 'Football academy, camps and player development management.' : baseMetadata.description,
+        openGraph: { ...baseMetadata.openGraph, locale: locale === 'ca' ? 'ca_ES' : locale === 'en' ? 'en_GB' : 'es_ES' },
     };
 }
 

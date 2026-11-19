@@ -1,3 +1,5 @@
+import { getT } from '@/lib/i18n/server'
+import { LanguageSwitcher } from '@/lib/i18n/client'
 import Link from 'next/link'
 import { ArrowLeft, CircleUserRound, Mail, ShieldCheck } from 'lucide-react'
 import { redirect } from 'next/navigation'
@@ -8,6 +10,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { getRoleHome, getRoleLabel, isAppRole } from '@/lib/roles'
 
 export default async function AccountPage() {
+    const translate = await getT()
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) redirect('/portal')
@@ -22,16 +25,17 @@ export default async function AccountPage() {
     return (
         <main className="min-h-full bg-slate-50 px-4 py-6 sm:px-6 sm:py-10">
             <div className="mx-auto max-w-2xl space-y-6">
+                <div className="flex justify-end"><LanguageSwitcher /></div>
                 <header className="rounded-3xl bg-navy p-6 text-white shadow-lg sm:p-8">
                     <Link href={getRoleHome(role)} className="mb-5 inline-flex min-h-10 items-center gap-2 rounded-xl border border-white/15 px-3 text-sm font-bold text-slate-200 transition hover:bg-white/10 hover:text-white">
-                        <ArrowLeft className="h-4 w-4" /> Volver
+                        <ArrowLeft className="h-4 w-4" /> {translate("Volver")}
                     </Link>
                     <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gold text-navy">
                         <CircleUserRound className="h-6 w-6" />
                     </span>
-                    <p className="mt-5 text-[10px] font-black uppercase tracking-[0.2em] text-gold">Seguridad de la cuenta</p>
-                    <h1 className="mt-1 font-heading text-3xl font-black uppercase sm:text-4xl">Mi cuenta</h1>
-                    <p className="mt-2 text-sm text-slate-300">Gestiona de forma segura tus datos de acceso a Academy.</p>
+                    <p className="mt-5 text-[10px] font-black uppercase tracking-[0.2em] text-gold">{translate("Seguridad de la cuenta")}</p>
+                    <h1 className="mt-1 font-heading text-3xl font-black uppercase sm:text-4xl">{translate("Mi cuenta")}</h1>
+                    <p className="mt-2 text-sm text-slate-300">{translate("Gestiona de forma segura tus datos de acceso a Academy.")}</p>
                 </header>
 
                 <Card className="rounded-2xl border-slate-200 shadow-sm">
@@ -43,7 +47,7 @@ export default async function AccountPage() {
                             <p className="truncate font-bold text-navy">{profile?.full_name || user.email}</p>
                             <p className="truncate text-sm text-slate-500">{user.email}</p>
                         </div>
-                        <Badge className="shrink-0 bg-navy text-white hover:bg-navy">{getRoleLabel(role)}</Badge>
+                        <Badge className="shrink-0 bg-navy text-white hover:bg-navy">{translate(getRoleLabel(role))}</Badge>
                     </CardContent>
                 </Card>
 
@@ -51,7 +55,7 @@ export default async function AccountPage() {
 
                 <div className="flex gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
                     <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" />
-                    <p>Cuando cambies la contraseña recibirás un correo automático de seguridad. Academy nunca puede ver tu contraseña.</p>
+                    <p>{translate("Cuando cambies la contraseña recibirás un correo automático de seguridad. Academy nunca puede ver tu contraseña.")}</p>
                 </div>
             </div>
         </main>

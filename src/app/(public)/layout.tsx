@@ -4,7 +4,7 @@ import { translateMetadata } from '@/lib/i18n/translate'
 import Link from "next/link"
 import { LanguageSwitcher } from "@/lib/i18n/client"
 import { Button } from "@/components/ui/button"
-import { Menu } from "lucide-react"
+import { Instagram, Menu } from "lucide-react"
 import HeaderCart from "./components/header-cart"
 import CartDrawer from "./components/cart-drawer"
 import { getPublicSettings } from "@/lib/public-settings"
@@ -39,7 +39,7 @@ export default async function PublicLayout({
     const academyName = settings.academy_name || 'Academy Costa Brava'
     const academyLogo = settings.academy_logo_url || '/logo.jpg'
     const socialLinks = [
-        ['Instagram', settings.academy_instagram],
+        ['Instagram', 'https://www.instagram.com/academy.costabrava?cnvx=MWpzaWJvZjVuanlnZw=='],
         ['Facebook', settings.academy_facebook],
         ['YouTube', settings.academy_youtube],
     ].filter((entry): entry is [string, string] => Boolean(entry[1]))
@@ -48,7 +48,7 @@ export default async function PublicLayout({
     return (
         <div className="flex min-h-screen flex-col">
             <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-navy shadow-lg shadow-navy/20">
-                    <div className="container flex h-16 items-center justify-between">
+                    <div className="container flex h-16 gap-2 items-center justify-between">
                         <Link href="/" className="flex items-center space-x-3 font-bold text-xl tracking-tight">
                             <div className="relative h-12 w-12">
                                 {/* The logo is configurable by the business and may use its own CDN. */}
@@ -64,21 +64,24 @@ export default async function PublicLayout({
                             <span className="hidden xs:inline font-heading text-white uppercase">{translate(academyName)}</span>
                         </Link>
 
-                        <nav className="hidden lg:flex items-center space-x-6 text-sm font-medium text-white">
+                        <nav className="hidden xl:flex items-center space-x-5 text-sm font-medium text-white">
                             {translate(navigation.map(([label, href]) => <Link key={href} href={href} className="transition-colors hover:text-gold">{translate(label)}</Link>))}
                         </nav>
 
-                        <div className="flex items-center space-x-2 md:space-x-4">
+                        <div className="flex items-center gap-1 sm:gap-2 xl:gap-3">
+                            <a href="https://www.instagram.com/academy.costabrava?cnvx=MWpzaWJvZjVuanlnZw==" target="_blank" rel="noopener noreferrer" aria-label={translate("Instagram de Academy Costa Brava (se abre en otra pestaña)")} title="@academy.costabrava" className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gold/40 bg-gold/10 text-gold transition hover:border-gold hover:bg-gold hover:text-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold">
+                                <Instagram className="h-5 w-5" aria-hidden="true" />
+                            </a>
                             <LanguageSwitcher />
                             <HeaderCart />
                             <Link href="/portal">
                                 <Button variant="outline" size="sm" className="hidden sm:flex border-white bg-white text-navy hover:bg-gray-100 hover:text-navy font-heading font-bold uppercase tracking-wide">
                                     {translate("Acceso Familias")}</Button>
                             </Link>
-                            <Link href="/inscripcion" className="hidden lg:block">
+                            <Link href="/inscripcion" className="hidden xl:block">
                                 <Button size="sm" className="bg-gold text-white hover:bg-gold-light hover:text-white">{translate("Inscribirse")}</Button>
                             </Link>
-                            <details className="relative lg:hidden">
+                            <details className="relative xl:hidden">
                                 <summary aria-label={translate("Abrir menú")} className="flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-md border border-white/20 text-white [&::-webkit-details-marker]:hidden">
                                     <Menu className="h-5 w-5" />
                                 </summary>
