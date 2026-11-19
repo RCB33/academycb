@@ -1,5 +1,51 @@
 # Pagos — auditoría y diseño de implementación
 
+## Cierre de pruebas de Karen — 19 noviembre 2026, última revisión
+
+**Resultado:** el alta y la edición de nuevas fichas pueden utilizarse. No se declara que absolutamente todos los botones ni todos los proveedores estén certificados. Quedan configuración de negocio, revisión histórica y las limitaciones de comprobación visual indicadas abajo. Esta sección sustituye los pendientes técnicos anteriores que ya constan resueltos aquí.
+
+### Correcciones publicadas
+
+- `1aef473` y `9bfe966`; última versión funcional comprobada en el dominio público: Vercel `dpl_4AnstLYHuzbbr7PirHTbhQ6aw2rV`, READY.
+- Alta de jugador, tutor principal y vínculo en una transacción. Reintento con la misma operación devuelve la misma ficha. El hermano reutiliza el tutor sin sobrescribirlo. Bloqueo de duplicados, incluidos archivados, correos ambiguos y fechas futuras. Un fallo no deja tutor/jugador huérfano.
+- Edición de jugador y tutor también transaccional; comprueba que el tutor pertenece a la ficha. No cambia por esta vía el correo de un tutor con acceso Auth, para evitar que la ficha y su acceso diverjan. Los errores conservan los datos anteriores.
+- Categoría vacía muestra «Por asignar». El botón de edición deja de ocultarse en móvil. Archivo con confirmación integrada y explicación de recuperación; no es una eliminación de historial.
+- Grupos y destinatarios por grupo usan una consulta común que incluye el domingo, deduplica y excluye archivados y vinculaciones caducadas/canceladas. No se enviaron mensajes colectivos.
+- Las plazas aceptadas de la campaña de Torneos aparecen en ficha, listado y filtros aunque la transferencia esté pendiente. Una solicitud sin aceptar no cuenta como plaza. La campaña deja de contar como vigente después del 3 de enero de 2027; el historial se conserva.
+- Cambios explícitos de día/hora del grupo estructurado actualizan sus sesiones futuras automáticas dentro de la vigencia de las matrículas. Se conservan sesiones pasadas. Se bloquea la reprogramación si hay asistencia, modificaciones manuales o agenda antigua sin matrículas vinculadas. No se ha reconstruido ninguna agenda histórica durante esta entrega. El calendario se actualiza; el cambio de horario no envía por sí solo un aviso a las familias.
+- Migraciones aplicadas sin backfill: `20261119214731`, `20261119214732`, `20261119215652`, `20261119215654`.
+
+### Evidencia de pruebas
+
+- 41 suites locales iniciales correctas, más la nueva `test-manual-player.sql`: **42 suites** de reglas, pagos, correo, oferta, roles, prorrateo, asistencia, recibos y altas. Suites afectadas repetidas tras los cambios. PostgreSQL aislado UTF8 y rollback; Stripe simulado. TypeScript, lint y build pasan; lint mantiene advertencias del repositorio, no se presenta como libre de advertencias.
+- Diez verificaciones conectadas en rollback: alta manual atómica; Campus; reutilización del hijo; cola de correo; Torneos/justificante/ingreso idempotente; oferta pública con ocho límites de prorrateo; alta manual con ocho límites y dos grupos; privacidad de recibos; aforos/Plus; edición y reprogramación de agenda. El digest de pagos fue el original después de cada comprobación. `scripts/test-final-karen-rollback.sql` conserva el último escenario reproducible.
+- API real con dos cuentas desechables: alta, reintento, segundo hermano con el mismo tutor, edición, rechazo de dorsal inválido y cambio de correo de acceso, archivo/restauración. La familia solo ve sus dos hijos de prueba, no ve pagos ajenos ni el registro interno de operaciones y tiene denegadas las RPC administrativas.
+- Versión publicada: 15 rutas administrativas responden sin error; nueve accesos administrativos quedan denegados al tutor; dos rutas de actividades/inscripción familiar responden correctamente. Son pruebas HTTP de acceso/renderizado, no clics completos de todas sus pantallas.
+- Navegador real en producción: login de administrador, alta completa con tutor, edición de categoría y talla y verificación de la ficha persistida. El diálogo nativo antiguo de archivo bloqueó el navegador de automatización. Se reemplazó por el diálogo integrado, pero **queda pendiente repetir visualmente archivo/restauración, sesión familiar y móvil**. Esos estados y permisos se comprobaron por API/SQL. La compilación aislada se retiró al terminar. No se oculta este límite ni se atribuye al usuario un fallo de la aplicación.
+- Gmail: se releyeron las cuatro entregas anteriores, todas en INBOX con SPF/DKIM/DMARC correctos: solicitud `1a1f51b4ee76cc03`, confirmación de demostración `1a1f549306caf528`, invitación `1a1f5492ed33aa3d`, recuperación `1a1f54a4113405d5`. No son cuatro nuevos envíos en esta revisión. La confirmación sigue siendo una demostración renderizada sin matrícula financiera persistida; no acredita una aceptación con cobro real de extremo a extremo.
+- Asesor de seguridad: no añade avisos para las nuevas funciones SECURITY INVOKER. Siguen las advertencias anteriores sobre funciones SECURITY DEFINER y contraseñas filtradas. No se ampliaron permisos para silenciarlas.
+
+### Limpieza y conservación
+
+Las dos cuentas y los dos jugadores de prueba, su tutor y sus operaciones se eliminaron. Cero usuarios `qa-final-*`/`qa-readiness-*` y cero filas en `manual_player_requests` al cerrar. Los usuarios de comprobación HTTP también se eliminaron. Se retiraron las credenciales temporales y se detuvieron los servidores locales.
+
+| Datos originales | Filas finales | Digest final, igual al inicial |
+| --- | ---: | --- |
+| Pagos | 11 | `e9b3ce77d682aabd79e1097a68a22b23` |
+| Jugadores | 16 | `c360e872784dfe3a6551eb46cf5f0812` |
+| Tutores | 21 | `f58812a50087db64a251255b28d0c105` |
+| Calendario | 7 | `5353fe35735ab612253526a3872d3d78` |
+
+### Qué falta para cerrar la puesta en marcha
+
+1. **Configuración confirmada por el negocio:** los 12 grupos publicados siguen sin entrenador, aforo ni intervalo de años configurados. No se han inventado. El funcionamiento del entrenador requiere asignarlo al grupo; la validación automática de edad/aforo requiere esos valores.
+2. **Histórico, con el propietario:** 16 jugadores sin categoría, cero matrículas operativas de Academia, cinco grupos de correos duplicados y diez tutores sin usuario. Los ocho pagos antiguos de Academia sin concepto/mes requieren revisión. «Sin vencidos» no significa que se hayan generado todas las cuotas. Ningún dato antiguo se ha reasignado ni conciliado por inferencia.
+3. **Stripe mensual:** continúa desactivado por instrucción del propietario. No se ejecutaron operaciones Stripe ni cambios de flags en esta revisión. El último ensayo de ciclo TEST sigue bloqueado por `more_permissions_required`; falta verificar alta, renovación, fallo, recuperación y final de mayo antes de habilitarlo. El flag general LIVE preexistente se conserva y no debe confundirse con mensualidades activas.
+4. **Validación visual pendiente:** repetir los clics citados al resolver el bloqueo del navegador. No se certifican todos los flujos de documentos, métricas, gamificación, gastos o trabajadores con esta pasada. Las suites prueban sus reglas/permisos donde corresponde; no equivalen a todas las interacciones visuales.
+5. **Mejoras restantes:** revisión de la pantalla antigua de solicitudes, persistencia de borradores al cambiar de actividad, limitación de abuso de formularios públicos, revisión individual de avisos de seguridad, catalán de los componentes nuevos y bienvenida animada. Recordatorios y reintentos de correo siguen siendo acciones de administración; no se ha añadido un servicio automático de seguimiento.
+
+Para empezar: Jugadores → Nuevo jugador → ficha y tutor → asignación de actividad y revisión de tarifa. Aceptar una plaza no acredita haber recibido dinero. Las fichas antiguas con advertencias se revisan antes de asignarles cuotas nuevas.
+
 ## Corrección solicitada por Karen — 19 noviembre 2026, noche
 
 Esta sección actualiza los pendientes de alta manual, domingo y correo de la auditoría de la tarde. No depura datos anteriores ni activa suscripciones.

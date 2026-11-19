@@ -97,6 +97,14 @@ begin
  denied:=false;begin update teams set schedule='17:00 – 18:00' where id=sunday;exception when raise_exception then denied:=true;end;
  if not denied or not exists(select 1 from calendar_events where id=event and description='Manual change') then raise exception 'Manual session overwritten';end if;
  update calendar_events set description='Sesión del grupo de Academia' where id=event;
+ select id into event from calendar_events where team_id=sunday and start_date>='2027-05-01' limit 1;
+ insert into training_sessions(event_id,child_id,session_date,attendance) select id,c,(start_date at time zone 'Europe/Madrid')::date,'present' from calendar_events where id=event;
+ denied:=false;begin update teams set schedule='18:00 – 19:00' where id=sunday;exception when raise_exception then denied:=true;end;
+ if not denied or not exists(select 1 from training_sessions where event_id=event) then raise exception 'Attendance overwritten by schedule';end if;
+ delete from training_sessions where event_id=event;
+ insert into calendar_events(title,description,start_date,end_date,team_id,source_type,source_id,status) values('Past session','Sesión del grupo de Academia',now()-interval '2 days',now()-interval '2 days'+interval '1 hour',sunday,'team',sunday,'confirmed') returning id into event;
+ update teams set name='Sunday renamed' where id=sunday;
+ if not exists(select 1 from calendar_events where id=event and title='Past session') then raise exception 'Past session rewritten';end if;
  if not exists(select 1 from calendar_events where team_id=sunday) then raise exception 'Sunday calendar empty'; end if;
  if exists(select 1 from calendar_events where start_date>'2027-06-01') then raise exception 'Sessions after season'; end if;
  insert into children(full_name) values('Other player') returning id into outsider;
