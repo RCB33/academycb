@@ -103,7 +103,7 @@ export default async function AcademyPage() {
                         </div>
                         <div className="shrink-0 rounded-3xl border border-gold/25 bg-navy/70 p-6 md:min-w-64 md:p-8">
                             <CalendarDays aria-hidden="true" className="h-7 w-7 text-gold" />
-                            <p className="mt-4 text-xs font-bold uppercase tracking-[0.15em] text-slate-400">{translate("Academy de verano")}</p>
+                            <p className="mt-4 text-xs font-bold uppercase tracking-[0.15em] text-slate-400">{translate("Tecnificación de")} {translate("verano")}</p>
                             <p className="mt-2 font-heading text-3xl font-black uppercase text-gold">{translate("Julio y agosto")}</p>
                         </div>
                     </div>

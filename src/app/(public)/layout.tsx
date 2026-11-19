@@ -100,7 +100,21 @@ export default async function PublicLayout({
                         <div>
                             <p className="font-heading text-xl font-bold uppercase text-white">{translate(academyName)}</p>
                             {translate(settings.academy_address && <p className="mt-2 text-sm">{translate(settings.academy_address)}</p>)}
-                            {translate(socialLinks.length > 0 && <div className="mt-3 flex flex-wrap gap-4 text-sm">{translate(socialLinks.map(([label, href]) => <a key={label} href={href} target="_blank" rel="noreferrer" className="hover:text-gold">{translate(label)}</a>))}</div>)}
+                            {socialLinks.length > 0 && <div className="mt-4 flex flex-wrap items-center gap-4 text-sm">
+                                {socialLinks.map(([label, href]) => <a
+                                    key={label}
+                                    href={href}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    aria-label={label === 'Instagram' ? translate("Instagram de Academy Costa Brava (se abre en otra pestaña)") : undefined}
+                                    className={label === 'Instagram'
+                                        ? "inline-flex min-h-12 items-center justify-center gap-3 rounded-xl bg-gold px-5 py-3 font-bold text-navy shadow-lg shadow-gold/15 transition-colors hover:bg-gold-light focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold"
+                                        : "hover:text-gold"}
+                                >
+                                    {label === 'Instagram' && <Instagram className="h-5 w-5 shrink-0" aria-hidden="true" />}
+                                    {translate(label)}
+                                </a>)}
+                            </div>}
                             {settings.prices_include_vat === 'true' && <p className="mt-4 text-sm">{translate("Todos los precios incluyen IVA.")}</p>}
                             <p className="mt-4 text-xs text-gray-500">{translate("© ")}{translate(year)} {translate(academyName)}{translate(". Todos los derechos reservados.")}</p>
                         </div>
