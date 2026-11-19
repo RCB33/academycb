@@ -75,7 +75,7 @@ export default async function TorneosPage() {
                         <h1 className="mt-7 font-heading text-[clamp(2rem,8vw,2.25rem)] font-black uppercase leading-[.9] text-white sm:text-5xl md:text-7xl lg:text-8xl">{translate("Competir, aprender")}<br /><span className="text-gold">{translate("y vivir la experiencia.")}</span></h1>
                         <p className="mt-7 max-w-2xl text-lg leading-relaxed text-slate-200 md:text-2xl">{translate("Cada torneo es una oportunidad para crecer, compartir y sentirnos parte de un mismo equipo.")}</p>
                         <p className="mt-4 max-w-2xl text-lg leading-relaxed text-slate-200 md:text-2xl"><strong className="font-bold text-gold">{translate("Defiende nuestro escudo. Vive nuestros colores.")}</strong> {translate(" Representa a Academy Costa Brava con orgullo, respeto y compañerismo, dentro y fuera del campo.")}</p>
-                        <Button asChild size="lg" className="mt-9 min-h-14 bg-gold px-7 font-bold uppercase text-navy hover:bg-gold-light"><Link href="#navidad">{translate("Ver torneos de Navidad ")}<ArrowRight className="ml-2 h-5 w-5" /></Link></Button>
+                        <Button asChild size="lg" className="mt-9 h-auto min-h-14 max-w-full whitespace-normal bg-gold px-5 py-4 text-center font-bold uppercase text-navy hover:bg-gold-light"><Link href="#navidad">{translate("Ver torneos de Navidad ")}<ArrowRight className="ml-2 h-5 w-5 shrink-0" /></Link></Button>
                     </div>
                 </div>
             </section>
