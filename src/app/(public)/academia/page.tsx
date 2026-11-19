@@ -1,7 +1,7 @@
 
 import { getT } from '@/lib/i18n/server'
 import { translateMetadata } from '@/lib/i18n/translate'
-import { Badge, Brain, CalendarDays, CheckCircle2, CircleDot, Clock3, Dumbbell, ExternalLink, FileText, HeartHandshake, MapPin, ShieldCheck, Sparkles } from "lucide-react"
+import { Badge, Brain, CalendarDays, CheckCircle2, CircleDot, Clock3, Dumbbell, ExternalLink, FileText, HeartHandshake, MapPin, ShieldCheck, Sparkles, Sun } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { CarouselCustom } from "@/components/ui/carousel-custom"
@@ -62,6 +62,7 @@ export default async function AcademyPage() {
                     <p className="inline-flex items-center rounded-full border border-gold/35 bg-gold/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-gold backdrop-blur"><Sparkles className="mr-2 h-4 w-4" /> {translate(" Temporada 2026/27")}</p>
                     <h1 className="mt-6 font-heading text-[clamp(2rem,9vw,3rem)] font-black uppercase leading-[.9] text-white md:text-7xl lg:text-8xl">{translate("Nuestra")}<br /><span className="text-gold">{translate("Academia.")}</span></h1>
                     <p className="mt-6 max-w-2xl text-lg leading-relaxed text-slate-200 md:text-2xl">{translate("Tecnificación y formación integral para que cada jugador crezca, compita y disfrute del fútbol.")}</p>
+                    <p className="mt-5 flex items-center gap-2 text-sm font-bold text-gold sm:text-base"><CalendarDays aria-hidden="true" className="h-5 w-5 shrink-0" />{translate("De septiembre a mayo")}</p>
                     <div className="mt-8 flex flex-col gap-3 sm:flex-row"><Button asChild size="lg" className="min-h-14 bg-gold px-7 font-bold uppercase text-navy hover:bg-gold-light"><Link href="/inscripcion?service=academy">{translate("Reserva tu plaza")}</Link></Button><Button asChild variant="outline" size="lg" className="min-h-14 border-white/30 bg-white/5 px-7 font-bold text-white hover:bg-white/10 hover:text-white"><a href="/dossier-tecnificacion-2026-27.pdf" target="_blank" rel="noreferrer"><FileText className="mr-2 h-4 w-4" /> {translate(" Ver dossier PDF")}</a></Button></div>
                 </div></div>
             </section>
@@ -90,6 +91,22 @@ export default async function AcademyPage() {
                     <div className="mt-10 grid gap-5 md:grid-cols-3">{translate(plans.map((plan) => <article key={plan.title} className={`relative flex flex-col rounded-3xl border p-7 ${plan.featured ? 'border-gold bg-gold text-navy shadow-xl shadow-gold/15' : 'border-white/15 bg-white/5 text-white'}`}>{translate(plan.featured && <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-navy px-4 py-1 text-xs font-bold uppercase tracking-wide text-gold">{translate("Opción completa")}</span>)}<CalendarDays className={`h-7 w-7 ${plan.featured ? 'text-navy' : 'text-gold'}`} /><h3 className="mt-5 font-heading text-3xl font-bold uppercase">{translate(plan.title)}</h3><p className={`mt-3 min-h-12 text-sm leading-relaxed ${plan.featured ? 'text-navy/80' : 'text-slate-300'}`}>{translate(plan.detail)}</p><div className="mt-7 border-t border-current/20 pt-5"><span className="font-heading text-5xl font-black">{translate(plan.price)}</span><span className="ml-1 font-bold">{translate(plan.suffix)}</span></div></article>))}</div>
                     <div className="mt-5 grid gap-4 rounded-2xl border border-gold/30 bg-navy-light/80 p-5 text-sm md:grid-cols-[auto_1fr_auto] md:items-center md:px-7"><ShieldCheck className="h-7 w-7 text-gold" /><p className="text-slate-200"><strong className="text-white">{translate("Plan Plus: +50 € al año, en un único pago.")}</strong> {translate(" Incluye posibilidad de recuperar sesiones, condiciones especiales en campus y torneos y beneficios en actividades Academy.")}</p><a className="inline-flex items-center font-bold text-gold hover:text-gold-light" href="/dossier-tecnificacion-2026-27.pdf" target="_blank" rel="noreferrer">{translate("Ver condiciones ")}<ExternalLink className="ml-1 h-4 w-4" /></a></div>
                     <div className="mt-8 text-center"><Button asChild size="lg" className="min-h-14 bg-gold px-8 font-bold uppercase text-navy hover:bg-gold-light"><Link href="/inscripcion?service=academy">{translate("Reserva tu plaza")}</Link></Button><p className="mt-3 text-sm text-slate-400">{translate("Sin pago en este paso. Secretaría confirma grupo, horario y siguientes pasos.")}</p></div>
+                </section>
+
+                <section id="tecnificacion-verano" className="relative mt-24 overflow-hidden rounded-[2rem] border border-gold/30 bg-gradient-to-br from-gold/10 via-navy-light to-navy p-6 md:mt-32 md:p-12" aria-labelledby="verano-title">
+                    <div className="flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
+                        <div className="max-w-2xl">
+                            <span className="inline-flex items-center gap-2 rounded-full border border-gold/40 bg-gold/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.15em] text-gold"><Sun aria-hidden="true" className="h-4 w-4" />{translate("Próximamente")}</span>
+                            <h2 id="verano-title" className="mt-5 font-heading text-3xl font-black uppercase leading-tight text-white sm:text-4xl md:text-5xl">{translate("Tecnificación de")}<br /><span className="text-gold">{translate("verano")}</span></h2>
+                            <p className="mt-5 text-base leading-relaxed text-slate-200 md:text-lg">{translate("En verano también somos Academy. Sigue disfrutando del fútbol y mejorando tu técnica durante julio y agosto.")}</p>
+                            <p className="mt-3 text-sm leading-relaxed text-slate-400">{translate("Próximamente anunciaremos el programa, los horarios y la apertura de inscripciones.")}</p>
+                        </div>
+                        <div className="shrink-0 rounded-3xl border border-gold/25 bg-navy/70 p-6 md:min-w-64 md:p-8">
+                            <CalendarDays aria-hidden="true" className="h-7 w-7 text-gold" />
+                            <p className="mt-4 text-xs font-bold uppercase tracking-[0.15em] text-slate-400">{translate("Academy de verano")}</p>
+                            <p className="mt-2 font-heading text-3xl font-black uppercase text-gold">{translate("Julio y agosto")}</p>
+                        </div>
+                    </div>
                 </section>
 
                 <section className="mt-24 md:mt-32"><div className="mb-12 flex flex-col items-center text-center"><Badge className="mb-4 h-12 w-12 text-gold" /><h2 className="font-heading text-3xl font-black uppercase sm:text-4xl text-white md:text-5xl">{translate("Galería de ")}<span className="text-gold">{translate("momentos")}</span></h2><p className="mt-4 max-w-2xl text-slate-400">{translate("Entrenamientos, partidos y aprendizajes que forman parte del camino Academy.")}</p></div><div className="mx-auto w-full max-w-5xl rounded-3xl border border-white/10 bg-gradient-to-br from-navy-light to-navy p-2 shadow-2xl md:p-4"><CarouselCustom images={galleryImages} className="aspect-video w-full rounded-2xl md:aspect-[16/9]" /></div></section>
