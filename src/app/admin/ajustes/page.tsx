@@ -259,7 +259,8 @@ export default function AjustesPage() {
                                 <Field label="IBAN" name="bank_iban" value={settings.bank_iban} placeholder="ES00 0000 0000 0000 0000 0000" />
                                 <Field label="BIC / SWIFT" name="bank_bic" value={settings.bank_bic} />
                                 <Field label="Prefijo de recibos" name="receipt_prefix" value={settings.receipt_prefix || 'ACB'} />
-                                <Field label="Impuesto / IVA (%)" name="invoice_tax_rate" value={settings.invoice_tax_rate || '0'} type="number" min="0" max="100" step="0.01" />
+                                <Field label="IVA incluido en el precio (%)" name="invoice_tax_rate" value={settings.invoice_tax_rate || '0'} type="number" min="0" max="100" step="0.01" />
+                                {settings.prices_include_vat === 'true' && <p className="text-sm text-slate-600 md:col-span-2">Los precios ya incluyen IVA. Este porcentaje no se suma al importe que paga la familia. Los documentos actuales son comprobantes; la emisión y el archivo automático de facturas fiscales todavía no están implementados.</p>}
                                 <div className="md:col-span-2"><TextField label="Instrucciones para transferencias" name="bank_transfer_instructions" value={settings.bank_transfer_instructions} /></div>
                                 <div className="md:col-span-2"><TextField label="Notas predeterminadas en recibos" name="invoice_notes" value={settings.invoice_notes} /></div>
                             </div>

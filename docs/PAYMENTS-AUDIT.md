@@ -1,5 +1,13 @@
 # Pagos — auditoría y diseño de implementación
 
+## Titular, IVA y muestras — 19 noviembre 2026
+
+- Titular y NIF facilitados por el propietario guardados en los ajustes de producción (sin duplicar sus identificadores en este repositorio). Nombre comercial: Academy Costa Brava. El propietario indica no añadir dirección; permanece vacía.
+- Tipo confirmado por el propietario: 21 % siempre incluido en el precio final. `invoice_tax_rate=21`, `prices_include_vat=true`. No se añade IVA a los importes actuales ni se alteran pagos existentes. Aviso público en español, catalán e inglés.
+- Tres muestras a la dirección personal confirmada: confirmación de correo, recuperación y recepción de solicitud. Resend aceptó los tres mensajes; consulta del estado de entrega devuelve 401 con esta clave. No se ha confirmado recepción en bandeja, ni completado un alta o una recuperación real. IDs de proveedor: `01a1f350-5eee-71db-8388-73c280c67fa1`, `01a1f350-5eee-720f-b90f-f009f0bfb3e7`, `01a1f350-5eee-713f-b0cc-22987d07baa3`.
+- La facturación fiscal automática y el archivo mensual por familia NO están implementados. El PDF actual se genera bajo demanda y es un comprobante informativo, accesible a los roles de finanzas; no es una factura fiscal. Las familias ven pagos y administración dispone de finanzas por mes y resumen por jugador/mes. No confundir eventos `invoice.paid` de Stripe con un archivo de facturas fiscales en Academy.
+- Para completar el flujo que pide el propietario faltan emisión/numeración fiscal, desglose de impuestos, datos fiscales de emisor/destinatario, conservación del documento emitido, acceso de cada familia y vista de facturas por mes para administración. La dirección del emisor sigue siendo un dato necesario para factura completa, aunque no se publique en la web. Referencia: https://sede.agenciatributaria.gob.es/Sede/ayuda/manuales-videos-folletos/manuales-practicos/folleto-actividades-economicas/5-impuesto-sobre-valor-anadido/5_10-facturas/5_10_2-requisitos.html
+
 ## Decisiones de entrega — 19 noviembre 2026, posteriores a la prueba de webhook
 
 El propietario confirma remitente `info@academycostabrava.com`, respuesta/contacto `costabravaacademy@gmail.com`, campus sin límite de plazas, Plus opcional de 50 € en un pago anual y ausencia de tarifa de pago anual completo. Se conserva la cuota de 75 €/mes y el plan existente de dos sesiones de 140 €/mes. No se crean ni modifican recibos existentes.

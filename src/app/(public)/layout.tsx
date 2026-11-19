@@ -101,6 +101,7 @@ export default async function PublicLayout({
                             <p className="font-heading text-xl font-bold uppercase text-white">{translate(academyName)}</p>
                             {translate(settings.academy_address && <p className="mt-2 text-sm">{translate(settings.academy_address)}</p>)}
                             {translate(socialLinks.length > 0 && <div className="mt-3 flex flex-wrap gap-4 text-sm">{translate(socialLinks.map(([label, href]) => <a key={label} href={href} target="_blank" rel="noreferrer" className="hover:text-gold">{translate(label)}</a>))}</div>)}
+                            {settings.prices_include_vat === 'true' && <p className="mt-4 text-sm">{translate("Todos los precios incluyen IVA.")}</p>}
                             <p className="mt-4 text-xs text-gray-500">{translate("© ")}{translate(year)} {translate(academyName)}{translate(". Todos los derechos reservados.")}</p>
                         </div>
                         <nav aria-label={translate("Información legal")} className="flex flex-wrap gap-x-5 gap-y-3 text-sm">
