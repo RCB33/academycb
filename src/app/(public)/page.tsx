@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { ArrowRight, Star, Shield, Zap, TrendingUp, HeartHandshake } from "lucide-react"
 import LeadWidget from "./components/lead-widget"
 import WhoWeAreSection from "./components/who-we-are-section"
+import AcademyStatsSection from "./components/academy-stats-section"
 import { getPublicSettings } from "@/lib/public-settings"
 
 export default async function LandingPage() {
@@ -82,6 +83,7 @@ export default async function LandingPage() {
             </section>
 
             <WhoWeAreSection />
+            <AcademyStatsSection />
 
             {/* AGENT WIDGET SECTION */}
             <section id="agente" className="py-24 bg-navy relative overflow-hidden">
