@@ -4,7 +4,7 @@ La integración comercial de septiembre se ha incorporado a la versión actual d
 
 ## Actualización del 19 noviembre
 
-El propietario solicita activar los pagos reales por recibo. Credenciales LIVE y webhook ya instalados; entrega firmada sin cobro comprobada. Configuración de despliegue: `STRIPE_LIVE_PAYMENTS_ENABLED=true`, `STRIPE_RECURRING_PAYMENTS_ENABLED=false`. El interruptor `payment_card_enabled` es la segunda condición para nuevos pagos.
+El propietario solicita activar los pagos reales por recibo. Credenciales LIVE y webhook ya instalados; entrega firmada sin cobro comprobada. Configuración de despliegue: `STRIPE_LIVE_PAYMENTS_ENABLED=true`, `STRIPE_RECURRING_PAYMENTS_ENABLED=false`. El interruptor `payment_card_enabled=true` completa la activación, verificada desde administración en producción. La clave restringida no permite verificar el estado `charges_enabled` de la cuenta y no se ha realizado ningún cargo real.
 
 Las mensualidades automáticas no están habilitadas. No se ha acreditado un pago real completo ni el ciclo de suscripción. Las tarifas de temporada generan recibos mensuales y no una suscripción automática. El Plus es 50 € anuales en un único recibo opcional y no existe tarifa de pago anual completo. Ver evidencia y decisiones más recientes en `PAYMENTS-AUDIT.md`.
 
