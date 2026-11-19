@@ -37,17 +37,10 @@ export default async function SessionDetailsPage({ params }: { params: Promise<{
         )
     }
 
-    const sessionDateStr = new Date(event.start_date).toISOString().split('T')[0]
+    const sessionDateStr = new Date(event.start_date).toLocaleDateString('en-CA',{timeZone:'Europe/Madrid'})
 
-    // 3. Fetch Children in this Category
-    let childrenQuery = supabase
-        .from('children')
-        .select('id, full_name')
-        .order('full_name', { ascending: true })
-    childrenQuery = event.team_id
-        ? childrenQuery.eq('team_id', event.team_id)
-        : childrenQuery.eq('category_id', event.category_id)
-    const { data: children } = await childrenQuery
+    const {data:children,error:rosterError}=await supabase.rpc('get_session_players',{event_uuid:event.id})
+    if(rosterError) return <div className="p-8">No se pudo cargar la lista de esta sesión.</div>
 
     // 4. Fetch existing attendance for this date
     const { data: sessions } = await supabase
@@ -56,7 +49,7 @@ export default async function SessionDetailsPage({ params }: { params: Promise<{
         .eq('event_id', event.id)
 
     // Merge data
-    const kidsData = (children || []).map(child => {
+    const kidsData = (children as {id:string;full_name:string}[] || []).map(child => {
         const sessionRecord = sessions?.find(s => s.child_id === child.id)
         return {
             id: child.id,

@@ -25,7 +25,7 @@ export default async function TutorProfilePage({ params }: { params: Promise<{ i
     const ids = children.map((child: {id: string}) => child.id)
     const [plans, teamsResult, membershipsResult, paymentsResult] = await Promise.all([
         getPlans(),
-        supabase.from('teams').select('id,name').eq('status','active').order('name'),
+        supabase.from('teams').select('id,name,schedule,public_offer').eq('status','active').order('name'),
         ids.length ? supabase.from('academy_memberships').select('*,plan:membership_plans(name,frequency)').in('child_id',ids).order('start_date',{ascending:false}) : Promise.resolve({data:[],error:null}),
         ids.length ? supabase.from('payments').select('*,manual_receipt_allocations(amount,paid_date,method,voided_at)').in('child_id',ids) : Promise.resolve({data:[],error:null}),
     ])

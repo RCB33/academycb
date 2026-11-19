@@ -148,6 +148,7 @@ export type MembershipPlan = {
     description: string
     duration_months: number
     season_start: string | null
+    sessions_per_week?: number | null
     season_end: string | null
     price: number
     enrollment_fee: number
@@ -262,7 +263,7 @@ export async function getPlans(includeInactive = false): Promise<MembershipPlan[
     const { supabase } = await requireAdmin()
     let query = supabase
         .from('membership_plans')
-        .select('id, name, description, duration_months, season_start, season_end, price, enrollment_fee, frequency, is_active, sort_order, created_at, updated_at, full_payment_enabled, full_payment_price, monthly_payment_enabled, monthly_payment_price')
+        .select('id, name, description, duration_months, sessions_per_week, season_start, season_end, price, enrollment_fee, frequency, is_active, sort_order, created_at, updated_at, full_payment_enabled, full_payment_price, monthly_payment_enabled, monthly_payment_price')
         .order('sort_order')
         .order('name')
     if (!includeInactive) query = query.eq('is_active', true)

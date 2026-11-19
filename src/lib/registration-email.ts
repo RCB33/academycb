@@ -5,7 +5,7 @@ import { renderCommunicationEmail } from '@/lib/communication-email'
 import { registrationEmailContent } from '@/lib/registration-email-content'
 
 // Internal helper, never a public server action. Failure cannot undo a saved request.
-export async function deliverRegistrationEmails(source: 'enrollment' | 'event', sourceId: string) {
+export async function deliverRegistrationEmails(source: 'enrollment' | 'event' | 'membership', sourceId: string) {
   try {
     const db = createAdminClient()
     const { data, error } = await db.from('registration_email_outbox').select('id').eq('source_type', source).eq('source_id', sourceId).neq('status', 'sent').order('created_at').limit(10)

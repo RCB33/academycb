@@ -31,7 +31,7 @@ export default async function RegistrationEmailsPage() {
         const expired=row.first_attempted_at && new Date(row.first_attempted_at).getTime()<cutoff
         return <tr className="border-t" key={row.id}>
           <td className="p-3">{new Date(row.created_at).toLocaleString('es-ES',{timeZone:'Europe/Madrid'})}</td>
-          <td className="p-3">{row.recipient}</td><td className="p-3">{row.source_type==='event'?'Torneos':'Academia / campus'} · {events[row.event_kind]||row.event_kind}</td>
+          <td className="p-3">{row.recipient}</td><td className="p-3">{row.source_type==='event'?'Torneos':row.source_type==='membership'?'Alta manual de Academia':'Academia / campus'} · {events[row.event_kind]||row.event_kind}</td>
           <td className="p-3">{labels[row.status]}{row.last_error&&<small className="block text-red-700">{row.last_error}</small>}</td><td className="p-3">{row.attempts}</td>
           <td className="p-3">{row.status!=='sent'&&(row.attempts>=5||expired?<span>Revisión manual en Resend</span>:<form action={retry}><input type="hidden" name="id" value={row.id}/><button className="rounded bg-navy px-3 py-2 text-white">Intentar envío</button></form>)}</td>
         </tr>

@@ -54,7 +54,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
     const [achievements, setAchievements] = useState<any[]>([])
     const [paymentsData, setPaymentsData] = useState<{ memberships: any[], payments: any[] }>({ memberships: [], payments: [] })
     const [plans, setPlans] = useState<any[]>([])
-    const [assignmentTeams,setAssignmentTeams]=useState<{id:string;name:string}[]>([])
+    const [assignmentTeams,setAssignmentTeams]=useState<import('@/lib/family-plan').AssignmentTeam[]>([])
     const [activeTab,setActiveTab]=useState('overview')
     const [studentAchievements, setStudentAchievements] = useState<any[]>([])
     const [signatures, setSignatures] = useState<any[]>([])
@@ -140,7 +140,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
 
             const { data: allPlans } = await supabase.from('membership_plans').select('*').eq('is_active', true).order('sort_order').order('name')
             setPlans(allPlans || [])
-            const {data:groups}=await supabase.from('teams').select('id,name').eq('status','active').order('name');setAssignmentTeams(groups||[])
+            const {data:groups}=await supabase.from('teams').select('id,name,schedule,public_offer').eq('status','active').order('name');setAssignmentTeams(groups||[])
 
             // 6. Fetch Signatures
             if (studentData.guardians && studentData.guardians.length > 0) {

@@ -1,5 +1,6 @@
 import 'server-only'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { deliverRegistrationEmails } from '@/lib/registration-email'
 import { configuredStripe } from '@/lib/stripe-payments'
 
 // Called only after an administrator commits acceptance. Never reset an existing
@@ -52,4 +53,17 @@ export async function prepareAcceptedSubscription(requestId:string,actorId:strin
     if(saved.error) return {error:'Plaza aceptada. Revisa las mensualidades y sus vencimientos desde Finanzas antes de enviar el enlace.'}
     return {status:'ready',requestId}
   } catch {return {error:'Plaza aceptada. Falta configurar el cobro mensual.'}}
+}
+
+// New assignment only: the queue is created atomically with the membership.
+export async function finishManualAssignment(membershipId:string,childId:string) {
+ const db=createAdminClient()
+ const {data:row,error}=await db.from('registration_email_outbox').select('recipient').eq('source_type','membership').eq('source_id',membershipId).eq('event_kind','reviewed').maybeSingle()
+ if(error||!row) return 'Plaza y cuotas creadas. Completa un único tutor principal con correo para poder enviar su confirmación.'
+ const access=await onboardAcceptedFamily(childId,row.recipient)
+ const {data:m}=await db.from('academy_memberships').select('plan_snapshot').eq('id',membershipId).single()
+ if(m?.plan_snapshot) await db.from('academy_memberships').update({plan_snapshot:{...m.plan_snapshot,onboarding:{access:access.status||'needs_review'}}}).eq('id',membershipId)
+ await deliverRegistrationEmails('membership',membershipId)
+ const {data:delivery}=await db.from('registration_email_outbox').select('status').eq('source_type','membership').eq('source_id',membershipId).maybeSingle()
+ return access.error||`Plaza y cuotas creadas. ${delivery?.status==='sent'?'Confirmación enviada al proveedor de correo.':'El correo está pendiente: revísalo en Estado de correos.'} No se ha realizado ningún cobro.`
 }

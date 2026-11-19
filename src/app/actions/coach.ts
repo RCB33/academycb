@@ -29,13 +29,8 @@ export async function markAttendance(
 
     if (eventError || !event) throw new Error('No tienes acceso a esta sesión')
 
-    let childQuery = supabase.from('children').select('id').eq('id', parsed.data.childId)
-    if (event.team_id) childQuery = childQuery.eq('team_id', event.team_id)
-    else if (event.category_id) childQuery = childQuery.eq('category_id', event.category_id)
-    else throw new Error('La sesión no tiene equipo ni categoría')
-
-    const { data: child } = await childQuery.maybeSingle()
-    if (!child) throw new Error('El alumno no pertenece a esta sesión')
+    const {data:roster,error:rosterError}=await supabase.rpc('get_session_players',{event_uuid:event.id})
+    if(rosterError||!roster?.some((child:{id:string})=>child.id===parsed.data.childId)) throw new Error('El alumno no pertenece a esta sesión')
 
     const { error } = await supabase
         .from('training_sessions')

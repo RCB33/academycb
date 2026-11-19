@@ -2,6 +2,12 @@ import 'server-only'
 import { receiptBalance } from '@/lib/receipt-balance'
 import { createAdminClient } from '@/lib/supabase/admin'
 
+export function familyAccessMessage(access?:string) {
+ const link='Portal familiar: https://www.academycostabrava.com/portal'
+ if(access==='invited') return `${link}\nTe hemos enviado un correo separado con un enlace seguro para crear tu contraseña. Si no lo encuentras, revisa también spam.`
+ if(access==='existing') return `${link}\nEntra con tu correo y contraseña habituales. Si no la recuerdas, utiliza «Crear o recuperar contraseña».`
+ return `${link}\nLa plaza está aceptada. El equipo está revisando tu acceso familiar y te avisará cuando esté listo. No necesitas entrar al portal para realizar la transferencia.`
+}
 export type RegistrationEmailDetails={subject:string;message:string}
 export async function registrationEmailDetails(source:string,id:string,kind:string):Promise<RegistrationEmailDetails|null> {
   const db=createAdminClient()
@@ -10,6 +16,19 @@ export async function registrationEmailDetails(source:string,id:string,kind:stri
     const {data,error}=await db.from('event_campaign_settings').select('bank_holder,iban').eq('id','christmas-2026').single()
     if(error||!data?.iban) throw new Error('Payment instructions unavailable')
     return `Importe pendiente: ${amount.toFixed(2)} €\nTransferencia bancaria\n${data.bank_holder?'Titular: '+data.bank_holder+'\n':''}IBAN: ${data.iban}\nConcepto: ${name} · ${id.slice(0,8).toUpperCase()}\nDespués de realizar la transferencia, envía el justificante a https://wa.me/34691179600 indicando el nombre del jugador. Comprobaremos el ingreso; una captura no equivale a un pago recibido.`
+  }
+  if(source==='membership'&&kind==='reviewed') {
+    const {data:m,error}=await db.from('academy_memberships').select('child_id,start_date,end_date,plan_snapshot,status').eq('id',id).single()
+    if(error||!m||!['active','pending_payment'].includes(m.status)||!m.plan_snapshot?.manual_v2) throw new Error('Manual assignment unavailable')
+    const {data:child,error:childError}=await db.from('children').select('full_name').eq('id',m.child_id).single()
+    if(childError||!child) throw new Error('Player unavailable')
+    const {data:receipts,error:paymentError}=await db.from('payments').select('amount,status,concept_code,covered_month,due_date,manual_receipt_allocations(*)').eq('ref_id',id)
+    if(paymentError) throw new Error('Payment unavailable')
+    const firstDue=(receipts||[]).filter(p=>p.concept_code==='monthly').map(p=>p.due_date).sort()[0]
+    const due=(receipts||[]).filter(p=>['pending','failed','overdue'].includes(p.status)&&(p.concept_code!=='monthly'||(m.plan_snapshot.frequency==='mensual'?p.covered_month===m.start_date.slice(0,7):p.due_date===firstDue))).reduce((n,p)=>n+receiptBalance(p).remaining,0)
+    const p=m.plan_snapshot
+    const groups=(p.groups||[]).map((g:{name:string;schedule:string;public_offer?:{day?:string;location?:string}})=>[g.public_offer?.day,g.name,g.schedule,g.public_offer?.location].filter(Boolean).join(' · ')).join('\n')
+    return {subject:`¡Enhorabuena, ${child.full_name}! Tu plaza está aceptada`,message:`${child.full_name} ya tiene su plaza aceptada en Academia.\n\n${p.name}\n${groups}\nIncorporación: ${m.start_date}\nFin: ${m.end_date}\n${p.frequency==='mensual'?`Primera mensualidad: ${p.first_percent} % de la cuota.`:'Pago por periodo según el plan elegido.'}\n\n${due?await transfer(due,child.full_name):'No consta un primer pago pendiente.'}\n\n${familyAccessMessage(p.onboarding?.access)}\n\nAceptar la plaza no acredita el pago.${contact}`}
   }
   if(source==='enrollment') {
     const {data:r,error}=await db.from('enrollment_requests').select('service,child_name,activity_name,status,academy_details,campus_details').eq('id',id).single()
@@ -39,7 +58,7 @@ export async function registrationEmailDetails(source:string,id:string,kind:stri
       const p=r.campus_details?.program_snapshot
       if(p) detail+=`\n${r.campus_details.schedule} · ${r.campus_details.location}\n${p.weeks.filter((w:{id:string})=>r.campus_details.weeks.includes(w.id)).map((w:{label:string})=>w.label).join('\n')}\nModalidad: ${r.campus_details.role}`
     } else return null
-    return {subject:`¡Enhorabuena, ${r.child_name}! Tu plaza está aceptada`,message:`${r.child_name} ya tiene su plaza aceptada en ${r.service==='academy'?'Academia':r.activity_name}.\n\n${detail}\n\n${payment}\n\nPortal familiar: https://www.academycostabrava.com/portal\nSi es vuestra primera inscripción, recibiréis el enlace para crear vuestra contraseña. Si ya tenéis acceso, utilizad vuestro correo y contraseña habituales.\n\nAceptar la plaza no acredita el pago.${contact}`}
+    return {subject:`¡Enhorabuena, ${r.child_name}! Tu plaza está aceptada`,message:`${r.child_name} ya tiene su plaza aceptada en ${r.service==='academy'?'Academia':r.activity_name}.\n\n${detail}\n\n${payment}\n\n${familyAccessMessage(a?.onboarding?.access||r.campus_details?.onboarding?.access)}\n\nAceptar la plaza no acredita el pago.${contact}`}
   }
   if(source==='event'&&kind==='awaiting_payment') {
     const {data:r,error}=await db.from('event_registrations').select('status,approved_amount,due_date,details,approved_tournaments').eq('id',id).single()

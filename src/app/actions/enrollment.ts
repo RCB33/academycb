@@ -60,10 +60,12 @@ export async function convertEnrollmentRequest(id: string) {
         if(!request.activity_id || request.campus_details)return {success:false,error:'Revisa y acepta esta solicitud desde Campus → Solicitudes, indicando su edición y el importe de las semanas.'}
         const {data:enrollmentId,error}=await supabase.rpc('accept_campus_request',{request_uuid:parsedId.data})
         if(error)return {success:false,error:error.message}
-        await deliverRegistrationEmails('enrollment', parsedId.data)
         const {data:enrollment}=await supabase.from('campus_enrollments').select('child_id').eq('id',enrollmentId).single()
+        const access=enrollment?.child_id?await onboardAcceptedFamily(enrollment.child_id,request.email):{error:'Plaza aceptada. Revisa el acceso del tutor.',status:undefined}
+        await createAdminClient().from('enrollment_requests').update({campus_details:{onboarding:{access:access.status||'needs_review'}}}).eq('id',parsedId.data)
+        await deliverRegistrationEmails('enrollment', parsedId.data)
         for(const path of ['/admin/leads','/admin/campus','/admin/campus/solicitudes','/admin/actividades','/admin/crm/alumnos','/admin/crm/tutores','/admin/finanzas'])revalidatePath(path)
-        return {success:true,childId:enrollment?.child_id}
+        return {success:true,childId:enrollment?.child_id,notice:access.error||'Plaza aceptada. Revisa el envío en Estado de correos.'}
     }
 
     const { data: childId, error } = await supabase.rpc(request.service==='academy'&&request.academy_details?'accept_academy_request':'convert_enrollment_request', {
