@@ -21,6 +21,8 @@ insert into event_campaign_settings values('christmas-2026');
 insert into campuses(name,start_date,status) values('Campus Navidad 2026–2027','2026-12-22','draft');
 insert into membership_plans(name,price,season_start,season_end) values('Tecnificación · 1 sesión semanal · 2026/2027',75,'2026-09-15','2027-05-31');
 \ir ../supabase/migrations/20261119165354_connected_business_offering.sql
+alter table public.enrollment_requests add column campus_details jsonb;
+\ir ../supabase/migrations/20261119170735_protect_campus_quote_and_status_updates.sql
 insert into auth.users(id,email,email_confirmed_at) values('00000000-0000-4000-8000-000000000001','admin@example.invalid',now());
 grant usage on schema public,auth,private to authenticated,anon,service_role;
 grant all on all tables in schema public to authenticated,service_role;
@@ -58,7 +60,17 @@ set local role anon;
 select set_config('request.jwt.claim.sub','',true);
 do $$begin
  begin insert into public.enrollment_requests(service,academy_details) values('academy','{}');raise exception 'Forged quote accepted';exception when others then if sqlerrm='Forged quote accepted' then raise;end if;end;
+ begin insert into public.enrollment_requests(service,campus_details) values('campus','{"quoted_amount":1}');raise exception 'Forged campus price accepted';exception when others then if sqlerrm='Forged campus price accepted' then raise;end if;end;
  if has_function_privilege('anon','public.accept_academy_request(uuid)','execute') then raise exception 'Anon may approve';end if;
+end $$;
+reset role;
+-- The fixture grants UPDATE; production RLS separately limits who may update.
+select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000002',true);
+set local role authenticated;
+do $$begin
+ update public.enrollment_requests set status='contacted' where child_name='Fixture 1';
+ if not found then raise exception 'Unchanged snapshot blocked status update'; end if;
+ begin update public.enrollment_requests set academy_details='{}' where child_name='Fixture 1';raise exception 'Forged update accepted';exception when others then if sqlerrm='Forged update accepted' then raise;end if;end;
 end $$;
 reset role;
 rollback;

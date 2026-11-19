@@ -31,6 +31,10 @@ begin
  begin insert into public.enrollment_requests(service,activity_name,child_name,birth_date,guardian_name,email,phone,academy_details) values('academy','QA','Forged quote','2016-01-01','QA parent','qa-forged@example.invalid','600000000','{}');
  exception when others then rejected:=true;end;
  if not rejected then raise exception 'Anonymous snapshot forgery accepted';end if;
+ rejected:=false;
+ begin insert into public.enrollment_requests(service,activity_name,child_name,birth_date,guardian_name,email,phone,campus_details) values('campus','QA','Forged campus quote','2016-01-01','QA parent','qa-forged@example.invalid','600000000','{"quoted_amount":1}');
+ exception when others then rejected:=true;end;
+ if not rejected then raise exception 'Anonymous campus snapshot forgery accepted';end if;
  execute 'reset role';
  raise notice 'PASS: live schema/RLS, 8 boundaries, atomic membership+receipts, 2 groups, idempotency, rejected forged quote, original payment digest unchanged';
 end $$;
