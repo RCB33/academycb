@@ -2,7 +2,7 @@
 import { useT } from '@/lib/i18n/client'
 
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { createRecoveryClient } from '@/lib/supabase/recovery-client'
@@ -13,6 +13,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 import { getRoleHome, isAppRole } from '@/lib/roles'
+import { PortalEntryLoading } from '@/components/portal/portal-entry-loading'
 import { billingReturnPath } from '@/lib/billing-request'
 
 export function LoginForm() {
@@ -21,6 +22,8 @@ export function LoginForm() {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [loading, setLoading] = useState(false)
+    const [entering, setEntering] = useState(false)
+    const loginInFlight = useRef(false)
     const [resettingPassword, setResettingPassword] = useState(false)
     const router = useRouter()
     const supabase = useMemo(() => createClient(), [])
@@ -56,6 +59,9 @@ export function LoginForm() {
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault()
+        if (loginInFlight.current) return
+        loginInFlight.current = true
+        setEntering(false)
         setLoading(true)
 
         try {
@@ -66,7 +72,11 @@ export function LoginForm() {
 
             if (error) {
                 toast.error(translate("Error al iniciar sesión: ") + translate(error.message))
+                loginInFlight.current = false
+                setLoading(false)
             } else {
+                setEntering(true)
+                // Keep the transition visible while the destination loads.
                 // Check role
                 const { data: { user } } = await supabase.auth.getUser()
                 const { data: profile } = await supabase
@@ -75,7 +85,6 @@ export function LoginForm() {
                     .eq('id', user?.id)
                     .single()
 
-                toast.success(translate("Bienvenido"))
                 router.refresh()
 
                 const next=profile?.role==='guardian'?billingReturnPath(new URLSearchParams(window.location.search).get('next')):null
@@ -83,7 +92,7 @@ export function LoginForm() {
             }
         } catch {
             toast.error(translate("Ha ocurrido un error inesperado"))
-        } finally {
+            loginInFlight.current = false
             setLoading(false)
         }
     }
@@ -107,6 +116,8 @@ export function LoginForm() {
 
         toast.success(translate('Te hemos enviado un enlace para crear o recuperar tu contraseña.'))
     }
+
+    if (loading) return <PortalEntryLoading checking={!entering} />
 
     return (
         <Card className="!bg-white/10 backdrop-blur-lg !border-white/20 shadow-2xl">

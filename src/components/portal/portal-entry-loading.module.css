@@ -1,0 +1,50 @@
+.screen {
+    position: fixed;
+    inset: 0;
+    margin: 0;
+    z-index: 90;
+    display: grid;
+    place-items: center;
+    overflow-y: auto;
+    padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
+    background: radial-gradient(ellipse at 50% 43%, #1a3655 0%, #0c2241 55%, #091a32 100%);
+    color: white;
+}
+.content { width: 100%; max-width: 360px; text-align: center; }
+.brand { margin: 0 0 30px; color: #f2ce67; font-size: 13px; font-weight: 800; letter-spacing: .18em; }
+.brand span { display: block; margin-top: 6px; color: #a9b7c9; font-size: 9px; letter-spacing: .28em; }
+.pitch { display: block; width: 100%; height: auto; margin-bottom: 16px; }
+.title { margin: 0; font-size: clamp(23px, 6vw, 30px); font-weight: 800; letter-spacing: -.025em; line-height: 1.2; }
+.description { min-height: 48px; margin: 14px auto 0; max-width: 290px; color: #bdcbdc; font-size: 14px; line-height: 1.6; }
+.dots { display: flex; justify-content: center; gap: 7px; margin-top: 24px; }
+.dots span { width: 5px; height: 5px; border-radius: 50%; background: #f2ce67; animation: breathe 1.4s ease-in-out infinite; }
+.dots span:nth-child(2) { animation-delay: .16s; }
+.dots span:nth-child(3) { animation-delay: .32s; }
+.ball { transform: translate(44px, 132px); animation: shot 2.8s ease-in-out infinite; }
+.spin { animation: spin 2.8s linear infinite; }
+.shadow { animation: shadow 2.8s ease-in-out infinite; }
+.net { transform-origin: 265px 100px; animation: net 2.8s ease-out infinite; }
+.spark { opacity: 0; animation: goal 2.8s ease-out infinite; }
+@keyframes shot {
+    0%, 10% { transform: translate(44px, 132px) scale(1); opacity: 1; }
+    26% { transform: translate(91px, 91px) scale(1); }
+    43% { transform: translate(138px, 132px) scale(1.04, .93); }
+    61% { transform: translate(202px, 73px) scale(.87); }
+    74%, 84% { transform: translate(263px, 105px) scale(.66); opacity: 1; }
+    91%, 100% { transform: translate(263px, 105px) scale(.66); opacity: 0; }
+}
+@keyframes spin { to { transform: rotate(540deg); } }
+@keyframes shadow {
+    0%, 10% { transform: translateX(0); opacity: .6; }
+    26% { transform: translateX(47px) scaleY(.6); opacity: .2; }
+    43% { transform: translateX(94px); opacity: .6; }
+    61% { transform: translateX(158px) scaleY(.5); opacity: .1; }
+    74%, 100% { transform: translateX(219px); opacity: 0; }
+}
+@keyframes net { 0%, 72%, 90%, 100% { transform: skewX(0); } 77% { transform: skewX(3deg); } 82% { transform: skewX(-1deg); } }
+@keyframes goal { 0%, 73%, 100% { opacity: 0; } 78%, 85% { opacity: 1; } }
+@keyframes breathe { 0%, 100% { opacity: .3; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+    .ball, .spin, .shadow, .net, .spark, .dots span { animation: none; }
+    .dots span { opacity: .7; }
+}
