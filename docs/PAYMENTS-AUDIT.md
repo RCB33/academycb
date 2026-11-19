@@ -1,5 +1,18 @@
 # Pagos — auditoría y diseño de implementación
 
+## Solicitudes de cobro desde administración — 19 noviembre 2026
+
+- Nuevo flujo `/admin/finanzas/solicitudes`: crear recibos mediante el editor existente, seleccionar tutor y recibos, preparar pago único o mensualidades finitas y compartir enlace por correo/copia/WhatsApp. Visible también en pagos de cada jugador y en el portal del tutor designado. Manual: `docs/ADMIN-BILLING.md`.
+- No se usa el adaptador antiguo que sustituye recibos: las solicitudes nuevas conservan importes, descuentos, vencimientos y referencias de los recibos seleccionados. Cobro transaccional sobre esos recibos solamente tras confirmación válida. No hay backfill ni cambios en pagos existentes.
+- Nuevas tablas con RLS y RPC de escritura exclusivas de service_role. Tutor exacto y vínculo con el jugador comprobados en servidor/base, protección contra origen externo, total alterado, cobro duplicado y solapamiento con otro Checkout/abono manual. Bloqueos ordenados y cancelación en dos fases.
+- Suscripción: autorización de tarjeta en Checkout setup; primera cuota en el primer vencimiento, mensualidades iguales/consecutivas, fin automático. Matrícula/extras independientes. La aceptación no se contabiliza como pago. Cancelar no borra recibos ni produce devolución automática.
+- Migraciones aditivas aplicadas: `20261119100055_admin_billing_requests`, `20261119102115_billing_request_lock_order`. Asesor de seguridad sin nuevos avisos para estos objetos; permanecen los avisos anteriores.
+- Pruebas locales: PostgreSQL 17 desechable con rollback (propiedad, RLS, snapshot, duplicados, modo TEST, bloqueos), SDK Stripe simulado, TypeScript, lint y build Preview. Pruebas conectadas: acceso admin, rechazo anónimo/familia/origen ajeno; tutor ajeno no abre ni acepta; pago único y suscripción crean/reutilizan/caducan Checkout TEST sin tarjeta. Resend acepta el correo al buzón oficial `delivered@resend.dev`, reenvío idempotente; no demuestra bandeja real.
+- Reloj TEST: tres intentos, incluido uno posterior a que el usuario comunicase activar el permiso, rechazados en `create_test_clock` con `StripePermissionError / more_permissions_required`. No se ha validado todavía primera factura, siguiente cuota, fallo y fin en el proveedor. La ruta de diagnóstico requiere admin y Preview, y devuelve 404 en Production. No se han cambiado los flags de ventas: pago único LIVE conserva la activación previa; mensualidades LIVE siguen desactivadas.
+- Fixtures y cuentas QA eliminados, sesiones revocadas. El histórico se compara antes/después de cada prueba conectada; 11 pagos existentes conservados. No se ha realizado ningún cargo real.
+
+Esta sección añade el flujo administrativo; no afirma que las mensualidades LIVE ni la facturación fiscal estén listas. El permiso pendiente corresponde a la clave TEST desplegada en Preview.
+
 ## Titular, IVA y muestras — 19 noviembre 2026
 
 - Titular y NIF facilitados por el propietario guardados en los ajustes de producción (sin duplicar sus identificadores en este repositorio). Nombre comercial: Academy Costa Brava. El propietario indica no añadir dirección; permanece vacía.

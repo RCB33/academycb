@@ -13,6 +13,7 @@ import { paymentMethodLabel, PAYMENT_CONCEPTS } from '@/lib/payment-concepts'
 import { PlayerPaymentSummary } from '@/components/admin/player-payment-summary'
 import { ReceiptCollectionHistory } from '@/components/admin/receipt-collection-history'
 import { SharePaymentReceipt } from '@/components/admin/share-payment-receipt'
+import { BillingRequests } from '@/components/admin/billing-requests'
 
 type PaymentsData = {
     memberships: any[]
@@ -32,6 +33,7 @@ export function PaymentsList({ paymentsData, plans, childId, onRefresh }: {
 
     return (
         <div className="space-y-6">
+            <details className="rounded-xl border p-3"><summary className="cursor-pointer font-semibold">Enviar cobro o suscripción al tutor</summary><div className="mt-4"><BillingRequests initialChildId={childId} /></div></details>
             <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="font-bold">Pagos del jugador</h3><p className="text-sm text-slate-500">Registra uno o varios meses sobre sus recibos, sin duplicar ingresos.</p></div><CreateChargeDialog childId={childId} onSaved={onRefresh}/><CollectReceiptDialog childId={childId} onSaved={async () => { await onRefresh() }} /></div>
             {/* KPI Row */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

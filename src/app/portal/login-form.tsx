@@ -13,6 +13,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 import { getRoleHome, isAppRole } from '@/lib/roles'
+import { billingReturnPath } from '@/lib/billing-request'
 
 export function LoginForm() {
     const translate = useT()
@@ -77,7 +78,8 @@ export function LoginForm() {
                 toast.success(translate("Bienvenido"))
                 router.refresh()
 
-                router.push(getRoleHome(isAppRole(profile?.role) ? profile.role : null))
+                const next=profile?.role==='guardian'?billingReturnPath(new URLSearchParams(window.location.search).get('next')):null
+                router.push(next||getRoleHome(isAppRole(profile?.role) ? profile.role : null))
             }
         } catch {
             toast.error(translate("Ha ocurrido un error inesperado"))

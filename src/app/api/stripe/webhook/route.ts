@@ -3,6 +3,7 @@ import { configuredStripe, verifyPaymentWebhook } from '@/lib/stripe-payments'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { fulfillAcademyCheckout, fulfillAcademyInvoice, syncAcademyInvoiceStatus, syncAcademySubscription } from '@/lib/academy-stripe-contract'
 import { recordWebhookProbe, WEBHOOK_PROBE_PURPOSE } from '@/lib/stripe-webhook-probe'
+import { fulfillBillingCheckout, fulfillBillingInvoice, syncBillingSubscription } from '@/lib/billing-request-stripe'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -35,21 +36,25 @@ export async function POST(request: Request) {
     try { event = verifyPaymentWebhook(raw, signature) }
     catch { return Response.json({ error: 'Invalid signature or environment' }, { status: 400 }) }
     if (event.type === 'invoice.paid') {
-        try { await fulfillAcademyInvoice(event.data.object as Stripe.Invoice); return Response.json({ received: true }) }
+        try { const invoice=event.data.object as Stripe.Invoice; if(!await fulfillBillingInvoice(invoice))await fulfillAcademyInvoice(invoice); return Response.json({ received: true }) }
         catch { return Response.json({ error: 'Invoice confirmation pending; retry' }, { status: 500 }) }
     }
     if (['invoice.payment_failed','invoice.payment_action_required'].includes(event.type)) {
-        try { await syncAcademyInvoiceStatus(event.data.object as Stripe.Invoice); return Response.json({ received: true }) }
+        try { const invoice=event.data.object as Stripe.Invoice & {subscription?:string}; const value=invoice.parent?.subscription_details?.subscription||invoice.subscription; const id=typeof value==='string'?value:value?.id; if(!id||!await syncBillingSubscription(id))await syncAcademyInvoiceStatus(invoice); return Response.json({ received: true }) }
         catch { return Response.json({ error: 'Invoice status pending; retry' }, { status: 500 }) }
     }
     if (['customer.subscription.updated','customer.subscription.deleted'].includes(event.type)) {
-        try { await syncAcademySubscription((event.data.object as Stripe.Subscription).id); return Response.json({ received: true }) }
+        try { const id=(event.data.object as Stripe.Subscription).id; if(!await syncBillingSubscription(id))await syncAcademySubscription(id); return Response.json({ received: true }) }
         catch { return Response.json({ error: 'Subscription status pending; retry' }, { status: 500 }) }
     }
     if (!supported.has(event.type)) return Response.json({ received: true, ignored: true })
     const session = event.data.object as Stripe.Checkout.Session
     // Metadata routes each signed event to its own persisted ledger.
     const purpose = session.metadata?.purpose
+    if (purpose === 'academy_billing_request') {
+        try { await fulfillBillingCheckout(session,event.type); return Response.json({ received: true }) }
+        catch { return Response.json({ error: 'Billing confirmation pending; retry' }, { status: 500 }) }
+    }
     if (purpose === WEBHOOK_PROBE_PURPOSE) {
         try { await recordWebhookProbe(event); return Response.json({ received: true, diagnostic: true }) }
         catch { return Response.json({ error: 'Webhook diagnostic pending; retry' }, { status: 500 }) }

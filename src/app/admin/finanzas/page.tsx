@@ -31,6 +31,7 @@ import {
 } from "@/app/actions/finance"
 import { toast } from "sonner"
 import { ManualPaymentEditor } from '@/components/admin/manual-payment-editor'
+import Link from 'next/link'
 import { CollectReceiptDialog } from '@/components/admin/collect-receipt-dialog'
 import { ReceiptCollectionHistory } from '@/components/admin/receipt-collection-history'
 import { getPaymentConfiguration, type PaymentMethodOption } from '@/app/actions/settings'
@@ -240,6 +241,7 @@ export default function FinancePage() {
                     </p>
                 </div>
                 <div className="flex gap-2">
+                    <Button asChild variant="outline"><Link href="/admin/finanzas/solicitudes">Cobros y suscripciones por enlace</Link></Button>
                     <CollectReceiptDialog onSaved={async () => { await Promise.all([fetchAll(), fetchPaymentGrid()]) }} />
                     <Button onClick={() => setManualPaymentOpen(true)} variant="outline">
                         <Plus className="mr-2 h-4 w-4" /> Otro ingreso

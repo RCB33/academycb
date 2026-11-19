@@ -13,6 +13,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { ConfirmationRefresh } from '@/app/admin/stripe/confirmation-refresh'
 import { AcademyOption } from './academy-option'
 import { CancelCheckout } from './cancel-checkout'
+import Link from 'next/link'
+import { billingLabels, billingSummary, type BillingRequest } from '@/lib/billing-request'
 
 export default async function PagosPage({ searchParams }: { searchParams: Promise<{ attempt?: string; contract?: string; cancelled?: string }> }) {
     const translate = await getT()
@@ -23,6 +25,8 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
 
     if (!user) redirect('/portal')
     const checkoutMode = await stripeCheckoutMode()
+    const { data: billingRequests, error: billingError } = await supabase.from('billing_requests').select('*,billing_request_items(*)').in('state',['ready','processing','active','cancelling']).order('created_at',{ascending:false})
+    if(billingError)throw new Error('No se pudieron cargar las solicitudes de cobro')
     const { data: attempts } = await supabase.from('receipt_checkout_attempts').select('id,payment_id,state,mode').eq('owner_id', user.id).order('created_at', { ascending: false }).limit(100)
     const returnedAttempt = attempts?.find(a => a.id === params.attempt)
 
@@ -120,6 +124,7 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
         <div className="space-y-6">
             <PortalPageHeader icon={<Receipt className="h-6 w-6" />} title={translate("Pagos")} description={translate("Consulta cuotas, inscripciones y compras asociadas a tu familia.")} />
             <FamilyPlanSummary students={familyChildren.data||[]} memberships={familyMemberships.data as unknown as FamilyMembership[]} payments={academyPayments as FamilyPayment[]} />
+            {!!billingRequests?.length&&<section className="space-y-3"><h2 className="text-xl font-bold">Solicitudes de administración</h2>{(billingRequests as BillingRequest[]).map(r=><article key={r.id} className="space-y-2 rounded-xl border bg-white p-4"><h3 className="font-semibold">{r.title}</h3><p className="text-sm">{billingSummary(r)}</p><p className="text-sm">{billingLabels[r.state]||r.state}{r.mode==='test'?' · Solo pruebas':''}</p><Link className="inline-block font-semibold text-blue-700 underline" href={'/portal/pagos/solicitud/'+r.id}>Revisar solicitud</Link></article>)}</section>}
             {translate(checkoutMode === 'test' && <div className="rounded-xl border border-gold/40 bg-gold/10 p-4 text-sm"><strong>{translate("Entorno de pruebas.")}</strong> {translate(" Usa únicamente tarjetas de prueba de Stripe. No se cobra dinero ni se modifican los recibos reales.")}</div>)}
             {translate(returnedAttempt?.state === 'paid' && <p role="status" className="rounded-xl bg-green-50 p-4 text-green-800">{translate(returnedAttempt.mode === 'test' ? 'Prueba confirmada correctamente. Tu recibo real sigue sin cambios.' : 'Pago confirmado. El recibo se ha actualizado correctamente.')}</p>)}
             {translate(returnedAttempt && <ConfirmationRefresh pending={['creating','open'].includes(returnedAttempt.state) && !params.cancelled} />)}
@@ -190,7 +195,7 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
                                             <a href="/portal/tienda" className="mt-3 flex w-full items-center justify-center rounded-md bg-gold/10 py-2 text-xs font-bold text-navy transition-colors hover:bg-gold/20">
                                                 {translate("Volver a Tienda")}</a>
                                         ))}
-                                        {translate(checkoutMode && !tx.balance?.hasAllocations && tx.paymentId && !contracts?.some(c=>c.membership_id===tx.membershipId) && !(memberships || []).some((m:any)=>m.id===tx.membershipId && !m.plan_snapshot && m.plan?.is_active && (m.plan.full_payment_enabled || (recurringEnabled && m.plan.monthly_payment_enabled)) && !academyPayments.some(p=>p.ref_id===m.id && (['paid','refunded'].includes(p.status) || receiptBalance(p).hasAllocations))) && ['pending', 'failed'].includes(tx.status) && (
+                                        {translate(checkoutMode && !billingRequests?.some(r=>r.mode===checkoutMode&&['processing','active','cancelling'].includes(r.state)&&r.billing_request_items.some((i:{payment_id:string})=>i.payment_id===tx.paymentId)) && !tx.balance?.hasAllocations && tx.paymentId && !contracts?.some(c=>c.membership_id===tx.membershipId) && !(memberships || []).some((m:any)=>m.id===tx.membershipId && !m.plan_snapshot && m.plan?.is_active && (m.plan.full_payment_enabled || (recurringEnabled && m.plan.monthly_payment_enabled)) && !academyPayments.some(p=>p.ref_id===m.id && (['paid','refunded'].includes(p.status) || receiptBalance(p).hasAllocations))) && ['pending', 'failed'].includes(tx.status) && (
                                             attempts?.some(a => a.payment_id === tx.paymentId && a.mode === checkoutMode && a.state === 'paid')
                                                 ? <p className="mt-3 text-sm text-green-700">{translate(checkoutMode === 'test' ? 'Prueba completada' : 'Pago confirmado')}</p>
                                                 : <PayReceiptButton paymentId={tx.paymentId} test={checkoutMode === 'test'} />

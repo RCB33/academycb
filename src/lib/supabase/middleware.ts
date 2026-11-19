@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { canAccessAdminPath, getRoleHome, isAppRole } from '@/lib/roles'
+import { billingReturnPath } from '@/lib/billing-request'
 
 // Routes that don't require any authentication
 const PUBLIC_ROUTES = [
@@ -89,7 +90,8 @@ export async function updateSession(request: NextRequest) {
         .eq('id', user.id)
         .maybeSingle()
       const url = request.nextUrl.clone()
-      url.pathname = getRoleHome(isAppRole(profile?.role) ? profile.role : null)
+      url.pathname = (profile?.role==='guardian' && billingReturnPath(request.nextUrl.searchParams.get('next'))) || getRoleHome(isAppRole(profile?.role) ? profile.role : null)
+      url.search = ''
       return NextResponse.redirect(url)
     }
     return supabaseResponse
@@ -99,6 +101,9 @@ export async function updateSession(request: NextRequest) {
   if (!user) {
     const url = request.nextUrl.clone()
     url.pathname = '/portal'
+    url.search = ''
+    const returnTo=billingReturnPath(pathname)
+    if(returnTo)url.searchParams.set('next',returnTo)
     return NextResponse.redirect(url)
   }
 
