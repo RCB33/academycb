@@ -4,12 +4,8 @@ import * as React from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import {
-    Calculator,
     Calendar,
-    CreditCard,
     Settings,
-    Smile,
-    User,
     Users,
     Search,
     MessageSquare,
@@ -32,10 +28,10 @@ import {
 export function SearchCommand() {
     const [open, setOpen] = React.useState(false)
     const [query, setQuery] = React.useState("")
-    const [results, setResults] = React.useState<any[]>([])
+    const [results, setResults] = React.useState<{id:string;full_name:string}[]>([])
     const [loading, setLoading] = React.useState(false)
     const router = useRouter()
-    const supabase = createClient()
+    const supabase = React.useMemo(() => createClient(), [])
 
     React.useEffect(() => {
         const down = (e: KeyboardEvent) => {
@@ -50,25 +46,29 @@ export function SearchCommand() {
     }, [])
 
     React.useEffect(() => {
-        if (!query) {
+        const term = query.trim()
+        let cancelled = false
+        if (!term) {
             setResults([])
+            setLoading(false)
             return
         }
-
-        const searchStudents = async () => {
+        setResults([])
+        const timer = setTimeout(async () => {
             setLoading(true)
             const { data } = await supabase
                 .from('children')
                 .select('id, full_name')
-                .ilike('full_name', `%${query}%`)
+                .is('archived_at', null)
+                .ilike('full_name', `%${term}%`)
+                .order('full_name')
                 .limit(5)
-
-            if (data) setResults(data)
-            setLoading(false)
-        }
-
-        const timer = setTimeout(searchStudents, 300)
-        return () => clearTimeout(timer)
+            if (!cancelled) {
+                setResults(data || [])
+                setLoading(false)
+            }
+        }, 300)
+        return () => { cancelled = true; clearTimeout(timer) }
     }, [query, supabase])
 
     const runCommand = React.useCallback((command: () => void) => {
@@ -105,10 +105,12 @@ export function SearchCommand() {
                     )}
 
                     {results.length > 0 && (
-                        <CommandGroup heading="Alumnos Encontrados">
+                        <CommandGroup heading="Jugadores encontrados" forceMount>
                             {results.map((student) => (
                                 <CommandItem
                                     key={student.id}
+                                    value={`${student.full_name} ${student.id}`}
+                                    forceMount
                                     onSelect={() => runCommand(() => router.push(`/admin/crm/alumnos/${student.id}`))}
                                     className="flex items-center gap-2"
                                 >
@@ -130,14 +132,14 @@ export function SearchCommand() {
                             <Users className="mr-2 h-4 w-4 text-slate-400" />
                             <span>Jugadores 360º</span>
                         </CommandItem>
-                        <CommandItem onSelect={() => runCommand(() => router.push("/admin/leads"))}>
+                        <CommandItem onSelect={() => runCommand(() => router.push("/admin/solicitudes"))}>
                             <MessageSquare className="mr-2 h-4 w-4 text-slate-400" />
-                            <span>Solicitudes Web (Leads)</span>
+                            <span>Solicitudes de familias</span>
                         </CommandItem>
                     </CommandGroup>
                     <CommandSeparator />
                     <CommandGroup heading="Operativa">
-                        <CommandItem onSelect={() => runCommand(() => router.push("/admin/academia"))}>
+                        <CommandItem onSelect={() => runCommand(() => router.push("/admin/gestion/academia"))}>
                             <Activity className="mr-2 h-4 w-4 text-slate-400" />
                             <span>Gestión Academia</span>
                         </CommandItem>
