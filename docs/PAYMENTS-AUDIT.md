@@ -28,6 +28,7 @@ Esta revisión complementa la anterior: una ruta HTTP correcta no equivale a hab
 - Dashboard: «Jugadores registrados» muestra las fichas existentes y distingue en el subtítulo cuántos tienen plaza vigente/próxima; cero vinculaciones ya no aparenta cero jugadores registrados.
 - Inscripción: transferencia seleccionada inicialmente; mensualidades con tarjeta identificadas como petición pendiente de activación mientras la configuración no permita cobros recurrentes. No se promete un cargo automático habilitado.
 - Ficha/pagos: «asignar plan para crear cuotas pendientes» sustituye la afirmación equívoca de generar una suscripción.
+- Buscador global: se corrige el filtrado adicional de resultados remotos que ocultaba jugadores existentes; resultados con identidad explícita, control de respuestas obsoletas, exclusión de archivados y título accesible del diálogo. Accesos de solicitudes/gestión actualizados al menú nuevo. La búsqueda de la tabla por tutor también se verificó.
 
 ### Pendientes priorizados: no son solo Stripe
 
@@ -44,7 +45,8 @@ Esta revisión complementa la anterior: una ruta HTTP correcta no equivale a hab
 
 - Baseline financiero: 11 pagos, digest `e9b3ce77d682aabd79e1097a68a22b23`. Conservado en todas las comprobaciones conectadas y después de editar textos de oferta.
 - TypeScript, build, suites de oferta/gestión y catálogo conectado correctos tras los cambios; lint completo sin errores (273 advertencias acumuladas, seis en payments-list).
-- Limpieza y revisión de despliegue: registrar el cierre al terminar esta ejecución.
+- Publicación verificada: `23d3df2` en `dpl_EUrdbBjy7AhXzMFC8p5BxKZprUS6`, seguida del buscador `ba6f100` en `dpl_EnaEndckogu9t9o6fk5G6maVyyRz`, ambas READY con el dominio público. Contador y disponibilidad de pagos observados en producción.
+- Limpieza y revisión final: registrar el cierre al terminar esta ejecución.
 
 
 ## Dashboard visual y portal de actividades — 19 noviembre 2026
