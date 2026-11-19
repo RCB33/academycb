@@ -1,4 +1,5 @@
 import 'server-only'
+import { stripeCheckoutMode } from '@/lib/stripe-availability'
 import { createHash } from 'node:crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { academyQuote, campusOfferSchema, groupSchema, planSchema, tournamentProgramSchema, type AcademyOffer, type CampusOffer, type TournamentOffer } from '@/lib/offering'
@@ -20,7 +21,7 @@ export async function getAcademyOffer(includeUnpublished=false):Promise<AcademyO
     groups:(groups.data||[]).map(g=>({...groupSchema.parse(g),id:g.id,updated_at:g.updated_at})).filter(g=>includeUnpublished||(g.status==='active'&&g.public_offer.published)).sort((a,b)=>a.public_offer.order-b.public_offer.order),
     plans:(plans.data||[]).map(p=>({...planSchema.parse({...p,description:p.description||''}),id:p.id,updated_at:p.updated_at})).filter(p=>includeUnpublished||p.is_active),
   }
-  return {...result,version:offeringVersion(result)}
+  return {...result,version:offeringVersion(result),recurring_available:process.env.STRIPE_RECURRING_PAYMENTS_ENABLED==='true'&&!!(await stripeCheckoutMode())}
 }
 export async function getCampusOffers(includeUnpublished=false):Promise<CampusOffer[]> {
   const {data,error}=await createAdminClient().from('campuses').select(campusColumns).not('public_program','is',null).order('start_date')

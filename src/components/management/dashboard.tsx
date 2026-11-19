@@ -303,9 +303,9 @@ export function ManagementDashboard({ data }: { data: WorkspaceData }) {
   const active = data.players.filter((p) => p.branches.length).length;
   const cards = [
     {
-      label: "Jugadores con plaza",
-      value: String(active),
-      hint: "Vigentes o próximos · sin duplicados",
+      label: "Jugadores registrados",
+      value: String(data.players.length),
+      hint: `${active} con plaza vigente o próxima`,
       icon: Users,
       href: "/admin/crm/alumnos",
       color: "text-blue-700 bg-blue-50",

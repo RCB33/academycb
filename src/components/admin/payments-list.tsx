@@ -146,7 +146,7 @@ export function PaymentsList({ paymentsData, plans, childId, onRefresh }: {
                 <div className="text-center py-12 text-slate-400">
                     <Euro className="h-12 w-12 mx-auto mb-3 text-slate-200" />
                     <p className="font-bold text-sm">No hay pagos registrados</p>
-                    <p className="text-xs mt-1">Inscribe al alumno en Academia para generar la suscripción</p>
+                    <p className="text-xs mt-1">Asigna un plan de Academia para crear sus cuotas pendientes</p>
                     <p className="text-xs">o registra un pago manual desde <Link href="/admin/finanzas" className="text-yellow-600 font-bold hover:underline">Finanzas</Link></p>
                 </div>
             )}

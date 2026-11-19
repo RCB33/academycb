@@ -8,7 +8,7 @@ const {createClient}=require('@supabase/supabase-js')
  if(!response.ok)throw Error('Management access unavailable')
  const keys=await response.json(),key=keys.find(k=>k.name==='service_role').api_key
  const db=createClient('https://pnaitrnthhclyzfdvgbp.supabase.co',key,{auth:{persistSession:false,autoRefreshToken:false}})
- const cache={};function load(file){if(cache[file])return cache[file];const m={exports:{}};new Function('module','exports','require',ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText)(m,m.exports,name=>name==='server-only'?{}:name==='@/lib/supabase/admin'?{createAdminClient:()=>db}:name.startsWith('@/')?load('src/'+name.slice(2)+'.ts'):require(name));return cache[file]=m.exports}
+ const path=require('node:path'); const cache={};function load(file){if(cache[file])return cache[file];const m={exports:{}};new Function('module','exports','require',ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText)(m,m.exports,name=>name==='server-only'?{}:name==='@/lib/supabase/admin'?{createAdminClient:()=>db}:name.startsWith('@/')?load('src/'+name.slice(2)+'.ts'):name.startsWith('.')?load(path.join(path.dirname(file),name)+'.ts'):require(name));return cache[file]=m.exports}
  const {getAcademyOffer,getCampusOffers,getTournamentOffer,academySelection}=load('src/lib/offering-server.ts')
  const [a,c,t]=await Promise.all([getAcademyOffer(),getCampusOffers(),getTournamentOffer()])
  assert.equal(a.groups.length,12);assert.equal(a.plans.length,2);assert.equal(c.length,1);assert.equal(t.events.length,3)

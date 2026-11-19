@@ -1,5 +1,52 @@
 # Pagos — auditoría y diseño de implementación
 
+## Auditoría funcional integral — 19 noviembre 2026, tarde
+
+Esta revisión complementa la anterior: una ruta HTTP correcta no equivale a haber pulsado todos sus botones. No se certifica todavía el ciclo completo de suscripción ni todas las entregas de correo.
+
+### Evidencia y alcance
+
+- Base comparada mediante fetch explícito de `origin/main`: `820445ac3e7787358cfe7d27abd59ef3573bb191`, producción `dpl_8QRm4nC5o3ZsFCRiS77t5dPFTEKC`. Se trabaja en la copia activa, sin desplegar snapshots históricos.
+- Suites Node correctas: `test:karen`, `test:events`, `test:notifications`, `test:offering`, `test:management`, `test:stripe`. Stripe simulado no acredita aceptación del proveedor.
+- Quince scripts SQL en PostgreSQL local aislado, con rollback: acceso, asistencia, solicitudes de cobro, separación reserva/pago, checkout y fuentes comerciales, oferta conectada, eventos, planes familiares, duplicados de tutor, cargos, entrenadores, justificantes, repartos manuales y correcciones. No operan sobre pagos reales.
+- Siete comprobaciones conectadas en transacciones revertidas: oferta/prorrateo, Campus, reutilización de inscripción, cola de correos, eventos, RLS de recibos y disponibilidad/aforo. Digest verificado tras cada prueba.
+- 42 rutas autenticadas sin error de servidor: 28 de administración y 14 de familias. Esto verifica acceso/renderizado HTTP; no es cobertura de todas las interacciones.
+- Recorrido visual real: validación del formulario público de Academia; dos grupos y resumen de primera cuota; Campus, pack completo, hermano y talla; acceso/cierre de sesión familiar; hijo existente en Campus/Torneos; limpieza de datos y consentimientos al cambiar de hijo; tarifas y solapamientos de torneos; pagos familiares sin cuotas inventadas.
+- Recorrido administrativo real: alta de jugador ficticio, reutilización de tutor existente por email, ficha y accesos de asignación/pagos, cuadro de cobro sin recibos (confirmación bloqueada), búsqueda y revisión de solicitud, inscripción administrativa de Campus con tutor precargado, finanzas/gastos y validación obligatoria. No se confirmó un cobro desde la interfaz ni se creó un trabajador real.
+- Edición real de las descripciones de los planes de 75/140 € desde Gestión de Academia: se sustituye el texto antiguo «mes parcial sujeto a revisión/sin prorrateo» por los cuatro tramos confirmados. Comprobado en la landing pública. Importes y condiciones económicas existentes intactos.
+
+### Solicitud, correo y cobro de demostración
+
+- POST real `/api/enrollment`, solicitud `ce069ff5-22d0-4f5c-9e07-b97aa5dc5df0`, identificada expresamente como PRUEBA AUDITORÍA. Correo autorizado a `rokecordoba@gmail.com`.
+- Entrega real comprobada en Gmail INBOX: mensaje `1a1f51b4ee76cc03`, 19/11/2026 18:39:29 UTC, proveedor `01a1f51b-4b0b-7ba9-b9e7-b050ad0d3d4e`. SPF, DKIM y DMARC correctos. HTML con logo, azul/dorado y selección de Academia; informa de solicitud recibida y de que todavía no hay plaza ni cobro confirmado. No exige entrar al portal para leer esos datos.
+- La misma solicitud se aceptó dentro de BEGIN/ROLLBACK: vínculo jugador–tutor, membresía, primera cuota del 25 % de 75 € = 18,75 €, registro de transferencia ficticia e idempotencia al repetir aceptación/cobro. Todo revertido; la prueba no ingresó dinero. La matrícula de 30 € es un concepto separado: el presupuesto inicial de la solicitud era 48,75 €.
+- Esta entrega verifica el correo de solicitud recibida. Las plantillas/colas de aceptación y acceso se probaron en código y rollback; no se afirma recepción real de esos otros mensajes ni establecimiento real de contraseña en esta auditoría.
+- Stripe TEST real: diagnóstico `98c595d0-705b-43d9-b379-f50dac4172d5`, operación `create_test_clock`, rechazado por `StripePermissionError / more_permissions_required`. No se creó reloj, cliente ni suscripción. Falta habilitar permisos TEST y repetir alta, renovación, fallo, recuperación y fin en mayo. No se activó LIVE.
+
+### Correcciones pequeñas incluidas
+
+- Dashboard: «Jugadores registrados» muestra las fichas existentes y distingue en el subtítulo cuántos tienen plaza vigente/próxima; cero vinculaciones ya no aparenta cero jugadores registrados.
+- Inscripción: transferencia seleccionada inicialmente; mensualidades con tarjeta identificadas como petición pendiente de activación mientras la configuración no permita cobros recurrentes. No se promete un cargo automático habilitado.
+- Ficha/pagos: «asignar plan para crear cuotas pendientes» sustituye la afirmación equívoca de generar una suscripción.
+
+### Pendientes priorizados: no son solo Stripe
+
+1. **P1 — Domingo en asistencia/calendario.** La aceptación guarda ambos grupos en `academy_group_assignments`, pero el pase de lista (`coach/session/[id]`) filtra por `children.team_id`. Hay que integrar el grupo secundario en permisos, convocatorias, calendario y asistencia y probarlo con un entrenador de cada grupo.
+2. **P1 — Alta manual coherente.** El asignador manual mantiene meses completos y pide crear el primer mes parcial aparte. Unificarlo con el prorrateo de solicitudes y con la elección explícita de ambos grupos; actualmente Karen puede obtener resultados distintos según la entrada utilizada.
+3. **P1 — Depuración histórica supervisada.** Antes de los fixtures de esta auditoría: 16 fichas (incluye demo antiguo) sin vinculación operativa, categorías por asignar, 5 grupos de correos de tutor duplicados y 10 tutores sin usuario Auth asociado. No asignar actividad, fusionar tutores ni crear cuentas por inferencia. Revisar con el negocio jugador por jugador.
+4. **P1 — Suscripciones y correos completos.** Resolver el bloqueo de permisos TEST y verificar el ciclo real; completar recepción de aceptación, acceso familiar y recuperación, además del correo de solicitud ya entregado. No basta con que el proveedor acepte el envío.
+5. **P2 — Simplificación pendiente.** Revisar una solicitud de Academia sigue abriendo la pantalla antigua de leads y consultas, con ruido comercial. Cambiar de Academia a Campus/Torneos desde el formulario general abandona el borrador. Separar las entradas con claridad o preservar los datos.
+6. **P2 — Configuración de negocio.** Aforos y años de grupos no definidos en todas las fichas; discrepancia de viernes entre PDF y web registrada en la sección previa; distinguir el teléfono general 654139429 del de justificantes 691179600. Confirmar propósito, no sustituir números sin criterio.
+7. **P2 — Idiomas y bienvenida.** Los nuevos componentes de selección/actividades contienen texto español fijo; completar catalán. El correo transaccional auditado es estático con marca, no la animación GIF/sobre planteada anteriormente.
+8. **P2 — Seguridad preventiva.** Asesor de salud sin incidencias. Persisten avisos SECURITY DEFINER anónimos (perfil público por token y pedido de tienda) y funciones autenticadas que requieren revisión individual de permisos; no todos implican exposición. Protección de contraseñas filtradas desactivada. Añadir limitación de abuso a formularios públicos; honeypot y límites de la cola no equivalen a rate limiting de solicitudes. No se han ampliado permisos para resolver avisos.
+
+### Integridad y validación final
+
+- Baseline financiero: 11 pagos, digest `e9b3ce77d682aabd79e1097a68a22b23`. Conservado en todas las comprobaciones conectadas y después de editar textos de oferta.
+- TypeScript, build, suites de oferta/gestión y catálogo conectado correctos tras los cambios; lint completo sin errores (273 advertencias acumuladas, seis en payments-list).
+- Limpieza y revisión de despliegue: registrar el cierre al terminar esta ejecución.
+
+
 ## Dashboard visual y portal de actividades — 19 noviembre 2026
 
 - Inicio administrativo con marca azul marino/dorado, tarjetas de plazas únicas, solicitudes, vencimientos y cobrado; buscador de jugador/tutor, filtros por actividad y categoría, próximos pasos y resumen de gastos. El selector mensual cambia el resumen económico; no reconstruye un balance histórico de deuda (usa saldos actuales con corte de vencimiento).
