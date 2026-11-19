@@ -1,7 +1,7 @@
 const PROJECT_REF = 'pnaitrnthhclyzfdvgbp'
 const SITE_URL = 'https://www.academycostabrava.com'
 const FROM = 'Academy Costa Brava <info@academycostabrava.com>'
-const REPLY_TO = 'info@academycostabrava.com'
+const REPLY_TO = 'costabravaacademy@gmail.com'
 
 function layout({ eyebrow, title, intro, detail, buttonLabel, buttonHref, code, security = false }) {
     const action = buttonLabel && buttonHref

@@ -11,7 +11,7 @@ const assignment = z.object({
     dueDay: z.number().int().min(1).max(28),
     discount: z.number().finite().min(0).max(1_000_000),
     promotion: z.string().trim().max(200),
-    enrollment: z.boolean(), plus: z.number().finite().min(0).max(1_000_000),
+    enrollment: z.boolean(), plus: z.union([z.literal(0), z.literal(50)]),
     teamId: z.string().uuid().nullable(),
 })
 

@@ -23,7 +23,7 @@ export function FamilyPlanAssignment({ childId, childName, plans, teams, default
     const [discount,setDiscount] = useState(0)
     const [promotion,setPromotion] = useState('')
     const [enrollment,setEnrollment] = useState(false)
-    const [plus,setPlus] = useState(0)
+    const [plus,setPlus] = useState<0 | 50>(0)
     const [team,setTeam] = useState(defaultTeamId)
     const [review,setReview] = useState(false)
     const [busy,setBusy] = useState(false)
@@ -48,7 +48,7 @@ export function FamilyPlanAssignment({ childId, childName, plans, teams, default
         <Dialog open={open} onOpenChange={value=>{if(!busy)setOpen(value)}}>
             <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-xl">
                 <DialogHeader><DialogTitle>{review?'Revisar asignación':'Asignar plan'} · {childName}</DialogTitle></DialogHeader>
-                <p className="text-sm text-slate-600">El plan pertenece a este hijo, no a toda la familia. Genera cuotas pendientes; no cobra tarjetas. Stripe sigue pendiente.</p>
+                <p className="text-sm text-slate-600">El plan pertenece a este hijo, no a toda la familia. Genera cuotas pendientes; no cobra tarjetas automáticamente. La familia podrá pagar sus recibos desde el portal cuando la tarjeta esté habilitada.</p>
                 {!plans.length ? <p className="rounded-lg bg-amber-50 p-4 text-sm">Primero crea las tarifas en <Link className="font-bold underline" href="/admin/ajustes">Ajustes → Planes</Link>. Define actividad, precio, frecuencia y duración. No hay precios inventados.</p> : !review ? <div className="space-y-4">
                     <label className="block text-sm font-medium">1. Actividad y tarifa
                         <select className={field} value={planId} onChange={e=>{setPlanId(e.target.value);setDiscount(0);setEnrollment(false)}}>
@@ -71,11 +71,11 @@ export function FamilyPlanAssignment({ childId, childName, plans, teams, default
                     </label>
                     <div className="grid grid-cols-2 gap-3">
                         <label className="text-sm font-medium">Descuento por periodo (€)<input type="number" min="0" step="0.01" className={field} value={discount} onChange={e=>setDiscount(Number(e.target.value))}/></label>
-                        <label className="text-sm font-medium">Extra Plus acordado · una vez (€)<input type="number" min="0" step="0.01" className={field} value={plus} onChange={e=>setPlus(Number(e.target.value))}/></label>
+                        <label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" checked={plus === 50} onChange={e=>setPlus(e.target.checked ? 50 : 0)}/> Añadir Plan Plus · 50 € al año</label>
                     </div>
                     {discount>0 && <label className="block text-sm font-medium">Motivo de la promoción<input maxLength={200} className={field} value={promotion} onChange={e=>setPromotion(e.target.value)}/></label>}
                     <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={enrollment} onChange={e=>setEnrollment(e.target.checked)}/> Añadir matrícula una sola vez ({euro(plan?.enrollment_fee||0)})</label>
-                    <p className="text-xs text-slate-500">Matrícula: solo para nuevos jugadores y si no está pagada. El dossier anuncia Plus +50 €, pero su periodicidad está pendiente de confirmar: déjalo a 0 salvo acuerdo individual de un pago único. Equipación, campus y torneos son conceptos independientes.</p>
+                    <p className="text-xs text-slate-500">Matrícula: solo para nuevos jugadores y si no está pagada. Plan Plus: 50 € en un único pago anual, solo si la familia lo elige y no está ya registrado este año. Equipación, campus y torneos son conceptos independientes.</p>
                     {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
                     <Button className="w-full" disabled={!preview || (discount>0&&!promotion.trim())} onClick={()=>setReview(true)}>Ver calendario e importes</Button>
                 </div> : preview && plan && <div className="space-y-4">

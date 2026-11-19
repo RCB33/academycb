@@ -61,6 +61,14 @@ async function sb(path, method='GET', body) {
    // Client-loaded admin screens are also tested via their actions/SQL suites.
    console.log(`PASS: authenticated admin route ${path}`)
   }
+  if(process.env.ACADEMY_VERIFY_LIVE_CARD==='1') {
+   const response=await fetch(origin+'/admin/stripe',{headers})
+   const html=await response.text()
+   assert.equal(response.status,200)
+   assert.ok(html.includes('Pagos con tarjeta activados'),'LIVE card checkout is not enabled or Stripe connection failed')
+   assert.ok(html.includes('pendientes de validación; las cuotas se pueden pagar por recibo'),'Recurring payments should remain disabled')
+   console.log('PASS: deployed LIVE card checkout enabled; recurring stays disabled. Account charging capability still requires Stripe confirmation when restricted key cannot read it.')
+  }
   await sb('/rest/v1/profiles?id=eq.'+userId,'PATCH',{role:'guardian'})
   for(const path of ['/admin/dashboard','/admin/finanzas','/admin/torneos/inscripciones']) {
    const page=await fetch(origin+path,{headers,redirect:'manual'}),html=await page.text()

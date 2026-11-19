@@ -16,13 +16,14 @@ begin
  if not rejected then raise exception 'Partial September accepted'; end if;
  rejected=false; begin perform public.assign_family_plan(gen_random_uuid(),c,p,v,'2027-06-01',5,0,'',false,0,null); exception when raise_exception then rejected=true; end;
  if not rejected then raise exception 'Post-season start accepted'; end if;
- m=public.assign_family_plan(req,c,p,v,'2026-11-01',5,0,'',true,0,null);
+ m=public.assign_family_plan(req,c,p,v,'2026-11-01',5,0,'',true,50,null);
  if (select end_date from public.academy_memberships where id=m)<>'2027-05-31' then raise exception 'Season end exceeded'; end if;
  if (select count(*) from public.payments where ref_id=m and concept_code='monthly')<>7 then raise exception 'Incorrect remaining months'; end if;
- if (select sum(amount) from public.payments where ref_id=m)<>555 then raise exception 'Incorrect price/matricula'; end if;
+ if (select sum(amount) from public.payments where ref_id=m)<>605 then raise exception 'Incorrect price/matricula'; end if;
  if exists(select 1 from public.payments where ref_id=m and status<>'pending') then raise exception 'Money marked paid'; end if;
- if public.assign_family_plan(req,c,p,v,'2026-11-01',5,0,'',true,0,null)<>m then raise exception 'Retry duplicated assignment'; end if;
- if (select count(*) from public.payments where ref_id=m)<>8 then raise exception 'Duplicate receipts'; end if;
+ if public.assign_family_plan(req,c,p,v,'2026-11-01',5,0,'',true,50,null)<>m then raise exception 'Retry duplicated assignment'; end if;
+ if (select count(*) from public.payments where ref_id=m)<>9 then raise exception 'Duplicate receipts'; end if;
+ if (select count(*) from public.payments where ref_id=m and concept_code='plus' and amount=50)<>1 then raise exception 'Annual Plus missing or duplicated'; end if;
  execute 'reset role';
  if (select md5(string_agg(to_jsonb(x)::text,'' order by id)) from public.payments x where ref_id is distinct from m) is distinct from digest then raise exception 'Existing receipts changed'; end if;
  rejected=false; begin

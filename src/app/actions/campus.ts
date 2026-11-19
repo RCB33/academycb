@@ -14,12 +14,13 @@ const CampusSchema = z.object({
     start_date: z.iso.date(), end_date: z.iso.date(),
     price: z.number().finite().min(0).max(1_000_000).multipleOf(0.01).nullable().optional(),
     capacity: z.number().int().min(0).max(10000),
+    capacity_unlimited: z.boolean().default(false),
     status: z.enum(['draft', 'published', 'closed']).default('draft'),
     location: z.string().trim().max(300).nullable().optional(),
     description: z.string().trim().max(5000).nullable().optional(),
     schedule: z.string().trim().max(500).nullable().optional(),
 }).refine(c => c.end_date >= c.start_date, { message: 'La fecha final debe ser posterior al inicio' })
-  .refine(c => c.status !== 'published' || c.capacity > 0, { message: 'Confirma un aforo mayor que 0 antes de publicar el campus' })
+  .refine(c => c.status !== 'published' || c.capacity_unlimited || c.capacity > 0, { message: 'Indica las plazas o selecciona sin límite antes de publicar el campus' })
 
 export type Campus = {
     id: string
@@ -30,6 +31,7 @@ export type Campus = {
     end_date: string
     price: number | null
     capacity: number
+    capacity_unlimited?: boolean
     status: 'draft' | 'published' | 'closed'
     location: string | null
     description: string | null
@@ -92,6 +94,7 @@ export async function createCampus(data: {
     end_date: string
     price?: number | null
     capacity: number
+    capacity_unlimited?: boolean
     status?: string
     location?: string | null
     description?: string | null
@@ -112,6 +115,7 @@ export async function createCampus(data: {
             end_date: data.end_date,
             price: data.price ?? null,
             capacity: data.capacity,
+            capacity_unlimited: data.capacity_unlimited ?? false,
             status: data.status || 'draft',
             location: data.location || null,
             description: data.description || null,
@@ -137,6 +141,7 @@ export async function updateCampus(id: string, data: Partial<{
     end_date: string
     price: number | null
     capacity: number
+    capacity_unlimited?: boolean
     status: string
     location: string | null
     description: string | null
@@ -248,11 +253,11 @@ export async function enrollChild(data: {
 
     const { data: campus } = await supabase
         .from('campuses')
-        .select('capacity')
+        .select('capacity,capacity_unlimited')
         .eq('id', data.campus_id)
         .single()
 
-    if (campus && count !== null && count >= campus.capacity) {
+    if (campus && !campus.capacity_unlimited && count !== null && count >= campus.capacity) {
         return { success: false, error: "El campus está lleno. No se pueden añadir más inscripciones." }
     }
 

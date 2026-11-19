@@ -2,7 +2,13 @@
 
 La integración comercial de septiembre se ha incorporado a la versión actual de Academy. Incluye pagos de recibos de academia, campus, torneos y tienda desde el portal, y pago de inscripciones de Navidad una vez aprobadas por Academy.
 
-## Activación pendiente
+## Actualización del 19 noviembre
+
+El propietario solicita activar los pagos reales por recibo. Credenciales LIVE y webhook ya instalados; entrega firmada sin cobro comprobada. Configuración de despliegue: `STRIPE_LIVE_PAYMENTS_ENABLED=true`, `STRIPE_RECURRING_PAYMENTS_ENABLED=false`. El interruptor `payment_card_enabled` es la segunda condición para nuevos pagos.
+
+Las mensualidades automáticas no están habilitadas. No se ha acreditado un pago real completo ni el ciclo de suscripción. Las tarifas de temporada generan recibos mensuales y no una suscripción automática. El Plus es 50 € anuales en un único recibo opcional y no existe tarifa de pago anual completo. Ver evidencia y decisiones más recientes en `PAYMENTS-AUDIT.md`.
+
+## Instrucciones históricas de activación
 
 Los cobros reales todavía están desactivados. Las credenciales de Preview son exclusivamente TEST. No reutilizarlas en Production.
 

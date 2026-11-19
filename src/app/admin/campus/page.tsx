@@ -138,6 +138,7 @@ export default function CampusPage() {
     // KPIs
     const publishedCampuses = campuses.filter(c => c.status === 'published')
     const totalConfirmed = campuses.reduce((sum, c) => sum + (c.confirmed_count || 0), 0)
+    const hasUnlimitedCapacity = campuses.some(c => c.capacity_unlimited)
     const totalCapacity = campuses.reduce((sum, c) => sum + c.capacity, 0)
     const totalEnrolled = campuses.reduce((sum, c) => sum + (c.enrollment_count || 0), 0)
     const estimatedRevenue = campuses.reduce((sum, c) => sum + ((c.confirmed_count || 0) * (c.price || 0)), 0)
@@ -168,7 +169,7 @@ export default function CampusPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <KpiCard icon={<Tent className="h-4 w-4" />} label="Ediciones Abiertas" value={publishedCampuses.length} color="yellow" />
                 <KpiCard icon={<Users className="h-4 w-4" />} label="Confirmados" value={totalConfirmed} color="green" />
-                <KpiCard icon={<MapPin className="h-4 w-4" />} label="Plazas Libres" value={totalCapacity - totalEnrolled} color={totalCapacity - totalEnrolled < 5 ? "amber" : "slate"} />
+                <KpiCard icon={<MapPin className="h-4 w-4" />} label="Plazas Libres" value={hasUnlimitedCapacity ? 'Sin límite' : totalCapacity - totalEnrolled} color={!hasUnlimitedCapacity && totalCapacity - totalEnrolled < 5 ? "amber" : "slate"} />
                 <KpiCard icon={<Euro className="h-4 w-4" />} label="Ingresos Est." value={`${estimatedRevenue.toLocaleString('es')}€`} color="yellow" />
             </div>
 
@@ -260,7 +261,7 @@ export default function CampusPage() {
                                                 <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Confirmados</p>
                                             </div>
                                             <div className="text-center">
-                                                <p className="text-2xl font-black text-slate-400">{selectedCampus.capacity - enrollments.filter(e => e.status !== 'cancelled').length}</p>
+                                                <p className="text-2xl font-black text-slate-400">{selectedCampus.capacity_unlimited ? 'Sin límite' : selectedCampus.capacity - enrollments.filter(e => e.status !== 'cancelled').length}</p>
                                                 <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Libres</p>
                                             </div>
                                         </div>
@@ -430,9 +431,9 @@ function CampusCard({ campus, onSelect, onEdit, onDelete }: {
                 <div className="space-y-1.5">
                     <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest">
                         <span className="text-slate-400">Ocupación</span>
-                        <span style={{ color: typeConf.color }}>{campus.enrollment_count || 0} / {campus.capacity}</span>
+                        <span style={{ color: typeConf.color }}>{campus.enrollment_count || 0} / {campus.capacity_unlimited ? 'Sin límite' : campus.capacity}</span>
                     </div>
-                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div hidden={campus.capacity_unlimited} className="h-2 bg-slate-100 rounded-full overflow-hidden">
                         <div className="h-full rounded-full transition-all" style={{
                             width: `${Math.min(occupancy, 100)}%`,
                             backgroundColor: occupancy >= 90 ? '#ef4444' : typeConf.color
@@ -485,6 +486,7 @@ function CampusDialog({ open, onOpenChange, campus }: {
             // 0 must remain 0 instead of becoming null through a truthy fallback.
             price: priceValue === '' ? null : Number(priceValue),
             capacity: Number(fd.get('capacity')),
+            capacity_unlimited: fd.get('capacity_unlimited') === 'on',
             status: fd.get('status') as string || 'draft',
             location: (fd.get('location') as string) || null,
             description: (fd.get('description') as string) || null,
@@ -556,7 +558,8 @@ function CampusDialog({ open, onOpenChange, campus }: {
                         <div className="space-y-2">
                             <Label className="text-slate-700 font-bold uppercase text-xs tracking-wider">Plazas</Label>
                             <Input name="capacity" type="number" defaultValue={campus?.capacity ?? 0} min={0} required className="bg-white" />
-                            <p className="mt-1 text-xs text-slate-500">0 = aforo pendiente, solo borrador. Confirma el aforo antes de publicar.</p>
+                            <label className="flex items-center gap-2 text-sm"><input name="capacity_unlimited" type="checkbox" defaultChecked={campus?.capacity_unlimited ?? false} />Sin límite de plazas</label>
+                            <p className="mt-1 text-xs text-slate-500">Si seleccionas sin límite, no se aplica el número de plazas. Con 0 y sin seleccionar, queda pendiente y solo se guarda como borrador.</p>
                         </div>
                         <div className="space-y-2">
                             <Label className="text-slate-700 font-bold uppercase text-xs tracking-wider">Estado</Label>

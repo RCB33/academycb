@@ -27,4 +27,11 @@ select 'Campus Navidad 2026–2027',2026,'invierno','2026-12-22','2027-01-07',0,
  'Camp Municipal de Santa Cristina d’Aro','09:00–14:00',
  'BORRADOR: aforo pendiente de confirmar. Nacidos entre 2013 y 2022. Semana 1: 22, 23 y 24 diciembre (89 €). Semana 2: 28, 29, 30 y 31 diciembre (99 €). Semana 3: 4, 5 y 7 enero (89 €). Pack completo: 197 €, incluye sudadera. Descuento del 5% para el segundo hermano inscrito. El importe se revisa según las semanas elegidas antes de asignar la plaza. Contacto campus: 691179600 · costabravaacademy@gmail.com.'
 where not exists(select 1 from public.campuses where name='Campus Navidad 2026–2027' and start_date='2026-12-22');
+-- Confirmed on 19 November: optional annual Plus; no receipts or memberships.
+insert into public.academy_settings(key,value,is_public) values
+ ('academy_plus_annual_amount','50',true),('academy_plus_periodicity','annual',true)
+on conflict(key) do nothing;
+update public.campuses set capacity_unlimited=true,
+ description=replace(description,'BORRADOR: aforo pendiente de confirmar. ','')
+where name='Campus Navidad 2026–2027' and start_date='2026-12-22';
 commit;

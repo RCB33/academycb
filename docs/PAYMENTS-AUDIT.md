@@ -1,5 +1,19 @@
 # Pagos — auditoría y diseño de implementación
 
+## Decisiones de entrega — 19 noviembre 2026, posteriores a la prueba de webhook
+
+El propietario confirma remitente `info@academycostabrava.com`, respuesta/contacto `costabravaacademy@gmail.com`, campus sin límite de plazas, Plus opcional de 50 € en un pago anual y ausencia de tarifa de pago anual completo. Se conserva la cuota de 75 €/mes y el plan existente de dos sesiones de 140 €/mes. No se crean ni modifican recibos existentes.
+
+- Petición expresa nueva de activar cobros LIVE: configurados `STRIPE_LIVE_PAYMENTS_ENABLED=true` y `STRIPE_RECURRING_PAYMENTS_ENABLED=false` en Production. El pago es por recibo aprobado; las suscripciones automáticas siguen pendientes de fechas de temporada y prueba completa con Test Clock. No se ha realizado un cargo real.
+- Migración `20261119100957_campus_unlimited_capacity`: opción explícita `capacity_unlimited`; cero sin esa opción sigue significando capacidad no confirmada. El campus de Navidad está configurado sin límite y conserva estado borrador; abrirlo es una acción administrativa independiente.
+- Plus se selecciona como 0/50 en nuevas asignaciones y se crea una sola vez; la base impide duplicarlo en la misma temporada (o periodo anual para planes sin temporada). No se asignan planes a alumnos existentes.
+- Seguridad: el propietario mantiene el plan actual, sin contratar Pro ni cambiar los controles. Persisten las observaciones anteriores de Auth/RPC; no equivale a una auditoría cerrada. El trigger de aforo conserva sus permisos revocados a clientes.
+- Pruebas locales de pagos, familias, Stripe simulado, notificaciones, actividades e i18n superadas. TypeScript, lint (advertencias preexistentes, cero errores) y build correctos. Pruebas SQL `test-delivery-readiness.sql` y `test-season-readiness.sql` con ROLLBACK verifican aforo limitado/ilimitado, Plus anual sin duplicados, tarifa mensual y fin de temporada.
+- Integridad comprobada tras pruebas: 11 pagos, digest `e9b3ce77d682aabd79e1097a68a22b23` sin cambios.
+- Muestras de correo solicitadas: dirección escrita con `.con`; pendiente confirmar destinatario antes de enviar. Muestras no equivalen a un alta/recuperación completa ni a recepción en bandeja. Datos del titular para aviso legal siguen pendientes.
+
+Esta sección sustituye las decisiones de negocio y autorización de activación previas; la evidencia del webhook sin cobro y los límites de prueba siguen vigentes.
+
 ## Estado más reciente — 19 noviembre 2026
 
 Credenciales LIVE y webhook guardados en Vercel Production; lectura y creación/caducidad de Checkout verificadas. Prueba real de entrega sin cobro superada: `checkout.session.expired`, evento `evt_1UdS3bGk8vSBcmVd9xHkmJys`, recibido y firmado correctamente el 19/11/2026 a las 09:55:08 UTC. No acredita un cobro completo ni el ciclo de suscripción. Los nuevos pagos con tarjeta y las mensualidades automáticas siguen desactivados. La clave restringida no permite consultar el estado de activación de la cuenta Stripe. Los 11 pagos existentes mantienen el digest `e9b3ce77d682aabd79e1097a68a22b23`; usuario QA eliminado y sesión revocada. Esta actualización sustituye las afirmaciones antiguas sobre ausencia de credenciales/entrega LIVE, no los pendientes de negocio y seguridad siguientes.
