@@ -4,7 +4,8 @@ import { translateMetadata } from '@/lib/i18n/translate'
 import Link from "next/link"
 import { LanguageSwitcher } from "@/lib/i18n/client"
 import { Button } from "@/components/ui/button"
-import { Instagram } from "lucide-react"
+import { Mail } from "lucide-react"
+import { SocialBrandIcon, instagramStyle, whatsappStyle, whatsappContactLink } from "./components/social-brand-icon"
 import MobileNavigation from "./components/mobile-navigation"
 import HeaderCart from "./components/header-cart"
 import CartDrawer from "./components/cart-drawer"
@@ -44,12 +45,14 @@ export default async function PublicLayout({
         ['Facebook', settings.academy_facebook],
         ['YouTube', settings.academy_youtube],
     ].filter((entry): entry is [string, string] => Boolean(entry[1]))
+    const phone = settings.academy_phone || settings.academy_whatsapp || ''
+    const whatsappHref = whatsappContactLink(settings.academy_whatsapp || phone)
     const year = new Date().getFullYear()
 
     return (
         <div className="flex min-h-screen flex-col">
             <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-navy shadow-lg shadow-navy/20">
-                    <div className="container flex h-16 gap-1 items-center justify-between px-2 sm:gap-2 sm:px-8">
+                    <div className="container flex min-h-16 gap-1 items-center justify-between px-2 py-2 sm:gap-2 sm:px-8">
                         <Link href="/" className="flex items-center space-x-3 font-bold text-xl tracking-tight">
                             <div className="relative h-10 w-10 shrink-0 sm:h-12 sm:w-12">
                                 {/* The logo is configurable by the business and may use its own CDN. */}
@@ -69,11 +72,14 @@ export default async function PublicLayout({
                             {translate(navigation.map(([label, href]) => <Link key={href} href={href} className="transition-colors hover:text-gold">{translate(label)}</Link>))}
                         </nav>
 
-                        <div className="flex items-center gap-1 sm:gap-2 xl:gap-3">
-                            <a href="https://www.instagram.com/academy.costabrava?cnvx=MWpzaWJvZjVuanlnZw==" target="_blank" rel="noopener noreferrer" aria-label={translate("Instagram de Academy Costa Brava (se abre en otra pestaña)")} title="@academy.costabrava" className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gold/40 bg-gold/10 text-gold transition hover:border-gold hover:bg-gold hover:text-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold">
-                                <Instagram className="h-5 w-5" aria-hidden="true" />
+                        <div className="flex items-center gap-1 max-[399px]:flex-wrap max-[399px]:justify-end sm:gap-2 xl:gap-3">
+                            <a href="https://www.instagram.com/academy.costabrava?cnvx=MWpzaWJvZjVuanlnZw==" target="_blank" rel="noopener noreferrer" aria-label={translate("Instagram de Academy Costa Brava (se abre en otra pestaña)")} title="@academy.costabrava" className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/15 shadow-sm transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold ${instagramStyle}`}>
+                                <SocialBrandIcon brand="instagram" />
                             </a>
-                            <LanguageSwitcher />
+                            {whatsappHref && <a href={whatsappHref} target="_blank" rel="noopener noreferrer" aria-label={translate("Contactar con Academy por WhatsApp (se abre en otra pestaña)")} title={`WhatsApp · ${phone}`} className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/15 shadow-sm transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold ${whatsappStyle}`}>
+                                <SocialBrandIcon brand="whatsapp" />
+                            </a>}
+                            <div className="flex max-[399px]:order-last max-[399px]:w-full max-[399px]:justify-end"><LanguageSwitcher /></div>
                             <HeaderCart />
                             <Link href="/portal">
                                 <Button variant="outline" size="sm" className="hidden sm:flex border-white bg-white text-navy hover:bg-gray-100 hover:text-navy font-heading font-bold uppercase tracking-wide">
@@ -100,6 +106,16 @@ export default async function PublicLayout({
                         <div>
                             <p className="font-heading text-xl font-bold uppercase text-white">{translate(academyName)}</p>
                             {translate(settings.academy_address && <p className="mt-2 text-sm">{translate(settings.academy_address)}</p>)}
+                            <div className="mt-5">
+                                <h2 className="text-sm font-bold uppercase tracking-wider text-white">{translate("Contacto")}</h2>
+                                <div className="mt-3 flex flex-col items-start gap-3">
+                                    {whatsappHref && <a href={whatsappHref} target="_blank" rel="noopener noreferrer" aria-label={translate("Contactar con Academy por WhatsApp (se abre en otra pestaña)")} className={`inline-flex min-h-12 items-center gap-3 rounded-xl px-4 py-3 font-bold shadow-sm transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold ${whatsappStyle}`}>
+                                        <SocialBrandIcon brand="whatsapp" />
+                                        <span>WhatsApp · {phone}</span>
+                                    </a>}
+                                    {settings.academy_email && <a href={`mailto:${settings.academy_email}`} className="inline-flex min-h-10 max-w-full items-center gap-2 text-sm text-gray-300 hover:text-white"><Mail className="h-4 w-4 shrink-0" aria-hidden="true" /><span className="break-all">{settings.academy_email}</span></a>}
+                                </div>
+                            </div>
                             {socialLinks.length > 0 && <div className="mt-4 flex flex-wrap items-center gap-4 text-sm">
                                 {socialLinks.map(([label, href]) => <a
                                     key={label}
@@ -108,10 +124,10 @@ export default async function PublicLayout({
                                     rel="noopener noreferrer"
                                     aria-label={label === 'Instagram' ? translate("Instagram de Academy Costa Brava (se abre en otra pestaña)") : undefined}
                                     className={label === 'Instagram'
-                                        ? "inline-flex min-h-12 items-center justify-center gap-3 rounded-xl bg-gold px-5 py-3 font-bold text-navy shadow-lg shadow-gold/15 transition-colors hover:bg-gold-light focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold"
+                                        ? `inline-flex min-h-12 items-center justify-center gap-3 rounded-xl px-5 py-3 font-bold shadow-lg transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold ${instagramStyle}`
                                         : "hover:text-gold"}
                                 >
-                                    {label === 'Instagram' && <Instagram className="h-5 w-5 shrink-0" aria-hidden="true" />}
+                                    {label === 'Instagram' && <SocialBrandIcon brand="instagram" />}
                                     {translate(label)}
                                 </a>)}
                             </div>}
