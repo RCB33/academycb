@@ -47,6 +47,9 @@ create policy payments_admin on payments for all using(public.is_admin());
 \ir ../supabase/migrations/20261119193029_academy_secondary_group_operations.sql
 \ir ../supabase/migrations/20261119193030_manual_assignment_notifications.sql
 \ir ../supabase/migrations/20261119214732_admin_group_rosters.sql
+create function public.sync_team_calendar() returns trigger language plpgsql as $$begin return new;end$$;
+create trigger team_calendar_sync after insert on teams for each row execute function public.sync_team_calendar();
+\ir ../supabase/migrations/20261119215654_structured_group_calendar_updates.sql
 create policy children_admin on children for all using(public.is_admin());
 create policy children_coach on children for select using(public.is_coach_of(id));
 create policy children_family on children for select using(public.is_guardian_of(id));
@@ -85,6 +88,15 @@ begin
  update academy_memberships set status='cancelled' where id=m;
  if exists(select 1 from public.admin_group_player_links() where child_id=c) then raise exception 'Cancelled child in roster via legacy team_id';end if;
  update academy_memberships set status='pending_payment' where id=m;
+ -- Explicit edits rebuild only untouched future sessions using the structured day.
+ update teams set schedule='16:00 – 17:30',public_offer=public_offer||'{"day":"Sábado"}' where id=sunday;
+ if exists(select 1 from calendar_events where team_id=sunday and start_date>now() and (extract(isodow from start_date at time zone 'Europe/Madrid')<>6 or (start_date at time zone 'Europe/Madrid')::time<>'16:00')) then raise exception 'Calendar did not follow public offer';end if;
+ update teams set schedule='15:00 – 16:30',public_offer=public_offer||'{"day":"Domingo"}' where id=sunday;
+ select id into event from calendar_events where team_id=sunday limit 1;
+ update calendar_events set description='Manual change' where id=event;
+ denied:=false;begin update teams set schedule='17:00 – 18:00' where id=sunday;exception when raise_exception then denied:=true;end;
+ if not denied or not exists(select 1 from calendar_events where id=event and description='Manual change') then raise exception 'Manual session overwritten';end if;
+ update calendar_events set description='Sesión del grupo de Academia' where id=event;
  if not exists(select 1 from calendar_events where team_id=sunday) then raise exception 'Sunday calendar empty'; end if;
  if exists(select 1 from calendar_events where start_date>'2027-06-01') then raise exception 'Sessions after season'; end if;
  insert into children(full_name) values('Other player') returning id into outsider;

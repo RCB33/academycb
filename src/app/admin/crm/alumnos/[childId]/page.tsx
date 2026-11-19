@@ -485,7 +485,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
                             <BranchLinks
                                 icon={<Trophy className="h-4 w-4 text-amber-600" />}
                                 label="Torneos"
-                                items={[...(student.tournament_players || []).filter((item: any) => item.status !== 'cancelled'), ...(student.event_registrations || []).filter((item:any)=>isAcceptedTournamentRegistration(item.status)).map((item:any)=>({...item,tournament:{title:'Torneos · Navidad 2026–2027'}}))]}
+                                items={[...(student.tournament_players || []).filter((item: any) => item.status !== 'cancelled'), ...(student.event_registrations || []).filter((item:{status:string})=>isAcceptedTournamentRegistration(item.status)).map((item:{id:string;status:string})=>({...item,tournament:{title:'Torneos · Navidad 2026–2027'}}))]}
                                 getName={(item: any) => `${item.tournament?.title || 'Torneo'}${item.team?.name ? ` · ${item.team.name}` : ''}`}
                             />
                         </CardContent>

@@ -61,86 +61,9 @@ export async function updateStudentData(childId: string, data: any) {
     const { supabase } = await requireAdmin()
     const jerseyNumber = parseJerseyNumber(data.jersey_number)
     if (jerseyNumber === undefined) return { success: false, error: 'El dorsal debe estar entre 1 y 99.' }
-    data = { ...data, guardian_email: data.guardian_email?.trim().toLowerCase() }
-    if (data.guardian_email) {
-        const { data: matches, error } = await supabase.from('guardians').select('id')
-            .ilike('email', data.guardian_email.replace(/[\\%_]/g, '\\$&')).limit(2)
-        if (error) return { success: false, error: 'No se pudo comprobar el tutor. No se han guardado cambios.' }
-        if ((matches?.length || 0) > 1 || (data.guardian_id && matches?.some(g => g.id !== data.guardian_id))) {
-            return { success: false, error: 'El correo coincide con otra ficha de tutor. Revisa los duplicados antes de guardar.' }
-        }
-        if (!data.guardian_id && matches?.length) {
-            return { success: false, error: 'Este tutor ya existe. Usa «Vincular tutor» para asociarlo sin duplicar ni sobrescribir sus datos.' }
-        }
-    }
-
-    // 1. Update Child Data
-    const { error: childError } = await supabase
-        .from('children')
-        .update({
-            full_name: data.full_name,
-            birth_date: data.birth_date || null,
-            birth_year: data.birth_date ? new Date(data.birth_date).getFullYear() : undefined, // Update year if date provided
-            address: data.address,
-            notes: data.notes,
-            category_id: (data.category_id && data.category_id !== "null") ? data.category_id : null,
-            position: data.position?.trim() || null,
-            preferred_foot: data.preferred_foot || null,
-            shirt_size: data.shirt_size?.trim() || null,
-            jersey_number: jerseyNumber,
-        })
-        .eq('id', childId)
-
-    if (childError) return { success: false, error: childError.message }
-
-    // 2. Update Guardian Data (if provided and guardian exists)
-    if (data.guardian_id) {
-        const { error: guardianError } = await supabase
-            .from('guardians')
-            .update({
-                full_name: data.guardian_name,
-                phone: data.guardian_phone,
-                email: data.guardian_email
-            })
-            .eq('id', data.guardian_id)
-
-        if (guardianError) return { success: false, error: guardianError.message }
-    } else if (data.guardian_name) {
-        // 3. Create New Guardian (if ID missing but name provided)
-
-        const { data: newGuardian, error: createGuardianError } = await supabase
-            .from('guardians')
-            .insert({
-                full_name: data.guardian_name,
-                phone: data.guardian_phone,
-                email: data.guardian_email
-            })
-            .select()
-            .single()
-
-        if (createGuardianError) {
-            console.error("Error creating guardian:", createGuardianError)
-            return { success: false, error: "Error al crear tutor: " + createGuardianError.message }
-        }
-
-        if (newGuardian) {
-            // Link to Child
-            const { error: linkError } = await supabase
-                .from('child_guardians')
-                .insert({
-                    child_id: childId,
-                    guardian_id: newGuardian.id,
-                    relationship: 'Tutor', // Default
-                    is_primary: true // Default for first/new link
-                })
-
-            if (linkError) {
-                console.error("Error linking guardian:", linkError)
-                return { success: false, error: "Error al vincular tutor: " + linkError.message }
-            }
-        }
-    }
-
+    const {error}=await supabase.rpc('update_player_with_guardian',{child_uuid:childId,details:{...data,jersey_number:jerseyNumber}})
+    if(error)return {success:false,error:error.message}
+    revalidatePath('/admin/crm/alumnos')
     revalidatePath(`/admin/crm/alumnos/${childId}`)
     return { success: true }
 }

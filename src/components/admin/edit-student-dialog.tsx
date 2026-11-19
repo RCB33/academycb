@@ -29,7 +29,7 @@ export function EditStudentDialog({ student, guardian, categories, onUpdate }: {
         full_name: student.full_name,
         birth_date: student.birth_date || '',
         address: student.address || '',
-        category_id: student.category_id,
+        category_id: student.category_id || '',
         position: student.position || '',
         preferred_foot: student.preferred_foot || '',
         shirt_size: student.shirt_size || '',
@@ -69,7 +69,7 @@ export function EditStudentDialog({ student, guardian, categories, onUpdate }: {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button size="sm" className="hidden lg:flex bg-yellow-500 hover:bg-yellow-600 text-black font-bold border-none shadow-md">
+                <Button size="sm" className="flex bg-yellow-500 hover:bg-yellow-600 text-black font-bold border-none shadow-md">
                     <Pencil className="mr-2 h-4 w-4" /> Editar Datos
                 </Button>
             </DialogTrigger>
@@ -120,6 +120,7 @@ export function EditStudentDialog({ student, guardian, categories, onUpdate }: {
                                     onChange={handleChange}
                                     className="flex h-10 w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 focus:bg-white transition-colors"
                                 >
+                                    <option value="">Por asignar</option>
                                     {categories.map((cat) => (
                                         <option key={cat.id} value={cat.id}>{cat.name}</option>
                                     ))}

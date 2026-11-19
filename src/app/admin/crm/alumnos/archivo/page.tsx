@@ -22,11 +22,15 @@ import { CreateStudentDialog } from "@/components/admin/create-student-dialog"
 import { archiveStudent, restoreStudent } from "@/app/actions/students"
 import { convertEnrollmentRequest, updateEnrollmentRequestStatus } from "@/app/actions/enrollment"
 import { toast } from "sonner"
+import { isAcceptedTournamentRegistration } from '@/lib/christmas-tournaments'
+import { AlertDialog,AlertDialogContent,AlertDialogHeader,AlertDialogTitle,AlertDialogDescription,AlertDialogFooter,AlertDialogCancel } from '@/components/ui/alert-dialog'
 
 export default function CRMMasterListPage() {
     const [students, setStudents] = useState<any[]>([])
     const [enrollmentRequests, setEnrollmentRequests] = useState<any[]>([])
     const [canConvertEnrollment, setCanConvertEnrollment] = useState(false)
+    const [archiveTarget,setArchiveTarget]=useState<{id:string;name:string}|null>(null)
+    const [archiving,setArchiving]=useState(false)
     const [loading, setLoading] = useState(true)
     const [search, setSearch] = useState('')
     const [selectedCategory, setSelectedCategory] = useState<string>('all')
@@ -49,7 +53,7 @@ export default function CRMMasterListPage() {
                 category:categories(name, id),
                 academy_memberships(id, status),
                 campus_enrollments(id, status),
-                tournament_players(id, status)
+                tournament_players(id, status), event_registrations(id,status)
             `).order('full_name'),
             supabase.from('enrollment_requests').select('*').order('created_at', { ascending: false }),
             supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -85,18 +89,17 @@ export default function CRMMasterListPage() {
         return matchesLifecycle && matchesSearch && matchesCategory && matchesYear && matchesBranch
     })
 
-    const handleArchive = async (id: string, name: string) => {
-        if (!confirm(`¿Archivar a ${name}? Se ocultará de los jugadores activos, pero se conservará todo su historial y podrás restaurarlo cuando vuelva.`)) return
-        
-        setLoading(true)
-        const result = await archiveStudent(id)
-        if (result.success) {
-            toast.success("Jugador archivado. Su historial se conserva.")
-            refreshData()
-        } else {
-            toast.error("Error al eliminar: " + result.error)
-            setLoading(false)
-        }
+    const handleArchive = async () => {
+        if(!archiveTarget||archiving)return
+        setArchiving(true)
+        try {
+            const result=await archiveStudent(archiveTarget.id)
+            if(!result.success)throw new Error(result.error||'No se pudo archivar')
+            toast.success('Jugador archivado. Su historial se conserva.')
+            setArchiveTarget(null)
+            await refreshData()
+        } catch(error) { toast.error(error instanceof Error?error.message:'No se pudo archivar') }
+        finally { setArchiving(false) }
     }
 
     const handleRestore = async (id: string, name: string) => {
@@ -341,7 +344,7 @@ export default function CRMMasterListPage() {
                                                             <DropdownMenuItem>Editar Datos</DropdownMenuItem>
                                                         </Link>
                                                         <DropdownMenuSeparator />
-                                                        {student.archived_at ? <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleRestore(student.id, student.full_name) }}><ArchiveRestore className="mr-2 h-4 w-4" />Restaurar jugador</DropdownMenuItem> : <DropdownMenuItem className="text-amber-700" onClick={(e) => { e.stopPropagation(); handleArchive(student.id, student.full_name) }}><ArchiveRestore className="mr-2 h-4 w-4" />Archivar jugador</DropdownMenuItem>}
+                                                        {student.archived_at ? <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleRestore(student.id, student.full_name) }}><ArchiveRestore className="mr-2 h-4 w-4" />Restaurar jugador</DropdownMenuItem> : <DropdownMenuItem className="text-amber-700" onClick={(e) => { e.stopPropagation(); setArchiveTarget({id:student.id,name:student.full_name}) }}><ArchiveRestore className="mr-2 h-4 w-4" />Archivar jugador</DropdownMenuItem>}
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
                                             </td>
@@ -353,6 +356,12 @@ export default function CRMMasterListPage() {
                     </div>
                 </CardContent>
             </Card>
+            <AlertDialog open={Boolean(archiveTarget)} onOpenChange={open=>{if(!open&&!archiving)setArchiveTarget(null)}}>
+                <AlertDialogContent>
+                    <AlertDialogHeader><AlertDialogTitle>Archivar jugador</AlertDialogTitle><AlertDialogDescription>¿Archivar a {archiveTarget?.name}? Se ocultará de los jugadores activos. Su historial se conserva y podrás restaurarlo desde «Archivados».</AlertDialogDescription></AlertDialogHeader>
+                    <AlertDialogFooter><AlertDialogCancel disabled={archiving}>Cancelar</AlertDialogCancel><Button disabled={archiving} onClick={handleArchive}>{archiving?'Archivando…':'Confirmar archivo'}</Button></AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     )
 }
@@ -361,7 +370,7 @@ function getBranchLinks(student: any) {
     const links: string[] = []
     if (student.academy_memberships?.some((item: any) => item.status !== 'cancelled')) links.push('academy')
     if (student.campus_enrollments?.some((item: any) => item.status !== 'cancelled')) links.push('campus')
-    if (student.tournament_players?.some((item: any) => item.status !== 'cancelled')) links.push('tournament')
+    if (student.tournament_players?.some((item: any) => item.status !== 'cancelled') || student.event_registrations?.some((item:{status:string})=>isAcceptedTournamentRegistration(item.status))) links.push('tournament')
     return links
 }
 
