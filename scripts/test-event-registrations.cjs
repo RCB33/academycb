@@ -24,3 +24,10 @@ assert.equal(s.safeParse({...valid,category:'S7'}).success,false)
 assert.equal(s.safeParse({...valid,birth_date:'2016-02-31'}).success,false)
 assert.equal(s.safeParse({...valid,tournaments:['champions'],owns_kit:false}).success,true)
 console.log('PASS: tournament packs, one kit per child, Champions exemption, overlap review, consents, dates and categories')
+
+for(const status of ['awaiting_payment','proof_review','confirmed']) {
+ assert.equal(moduleValue.exports.isCurrentTournamentRegistration(status,'christmas-2026','2026-12-01'),true)
+ assert.equal(moduleValue.exports.isCurrentTournamentRegistration(status,'christmas-2026','2027-01-04'),false)
+}
+for(const status of ['requested','cancelled'])assert.equal(moduleValue.exports.isAcceptedTournamentRegistration(status),false)
+assert.equal(moduleValue.exports.isCurrentTournamentRegistration('confirmed','unknown','2026-12-01'),false)

@@ -1,5 +1,7 @@
 'use client'
 
+import { isAcceptedTournamentRegistration } from '@/lib/christmas-tournaments'
+
 import { useState, useEffect, use } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from "@/components/ui/button"
@@ -88,7 +90,8 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
                 guardians:child_guardians(relationship, is_primary, guardian:guardians(*)),
                 academy_memberships(id, status, plan:membership_plans(name)),
                 campus_enrollments(id, status, campus:campuses(id, name, year)),
-                tournament_players(id, status, tournament:tournaments_internal(id, title), team:teams(id, name))
+                tournament_players(id, status, tournament:tournaments_internal(id, title), team:teams(id, name)),
+                event_registrations(id,status,campaign)
             `)
             .eq('id', childId)
             .single()
@@ -482,7 +485,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
                             <BranchLinks
                                 icon={<Trophy className="h-4 w-4 text-amber-600" />}
                                 label="Torneos"
-                                items={(student.tournament_players || []).filter((item: any) => item.status !== 'cancelled')}
+                                items={[...(student.tournament_players || []).filter((item: any) => item.status !== 'cancelled'), ...(student.event_registrations || []).filter((item:any)=>isAcceptedTournamentRegistration(item.status)).map((item:any)=>({...item,tournament:{title:'Torneos · Navidad 2026–2027'}}))]}
                                 getName={(item: any) => `${item.tournament?.title || 'Torneo'}${item.team?.name ? ` · ${item.team.name}` : ''}`}
                             />
                         </CardContent>
@@ -1010,7 +1013,7 @@ function BranchLinks({ icon, label, items, getName }: { icon: React.ReactNode, l
 function formatLinkStatus(status: string) {
     const labels: Record<string, string> = {
         active: 'Activo', paused: 'Pausado', pending_payment: 'Pendiente', reserved: 'Reservado',
-        confirmed: 'Confirmado', selected: 'Convocado',
+        confirmed: 'Confirmado', selected: 'Convocado', awaiting_payment: 'Pendiente de transferencia', proof_review: 'Justificante en revisión',
     }
     return labels[status] || status
 }

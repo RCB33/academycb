@@ -46,6 +46,7 @@ create policy payments_admin on payments for all using(public.is_admin());
 \ir ../supabase/migrations/20261119193027_manual_academy_proration.sql
 \ir ../supabase/migrations/20261119193029_academy_secondary_group_operations.sql
 \ir ../supabase/migrations/20261119193030_manual_assignment_notifications.sql
+\ir ../supabase/migrations/20261119214732_admin_group_rosters.sql
 create policy children_admin on children for all using(public.is_admin());
 create policy children_coach on children for select using(public.is_coach_of(id));
 create policy children_family on children for select using(public.is_guardian_of(id));
@@ -77,6 +78,13 @@ begin
   if public.assign_family_plan_v2(req,c,p,v,make_date(2027,4,d),1,0,'',true,50,g,sunday)<>m then raise exception 'Idempotency'; end if;
   if (select count(*) from registration_email_outbox where source_id=m)<>1 then raise exception 'Missing/duplicate manual email'; end if;
  end loop;
+ if (select count(*) from public.admin_group_player_links() where team_id=sunday)<>8 then raise exception 'Secondary admin roster incomplete';end if;
+ update children set archived_at=now() where id=c;
+ if exists(select 1 from public.admin_group_player_links() where child_id=c) then raise exception 'Archived child in admin roster';end if;
+ update children set archived_at=null where id=c;
+ update academy_memberships set status='cancelled' where id=m;
+ if exists(select 1 from public.admin_group_player_links() where child_id=c) then raise exception 'Cancelled child in roster via legacy team_id';end if;
+ update academy_memberships set status='pending_payment' where id=m;
  if not exists(select 1 from calendar_events where team_id=sunday) then raise exception 'Sunday calendar empty'; end if;
  if exists(select 1 from calendar_events where start_date>'2027-06-01') then raise exception 'Sessions after season'; end if;
  insert into children(full_name) values('Other player') returning id into outsider;

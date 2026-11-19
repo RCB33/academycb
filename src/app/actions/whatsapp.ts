@@ -3,6 +3,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { requireAdmin } from '@/lib/auth'
+import { adminGroupPlayerLinks } from '@/lib/admin-group-roster'
+import { adminReadAll } from '@/lib/admin-read-all'
 import { renderCommunicationEmail } from '@/lib/communication-email'
 
 // ─── SETTINGS ───
@@ -132,6 +134,7 @@ export async function getRecipientsByCategory(categoryId: string): Promise<Recip
             child_guardians(guardian:guardians(id, user_id, full_name, phone, email))
         `)
         .eq('category_id', categoryId)
+        .is('archived_at', null)
 
     return extractRecipients(children || [])
 }
@@ -139,18 +142,13 @@ export async function getRecipientsByCategory(categoryId: string): Promise<Recip
 export async function getRecipientsByTeam(teamId: string): Promise<Recipient[]> {
     const { supabase } = await requireAdmin()
 
-    // Children have a direct team_id column
-    const { data: children } = await supabase
-        .from('children')
-        .select(`
-            id, full_name,
-            category:categories(name),
-            team:teams(name),
-            child_guardians(guardian:guardians(id, user_id, full_name, phone, email))
-        `)
-        .eq('team_id', teamId)
-
-    return extractRecipients(children || [])
+    const links=await adminGroupPlayerLinks(supabase)
+    const ids=new Set(links.filter(link=>link.team_id===teamId).map(link=>link.child_id))
+    if(!ids.size) return []
+    const {data:children}=await adminReadAll((f,t)=>supabase.from('children')
+        .select('id,full_name,category:categories(name),team:teams(name),child_guardians(guardian:guardians(id,user_id,full_name,phone,email))')
+        .is('archived_at',null).order('id').range(f,t))
+    return extractRecipients(children.filter(child=>ids.has(child.id)))
 }
 
 export async function getRecipientsAllGuardians(): Promise<Recipient[]> {

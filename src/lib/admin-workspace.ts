@@ -1,4 +1,5 @@
 import "server-only";
+import { isCurrentTournamentRegistration } from "@/lib/christmas-tournaments";
 import { requireAdmin } from "@/lib/auth";
 import { adminReadAll } from "@/lib/admin-read-all";
 import {
@@ -84,7 +85,7 @@ export async function getAdminWorkspace(
       supabase
         .from("event_registrations")
         .select(
-          "id,child_id,status,details,quoted_amount,approved_amount,created_at",
+          "id,child_id,campaign,status,details,quoted_amount,approved_amount,created_at",
         )
         .order("id")
         .range(f, t),
@@ -137,6 +138,7 @@ export async function getAdminWorkspace(
       isCurrentPlace(r.status, one(r.tournament)?.end_date || null, today),
     )
     .forEach((r) => add(r.child_id, "tournament"));
+  events.data.filter(r=>isCurrentTournamentRegistration(r.status,r.campaign,today)).forEach(r=>add(r.child_id,"tournament"));
   const requests: WorkspaceRequest[] = [
     ...enrollments.data.map((r) => ({
       id: r.id,

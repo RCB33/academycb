@@ -3,6 +3,8 @@
 import { requireAdmin } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
+import { adminGroupPlayerLinks } from '@/lib/admin-group-roster'
+import { adminReadAll } from '@/lib/admin-read-all'
 
 const createClient = async () => (await requireAdmin()).supabase
 
@@ -32,9 +34,9 @@ export async function getTeams() {
         console.error('Error fetching teams:', error)
         return []
     }
-    const {data:additional,error:assignmentError}=await supabase.from('academy_group_assignments').select('team_id,child:children(id,full_name,birth_year),membership:academy_memberships!inner(status,end_date)').in('membership.status',['active','pending_payment']).gte('membership.end_date',new Date().toISOString().slice(0,10))
-    if(assignmentError) throw new Error('No se pudieron consultar todas las vinculaciones de grupos.')
-    return (data||[]).map(team=>({...team,players:Array.from(new Map([...(team.players||[]),...(additional||[]).filter(a=>a.team_id===team.id).flatMap(a=>Array.isArray(a.child)?a.child:[a.child])].filter(Boolean).map(c=>[c.id,c])).values())}))
+    const links=await adminGroupPlayerLinks(supabase)
+    const {data:players}=await adminReadAll((f,t)=>supabase.from('children').select('id,full_name,birth_year,category_id').is('archived_at',null).order('id').range(f,t))
+    return (data||[]).map(team=>({...team,players:players.filter(c=>links.some(link=>link.team_id===team.id&&link.child_id===c.id))}))
 }
 export async function getTeamById(id: string) {
     const supabase = await createClient()
@@ -53,7 +55,10 @@ export async function getTeamById(id: string) {
         console.error('Error fetching team:', error)
         return null
     }
-    return data
+    const links=await adminGroupPlayerLinks(supabase)
+    const ids=links.filter(link=>link.team_id===id).map(link=>link.child_id)
+    const {data:players}=await adminReadAll((f,t)=>supabase.from('children').select('id,full_name,birth_year,category_id').is('archived_at',null).order('id').range(f,t))
+    return {...data,players:players.filter(player=>ids.includes(player.id))}
 }
 
 export async function createTeam(formData: z.infer<typeof TeamSchema>) {

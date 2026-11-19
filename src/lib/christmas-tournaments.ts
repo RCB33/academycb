@@ -42,3 +42,11 @@ export function tournamentQuote(ids: readonly string[], ownsKit: boolean) {
   const kit = ids.some(id => id !== 'champions') && !ownsKit ? 55 : 0
   return { tournaments, kit, total: tournaments + kit, reviewCompatibility: ids.includes('231') && ids.includes('champions') }
 }
+
+// Accepted places are linked even while transfer/proof is pending; a request alone is not a place.
+export function isAcceptedTournamentRegistration(status: string) {
+  return ['awaiting_payment','proof_review','confirmed'].includes(status)
+}
+export function isCurrentTournamentRegistration(status: string, campaign: string, today: string) {
+  return isAcceptedTournamentRegistration(status) && campaign === 'christmas-2026' && today <= '2027-01-03'
+}

@@ -22,6 +22,7 @@ import { useRouter } from "next/navigation"
 export function CreateStudentDialog({ onUpdate }: { onUpdate?: () => void }) {
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
+    const [requestId,setRequestId] = useState('')
     const router = useRouter()
     const supabase = createClient()
 
@@ -52,64 +53,17 @@ export function CreateStudentDialog({ onUpdate }: { onUpdate?: () => void }) {
             const jerseyNumber = formData.jersey_number ? Number(formData.jersey_number) : null
             if (!formData.guardian_name.trim()||!formData.guardian_email.trim()||!/^\+?[0-9\s()-]{9,20}$/.test(formData.guardian_phone)) throw new Error('Completa el nombre, correo y teléfono del tutor.')
             if (!fullName) throw new Error('Introduce el nombre completo del alumno.')
-            if (!Number.isInteger(birthYear)) throw new Error('Introduce una fecha de nacimiento válida.')
+            if (!Number.isInteger(birthYear)||formData.birth_date>new Date().toLocaleDateString('en-CA',{timeZone:'Europe/Madrid'})) throw new Error('Introduce una fecha de nacimiento válida.')
             if (jerseyNumber !== null && (!Number.isInteger(jerseyNumber) || jerseyNumber < 1 || jerseyNumber > 99)) {
                 throw new Error('El dorsal debe estar entre 1 y 99.')
             }
 
-            const { data: child, error } = await supabase.from('children').insert({
-                full_name: fullName,
-                birth_date: formData.birth_date,
-                birth_year: birthYear,
-                position: formData.position || null,
-                preferred_foot: formData.preferred_foot || null,
-                shirt_size: formData.shirt_size.trim() || null,
-                jersey_number: jerseyNumber,
-            }).select('id').single()
-            if (error) throw new Error(error.message)
-
-            const guardianEmail = formData.guardian_email.trim().toLowerCase()
-            if (guardianEmail && child) {
-                const { data: matchingGuardians, error: guardianLookupError } = await supabase
-                    .from('guardians')
-                    .select('id')
-                    .ilike('email', guardianEmail.replace(/[\\%_]/g, '\\$&'))
-                    .limit(2)
-                if (guardianLookupError) {
-                    await supabase.from('children').delete().eq('id', child.id)
-                    throw new Error(`No se ha podido buscar el tutor: ${guardianLookupError.message}`)
-                }
-                if (matchingGuardians && matchingGuardians.length > 1) {
-                    await supabase.from('children').delete().eq('id', child.id)
-                    throw new Error('Hay varios tutores con este correo. Revisa los duplicados antes de crear la ficha.')
-                }
-                const existingGuardian = matchingGuardians?.[0]
-
-                const isNewGuardian = !existingGuardian
-                const { data: createdGuardian, error: guardianCreateError } = existingGuardian
-                    ? { data: existingGuardian, error: null }
-                    : await supabase.from('guardians').insert({
-                        full_name: formData.guardian_name.trim(),
-                        email: guardianEmail,
-                        phone: formData.guardian_phone.trim(),
-                    }).select('id').single()
-                if (guardianCreateError || !createdGuardian) {
-                    await supabase.from('children').delete().eq('id', child.id)
-                    throw new Error(`No se ha podido crear el tutor: ${guardianCreateError?.message || 'sin respuesta'}`)
-                }
-
-                const { error: linkError } = await supabase.from('child_guardians').insert({
-                    child_id: child.id,
-                    guardian_id: createdGuardian.id,
-                    relationship: 'Tutor',
-                    is_primary: true,
-                })
-                if (linkError) {
-                    await supabase.from('children').delete().eq('id', child.id)
-                    if (isNewGuardian) await supabase.from('guardians').delete().eq('id', createdGuardian.id)
-                    throw new Error(`No se ha podido vincular el tutor: ${linkError.message}`)
-                }
-            }
+            const {data:childId,error}=await supabase.rpc('create_player_with_guardian',{
+                request_id:requestId,
+                details:{...formData,full_name:fullName,guardian_email:formData.guardian_email.trim().toLowerCase()},
+            })
+            if(error) throw new Error(error.message)
+            const child={id:childId}
 
             toast.success("Jugador y tutor vinculados. Ya puedes elegir su actividad desde la ficha.")
             setOpen(false)
@@ -137,7 +91,7 @@ export function CreateStudentDialog({ onUpdate }: { onUpdate?: () => void }) {
     }
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={value=>{if(loading)return;if(value&&!open)setRequestId(crypto.randomUUID());setOpen(value)}}>
             <DialogTrigger asChild>
                 <Button>
                     <Plus className="mr-2 h-4 w-4" /> Nuevo jugador
