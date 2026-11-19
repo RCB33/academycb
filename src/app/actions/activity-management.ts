@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { requireAdmin } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { onboardAcceptedFamily } from '@/lib/enrollment-onboarding'
 import { deliverRegistrationEmails } from '@/lib/registration-email'
 
 export async function acceptCampusRequest(id: string, assignment?: {campusId:string;amount:number}) {
@@ -15,9 +16,11 @@ export async function acceptCampusRequest(id: string, assignment?: {campusId:str
     ? await supabase.rpc('assign_and_accept_campus_request',{request_uuid:id,selected_campus:assignment.campusId,validated_amount:assignment.amount})
     : await supabase.rpc('accept_campus_request', { request_uuid: id })
   if (error) return { error: error.message }
+  const [{data:enrollment},{data:request}]=await Promise.all([supabase.from('campus_enrollments').select('child_id').eq('id',data).single(),supabase.from('enrollment_requests').select('email').eq('id',id).single()])
+  const access=enrollment&&request?await onboardAcceptedFamily(enrollment.child_id,request.email):{error:'Revisa el acceso familiar.'}
   await deliverRegistrationEmails('enrollment', id)
   for (const path of ['/admin/campus', '/admin/campus/solicitudes', '/admin/actividades', '/admin/leads', '/admin/crm/alumnos', '/admin/finanzas']) revalidatePath(path)
-  return { success: true, enrollmentId: data as string }
+  return { success: true, enrollmentId: data as string,notice:access.error||'Plaza aceptada. Se ha solicitado el envío del correo; el pago sigue pendiente.' }
 }
 
 export async function saveTournamentOperations(form: FormData) {

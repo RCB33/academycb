@@ -7,11 +7,9 @@ import { redirect } from 'next/navigation'
 import { PortalPageHeader } from '@/components/portal/portal-page-header'
 import { receiptBalance } from '@/lib/receipt-balance'
 import { FamilyPlanSummary, type FamilyMembership, type FamilyPayment } from '@/components/family-plan-summary'
-import { PayReceiptButton } from './pay-button'
 import { stripeCheckoutMode } from '@/lib/stripe-availability'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { ConfirmationRefresh } from '@/app/admin/stripe/confirmation-refresh'
-import { AcademyOption } from './academy-option'
 import { CancelCheckout } from './cancel-checkout'
 import Link from 'next/link'
 import { billingLabels, billingSummary, type BillingRequest } from '@/lib/billing-request'
@@ -39,7 +37,6 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
     const childIds = [...new Set(guardians?.flatMap(g => g.child_guardians?.map((cg: any) => cg.child_id) || []) || [])]
     const { data: memberships } = childIds.length ? await supabase.from('academy_memberships').select('id,child_id,plan_snapshot,plan:membership_plans(name,is_active,full_payment_enabled,full_payment_price,monthly_payment_enabled,monthly_payment_price,duration_months,enrollment_fee)').in('child_id', childIds).eq('status','active') : { data: [] }
     const { data: contracts } = await supabase.from('academy_checkout_contracts').select('id,membership_id,state,mode,choice,months,unit_cents,fee_cents,total_cents,billing_status,academy_contract_collections(id,amount_cents)').eq('owner_id',user.id).eq('mode',checkoutMode || 'test').not('state','in','(expired,cancelled)')
-    const recurringEnabled = checkoutMode === 'test' || process.env.STRIPE_RECURRING_PAYMENTS_ENABLED === 'true'
     const returnedContract = contracts?.find(c=>c.id===params.contract)
     const [familyChildren, familyMemberships] = childIds.length ? await Promise.all([
         supabase.from('children').select('id,full_name').in('id',childIds),
@@ -144,11 +141,9 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
                     <p className="text-sm">{translate("Cobros confirmados: ")}{translate(contract.academy_contract_collections?.length || 0)} {translate(" de ")}{translate(contract.choice==='monthly' ? contract.months : 1)}{translate(".")}</p>
                     {translate(contract.billing_status==='attention' && <p role="alert" className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{translate("Hay una cuota pendiente o una autorización bancaria por completar. Contacta con Academy para revisar el pago. No contrates otro plan.")}</p>)}
                     {translate(contract.billing_status==='ended' && <p className="text-sm">{translate("La programación de cobros ha finalizado.")}{translate(contract.state!=='completed' ? ' Quedan importes por revisar con Academy.' : '')}</p>)}
-                    {translate(['creating','open'].includes(contract.state) && <AcademyOption membershipId={m.id} choice={contract.choice} amount={Number(contract.unit_cents)/100} fee={Number(contract.fee_cents)/100} months={contract.months} test={checkoutMode==='test'} />)}
                     {translate(contract.state==='open' && <CancelCheckout kind="academy" id={contract.id} />)}
                 </section>
-                if(m.plan_snapshot || !plan?.is_active || (!plan.full_payment_enabled && !(recurringEnabled && plan.monthly_payment_enabled)) || academyPayments.some(p=>p.ref_id===m.id && (['paid','refunded'].includes(p.status) || receiptBalance(p).hasAllocations))) return null
-                return <section key={m.id} className="space-y-4 rounded-2xl border bg-white p-5"><h2 className="text-xl font-bold text-navy">{translate(plan.name)} {translate(" · Elige cómo pagar")}</h2><div className="grid gap-4 sm:grid-cols-2">{translate(plan.full_payment_enabled && <AcademyOption membershipId={m.id} choice="full" amount={Number(plan.full_payment_price)} fee={Number(plan.enrollment_fee || 0)} months={plan.duration_months} test={checkoutMode==='test'} />)}{translate(recurringEnabled && plan.monthly_payment_enabled && <AcademyOption membershipId={m.id} choice="monthly" amount={Number(plan.monthly_payment_price)} fee={Number(plan.enrollment_fee || 0)} months={plan.duration_months} test={checkoutMode==='test'} />)}</div></section>
+                return null
             }))}
 
             <div className="space-y-4">
@@ -203,15 +198,9 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
                                             <a href="/portal/tienda" className="mt-3 flex w-full items-center justify-center rounded-md bg-gold/10 py-2 text-xs font-bold text-navy transition-colors hover:bg-gold/20">
                                                 {translate("Volver a Tienda")}</a>
                                         ))}
-                                        {translate(checkoutMode && !billingRequests?.some(r=>r.mode===checkoutMode&&['processing','active','cancelling'].includes(r.state)&&r.billing_request_items.some((i:{payment_id:string})=>i.payment_id===tx.paymentId)) && !tx.balance?.hasAllocations && tx.paymentId && !contracts?.some(c=>c.membership_id===tx.membershipId) && !(memberships || []).some((m:any)=>m.id===tx.membershipId && !m.plan_snapshot && m.plan?.is_active && (m.plan.full_payment_enabled || (recurringEnabled && m.plan.monthly_payment_enabled)) && !academyPayments.some(p=>p.ref_id===m.id && (['paid','refunded'].includes(p.status) || receiptBalance(p).hasAllocations))) && ['pending', 'failed'].includes(tx.status) && (
-                                            attempts?.some(a => a.payment_id === tx.paymentId && a.mode === checkoutMode && a.state === 'paid')
-                                                ? <p className="mt-3 text-sm text-green-700">{translate(checkoutMode === 'test' ? 'Prueba completada' : 'Pago confirmado')}</p>
-                                                : <PayReceiptButton paymentId={tx.paymentId} test={checkoutMode === 'test'} />
-                                        ))}
-                                        {translate(!checkoutMode && !tx.isStore && ['pending', 'overdue', 'failed'].includes(tx.status) && (
-                                            <div className="mt-3 flex w-full items-center justify-center rounded-md bg-amber-50 py-2 text-xs font-bold text-amber-700">
-                                                {translate("Pendiente de gestión")}</div>
-                                        ))}
+                                        {tx.paymentId && ['pending', 'overdue', 'failed'].includes(tx.status) && Number(tx.balance?.remaining ?? tx.amount) > 0 && !billingRequests?.some(r => ['processing', 'active', 'cancelling'].includes(r.state) && r.billing_request_items.some((i: { payment_id: string }) => i.payment_id === tx.paymentId)) && !contracts?.some(c => c.membership_id === tx.membershipId && ['creating', 'open', 'active'].includes(c.state)) && (
+                                            <p className="mt-3 text-sm text-amber-800">Pago por transferencia. Consulta las instrucciones de tu inscripción.</p>
+                                        )}
                                         {translate(attempts?.filter(a=>a.payment_id===tx.paymentId && a.mode===checkoutMode && a.state==='open').map(a=><CancelCheckout key={a.id} kind="receipt" id={a.id} />))}
                                     </div>
                                 </div>

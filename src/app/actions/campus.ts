@@ -23,6 +23,7 @@ const CampusSchema = z.object({
   .refine(c => c.status !== 'published' || c.capacity_unlimited || c.capacity > 0, { message: 'Indica las plazas o selecciona sin límite antes de publicar el campus' })
 
 export type Campus = {
+    public_program?: object | null
     id: string
     name: string
     year: number

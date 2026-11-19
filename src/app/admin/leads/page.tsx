@@ -68,12 +68,13 @@ export default function AdminLeadsPage() {
     }
 
     async function handleEnrollmentConversion(id: string) {
-        const toastId = toast.loading('Creando ficha del jugador…')
+        if(!confirm('¿Has revisado grupo, horario, fecha e importe? Se aceptará la plaza y, para Academia, se crearán los recibos pendientes. No se realiza ningún cobro.')) return
+        const toastId = toast.loading('Aceptando plaza…')
         try {
             const result = await convertEnrollmentRequest(id)
             if (!result.success) toast.error(result.error || 'No se pudo crear la ficha')
             else {
-                toast.success('Ficha de alumno y tutor creada')
+                toast.success(('notice' in result&&result.notice)||'Plaza tramitada y ficha vinculada')
                 fetchLeads()
             }
         } catch {
@@ -108,7 +109,7 @@ export default function AdminLeadsPage() {
                                 <a href={`tel:${request.phone}`} className="flex items-center gap-2 font-medium hover:underline"><Phone className="h-4 w-4 text-green-600" />{request.phone}</a>
                                 {request.privacy_accepted_at && request.terms_accepted_at ? <p className="rounded-lg bg-green-50 px-3 py-2 text-xs font-medium text-green-800">Privacidad y condiciones aceptadas · v{request.terms_version || request.privacy_policy_version}</p> : <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">Solicitud anterior sin evidencia de aceptación registrada.</p>}
                                 {request.notes && <p className="whitespace-pre-wrap rounded-lg bg-slate-50 p-3 text-slate-600">{request.notes}</p>}
-                                <div className="flex flex-wrap gap-2 border-t pt-4"><Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => updateEnrollmentStatus(request.id, 'contacted')}>Contactado</Button><Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => updateEnrollmentStatus(request.id, 'interested')}>En trámite</Button>{canConvert && request.status !== 'enrolled' && <Button size="sm" className="flex-1 bg-gold text-xs font-bold text-navy hover:bg-gold/80" onClick={() => handleEnrollmentConversion(request.id)}>Aceptar y crear ficha</Button>}<Button size="sm" variant="ghost" className="text-xs text-red-500" onClick={() => updateEnrollmentStatus(request.id, 'lost')}>Descartar</Button></div>
+                                <div className="flex flex-wrap gap-2 border-t pt-4"><Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => updateEnrollmentStatus(request.id, 'contacted')}>Contactado</Button><Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => updateEnrollmentStatus(request.id, 'interested')}>En trámite</Button>{canConvert && request.status !== 'enrolled' && <Button size="sm" className="flex-1 bg-gold text-xs font-bold text-navy hover:bg-gold/80" onClick={() => handleEnrollmentConversion(request.id)}>{request.academy_details?'Aceptar plaza y crear recibos':'Aceptar y vincular ficha'}</Button>}<Button size="sm" variant="ghost" className="text-xs text-red-500" onClick={() => updateEnrollmentStatus(request.id, 'lost')}>Descartar</Button></div>
                             </CardContent>
                         </Card>
                     ))}

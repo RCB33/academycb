@@ -1,12 +1,13 @@
 'use server'
 
 import { z } from 'zod'
+import { getTournamentOffer } from '@/lib/offering-server'
+import { offerTournamentQuote, tournamentProgramSchema } from '@/lib/offering'
 import { revalidatePath } from 'next/cache'
 import { requireAdmin, requireUser } from '@/lib/auth'
-import { stripeCheckoutMode } from '@/lib/stripe-availability'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { deliverRegistrationEmails } from '@/lib/registration-email'
-import { tournamentRegistrationSchema, tournamentQuote, tournamentIds } from '@/lib/christmas-tournaments'
+import { tournamentRegistrationSchemaFor, tournamentQuote, tournamentIds } from '@/lib/christmas-tournaments'
 
 async function verifiedUser() {
   const { user, supabase } = await requireUser()
@@ -36,15 +37,17 @@ export async function getEventFamily() {
   const { data: registrations, error: registrationError } = await db.from('event_registrations').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
   if (registrationError) throw new Error('Las inscripciones todavía no están disponibles. Inténtalo más tarde.')
   const { data: bank } = await db.from('event_campaign_settings').select('bank_holder,iban').eq('id', 'christmas-2026').single()
-  const checkoutMode = await stripeCheckoutMode()
+  const checkoutMode = null // Campus and tournaments are paid by bank transfer.
   const { data: checkoutAttempts } = await db.from('event_checkout_attempts').select('id,registration_id,mode,state').eq('owner_id',user.id).order('created_at',{ascending:false}).limit(100)
-  return { guardian, children, registrations: registrations || [], email: user.email, bank, checkoutMode, checkoutAttempts: checkoutAttempts || [] }
+  return { catalog:await getTournamentOffer(), guardian, children, registrations: registrations || [], email: user.email, bank, checkoutMode, checkoutAttempts: checkoutAttempts || [] }
 }
 
 export async function submitEventRegistration(input: unknown) {
   try {
     const { user, supabase } = await verifiedUser()
-    const parsed = tournamentRegistrationSchema.safeParse(input)
+    const catalog=await getTournamentOffer()
+    if(!input||typeof input!=='object'||!('offer_version' in input)||input.offer_version!==catalog.version) return {error:'Los torneos o precios han cambiado. Recarga para revisar tu selección.'}
+    const parsed = tournamentRegistrationSchemaFor(catalog.events).safeParse(input)
     if (!parsed.success) return { error: parsed.error.issues[0].message }
     if (parsed.data.child_id) {
       const { data: linked } = await supabase.rpc('is_guardian_of', { child_uuid: parsed.data.child_id })
@@ -54,8 +57,8 @@ export async function submitEventRegistration(input: unknown) {
       parsed.data.child_name = child.full_name
       if (child.birth_date) parsed.data.birth_date = child.birth_date
     }
-    const quote = tournamentQuote(parsed.data.tournaments, parsed.data.owns_kit)
-    const { data, error } = await createAdminClient().rpc('submit_event_registration', { actor: user.id, payload: parsed.data, quote: quote.total })
+    const quote = offerTournamentQuote(parsed.data.tournaments, parsed.data.owns_kit,catalog)
+    const { data, error } = await createAdminClient().rpc('submit_event_registration', { actor: user.id, payload: {...parsed.data,offer_snapshot:catalog}, quote: quote.total })
     if (error) return { error: error.message }
     await deliverRegistrationEmails('event', data as string)
     revalidatePath('/admin/torneos/inscripciones')
@@ -114,7 +117,8 @@ export async function reviewEventRegistration(form: FormData) {
     const db = createAdminClient()
     const { data: registration } = await db.from('event_registrations').select('details').eq('id', id).single()
     if (!registration) throw new Error('Solicitud no encontrada.')
-    const amount = operation === 'approve' ? tournamentQuote(selections, registration.details.owns_kit === true).total : null
+    const snapshot=tournamentProgramSchema.safeParse(registration.details.offer_snapshot)
+    const amount = operation === 'approve' ? (snapshot.success?offerTournamentQuote(selections,registration.details.owns_kit===true,snapshot.data):tournamentQuote(selections,registration.details.owns_kit===true)).total : null
     const deadline = operation === 'approve' ? z.string().regex(/^\d{4}-\d{2}-\d{2}$/).parse(form.get('deadline')) : null
     const { error } = await db.rpc('review_event_registration', { registration: id, actor: user.id, operation, selections, amount, deadline, note })
     if (error) throw new Error(error.message)

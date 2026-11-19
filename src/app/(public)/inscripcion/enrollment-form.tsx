@@ -1,4 +1,6 @@
 'use client'
+import { AcademySelection } from './academy-selection'
+import type { AcademyOffer } from '@/lib/offering'
 import { useT } from '@/lib/i18n/client'
 
 
@@ -20,6 +22,7 @@ const serviceLabels: Record<EnrollmentService, string> = {
 }
 
 export default function EnrollmentForm({
+    academyOffer,
     campuses,
     tournaments,
     initialService,
@@ -27,6 +30,7 @@ export default function EnrollmentForm({
     familyPlayers = [],
     guardian,
 }: {
+    academyOffer: AcademyOffer
     campuses: EnrollmentActivity[]
     tournaments: EnrollmentActivity[]
     initialService: EnrollmentService
@@ -49,7 +53,7 @@ export default function EnrollmentForm({
         const data = Object.fromEntries(formData)
         const campusPreferences = players.filter(id => formData.get(`player_${id}_service`) === 'campus').map(id => `${formData.get(`player_${id}_child_name`)}: ${formData.get(`player_${id}_campus_period`) || 'Periodo por confirmar'} · ${formData.get(`player_${id}_campus_role`) || 'Modalidad por confirmar'}`)
         if (campusPreferences.length) data.notes = [data.notes, ...campusPreferences].filter(Boolean).join('\n')
-        const children = players.map((id) => Object.fromEntries(['service', 'activity_id', 'child_name', 'birth_date', 'linked_child_id'].map((key) => [key, formData.get(`player_${id}_${key}`) || ''])))
+        const children = players.map((id) => Object.fromEntries(['service', 'activity_id', 'child_name', 'birth_date', 'linked_child_id', 'plan_id', 'group_id', 'second_group_id', 'start_date', 'plus', 'offer_version', 'payment_choice'].map((key) => [key, formData.get(`player_${id}_${key}`) || ''])))
 
         try {
             const response = await fetch('/api/enrollment', {
@@ -77,7 +81,7 @@ export default function EnrollmentForm({
                 <p className="text-sm text-slate-600">{translate("Añade a tus hijos y elige una actividad para cada uno. Solo tendrás que rellenar una vez los datos del tutor.")}</p>
                 {translate(players.map((id, index) => <fieldset key={id} disabled={pending} className="min-w-0 space-y-5 rounded-2xl border border-slate-200 p-4 sm:p-6">
                     <legend className="px-2 font-bold text-navy">{translate("Jugador ")}{translate(index + 1)}</legend>
-                    <PlayerFields prefix={`player_${id}_`} campuses={campuses} tournaments={tournaments} initialService={initialService} initialActivityId={initialActivityId} familyPlayers={familyPlayers} />
+                    <PlayerFields academyOffer={academyOffer} prefix={`player_${id}_`} campuses={campuses} tournaments={tournaments} initialService={initialService} initialActivityId={initialActivityId} familyPlayers={familyPlayers} />
                     {translate(players.length > 1 && <Button type="button" variant="outline" className="min-h-11" onClick={() => setPlayers(players.filter((value) => value !== id))}>{translate("Quitar jugador ")}{translate(index + 1)}</Button>)}
                 </fieldset>))}
                 <Button type="button" variant="outline" disabled={pending || players.length >= 6} className="min-h-12 w-full border-gold text-navy" onClick={() => { setPlayers([...players, nextPlayer]); setNextPlayer(nextPlayer + 1) }}>{translate("Añadir otro hijo/a")}</Button>
@@ -110,7 +114,7 @@ function Field({ label, ...props }: ComponentProps<typeof Input> & { label: stri
     return <div><label htmlFor={id} className="text-sm font-bold text-slate-700">{translate(label)}</label><Input id={id} {...props} className="mt-2 h-11 border-slate-300" /></div>
 }
 
-function PlayerFields({ prefix, campuses, tournaments, initialService, initialActivityId, familyPlayers }: { prefix: string; campuses: EnrollmentActivity[]; tournaments: EnrollmentActivity[]; initialService: EnrollmentService; initialActivityId: string; familyPlayers: FamilyPlayer[] }) {
+function PlayerFields({ academyOffer, prefix, campuses, tournaments, initialService, initialActivityId, familyPlayers }: { academyOffer: AcademyOffer; prefix: string; campuses: EnrollmentActivity[]; tournaments: EnrollmentActivity[]; initialService: EnrollmentService; initialActivityId: string; familyPlayers: FamilyPlayer[] }) {
     const translate = useT()
 
     const [service, setService] = useState<EnrollmentService>(initialService)
@@ -123,7 +127,7 @@ function PlayerFields({ prefix, campuses, tournaments, initialService, initialAc
                 <p className="text-xs font-bold tracking-[0.18em] text-gold uppercase">{translate("Tu inscripción")}</p>
                 <h2 className="mt-1 font-heading text-3xl font-black uppercase text-navy">{translate("Actividad")}</h2>
                 <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                    {translate((Object.keys(serviceLabels) as EnrollmentService[]).map((item) => <label key={item} className={`cursor-pointer rounded-xl border p-4 transition ${service === item ? 'border-gold bg-gold/10 ring-1 ring-gold shadow-sm' : 'border-slate-200 hover:border-gold/60 hover:bg-slate-50'}`}><input className="sr-only" type="radio" name={`${prefix}service`} value={item} checked={service === item} onChange={() => { setService(item); setActivityId('') }} /><span className="block font-bold text-navy">{translate(serviceLabels[item])}</span><span className="mt-1 block text-xs text-slate-500">{translate(item === 'academy' ? 'Temporada deportiva' : item === 'campus' ? 'Edición intensiva' : 'Competición o evento')}</span></label>))}
+                    {translate((Object.keys(serviceLabels) as EnrollmentService[]).map((item) => <label key={item} className={`cursor-pointer rounded-xl border p-4 transition ${service === item ? 'border-gold bg-gold/10 ring-1 ring-gold shadow-sm' : 'border-slate-200 hover:border-gold/60 hover:bg-slate-50'}`}><input className="sr-only" type="radio" name={`${prefix}service`} value={item} checked={service === item} onChange={() => { if(item==='campus'){window.location.assign('/campus/inscripcion');return} if(item==='tournament'){window.location.assign('/torneos/inscripcion');return} setService(item); setActivityId('') }} /><span className="block font-bold text-navy">{translate(serviceLabels[item])}</span><span className="mt-1 block text-xs text-slate-500">{translate(item === 'academy' ? 'Temporada deportiva' : item === 'campus' ? 'Edición intensiva' : 'Competición o evento')}</span></label>))}
                 </div>
                 {translate(service === 'campus' && <div className="mt-5 grid gap-4 sm:grid-cols-2">
                     <div><label htmlFor={`${prefix}campus_period`} className="text-sm font-bold text-slate-700">{translate("Semana o pack solicitado")}</label><input id={`${prefix}campus_period`} name={`${prefix}campus_period`} required maxLength={100} placeholder={translate("Ej. Navidad: 22–24 diciembre o pack completo")} className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm" /></div>
@@ -137,7 +141,7 @@ function PlayerFields({ prefix, campuses, tournaments, initialService, initialAc
                 {translate(familyPlayers.length > 0 && <label className="mt-4 block text-sm font-bold">{translate("Usar una ficha existente")}<select name={`${prefix}linked_child_id`} value={selectedChild} onChange={e => setSelectedChild(e.target.value)} className="mt-2 block w-full rounded-lg border p-3"><option value="">{translate("Nuevo jugador")}</option>{translate(familyPlayers.map(c => <option key={c.id} value={c.id}>{translate(c.full_name)}</option>))}</select></label>)}
                 <div key={selectedChild} className="mt-4 grid gap-5 sm:grid-cols-2"><Field label={translate("Nombre completo del jugador")} name={`${prefix}child_name`} required autoComplete="name" defaultValue={child?.full_name || ''} readOnly={!!child} /><Field label={translate("Fecha de nacimiento")} name={`${prefix}birth_date`} type="date" required defaultValue={child?.birth_date || ''} /></div>
             </section>
-
+            {service === 'academy' && <AcademySelection prefix={prefix} offer={academyOffer} />}
 
     </div>
 }

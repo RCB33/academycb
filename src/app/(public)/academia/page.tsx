@@ -1,3 +1,4 @@
+import { getAcademyOffer } from '@/lib/offering-server'
 
 import { getT } from '@/lib/i18n/server'
 import { translateMetadata } from '@/lib/i18n/translate'
@@ -14,19 +15,6 @@ export async function generateMetadata() {
     description: 'Tecnificación y Metodología 360º para el desarrollo integral del futbolista.'
 }, translate)
 }
-
-const plans = [
-    { title: 'Una sesión semanal', price: '75 €', suffix: '/ mes', detail: 'Una sesión de entrenamiento por semana.' },
-    { title: 'Dos sesiones semanales', price: '140 €', suffix: '/ mes', detail: 'Una sesión de lunes a viernes y otra el domingo.', featured: true },
-    { title: 'Matrícula de inscripción', price: '30 €', suffix: ' pago único', detail: 'Matrícula única al formalizar la inscripción para nuevos jugadores.' },
-]
-
-const weeklySchedule = [
-    { day: 'Martes', slots: ['17:30 - 19:00 · Benjamines', '19:00 - 20:30 · Infantiles'] },
-    { day: 'Miércoles', slots: ['17:30 - 19:00 · Benjamines', '19:00 - 20:30 · Infantiles / Cadetes'] },
-    { day: 'Jueves', slots: ['17:30 - 19:00 · Alevines'] },
-    { day: 'Viernes', slots: ['17:30 - 19:00 · Escoleta / Prebenjamines'] },
-]
 
 const methodologyDimensions = [
     { title: 'Técnica individual', short: 'Control, pase, conducción y finalización.', icon: Badge, text: 'Control, pase, conducción, regate y finalización. Un objetivo técnico cada mes, adaptado a la edad y al nivel.' },
@@ -47,6 +35,10 @@ async function DimensionCard({ dimension, compact = false }: { dimension: typeof
 
 export default async function AcademyPage() {
     const translate = await getT()
+    const offer = await getAcademyOffer()
+    const plans = offer.plans.map(p => ({title:p.name,price:`${p.price} €`,suffix:'/ mes',detail:`${p.description} Matrícula nuevos jugadores: ${p.enrollment_fee} €.`,featured:p.sessions_per_week===2}))
+    const weeklySchedule = Array.from(new Set(offer.groups.map(g=>g.public_offer.day))).map(day=>({day,slots:offer.groups.filter(g=>g.public_offer.day===day).map(g=>`${g.schedule} · ${g.name} · ${g.public_offer.location}${g.public_offer.note?' · '+g.public_offer.note:''}`)}))
+
 
     const galleryImages = [
         "/academy-gallery-1.jpg", "/academy-gallery-2.jpg", "/academy-gallery-3.jpg", "/academy-gallery-4.jpg", "/academy-gallery-5.jpg", "/academy-gallery-6.jpg", "/academy-gallery-7.jpg", "/academy-gallery-8.jpg", "/academy-gallery-9.jpg",
@@ -59,10 +51,10 @@ export default async function AcademyPage() {
                 <div className="absolute inset-0 bg-gradient-to-r from-navy via-navy/80 to-navy/25" />
                 <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-navy to-transparent" />
                 <div className="container relative z-10 py-20 md:py-28"><div className="max-w-3xl">
-                    <p className="inline-flex items-center rounded-full border border-gold/35 bg-gold/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-gold backdrop-blur"><Sparkles className="mr-2 h-4 w-4" /> {translate(" Temporada 2026/27")}</p>
+                    <p className="inline-flex items-center rounded-full border border-gold/35 bg-gold/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-gold backdrop-blur"><Sparkles className="mr-2 h-4 w-4" /> {offer.plans[0] ? `Temporada ${offer.plans[0].season_start.slice(0,4)}/${offer.plans[0].season_end.slice(0,4)}` : 'Academia'}</p>
                     <h1 className="mt-6 font-heading text-[clamp(2rem,9vw,3rem)] font-black uppercase leading-[.9] text-white md:text-7xl lg:text-8xl">{translate("Nuestra")}<br /><span className="text-gold">{translate("Academia.")}</span></h1>
                     <p className="mt-6 max-w-2xl text-lg leading-relaxed text-slate-200 md:text-2xl">{translate("Aprender, competir, disfrutar. Crecer dentro y fuera del campo.")}</p>
-                    <p className="mt-5 flex items-center gap-2 text-sm font-bold text-gold sm:text-base"><CalendarDays aria-hidden="true" className="h-5 w-5 shrink-0" />{translate("De septiembre a mayo")}</p>
+                    <p className="mt-5 flex items-center gap-2 text-sm font-bold text-gold sm:text-base"><CalendarDays aria-hidden="true" className="h-5 w-5 shrink-0" />{offer.plans[0] ? `${new Date(offer.plans[0].season_start+'T12:00:00Z').toLocaleDateString('es-ES')} – ${new Date(offer.plans[0].season_end+'T12:00:00Z').toLocaleDateString('es-ES')}` : 'Consulta nuevas temporadas'}</p>
                     <div className="mt-8 flex flex-col gap-3 sm:flex-row"><Button asChild size="lg" className="min-h-14 bg-gold px-7 font-bold uppercase text-navy hover:bg-gold-light"><Link href="/inscripcion?service=academy">{translate("Reserva tu plaza")}</Link></Button><Button asChild variant="outline" size="lg" className="min-h-14 border-white/30 bg-white/5 px-7 font-bold text-white hover:bg-white/10 hover:text-white"><a href="/dossier-tecnificacion-2026-27.pdf" target="_blank" rel="noreferrer"><FileText className="mr-2 h-4 w-4" /> {translate(" Ver dossier PDF")}</a></Button></div>
                 </div></div>
             </section>
@@ -76,7 +68,7 @@ export default async function AcademyPage() {
                 <section className="mt-24 rounded-[2rem] border border-white/10 bg-white/[.045] p-6 md:mt-32 md:p-10" aria-labelledby="horarios-title">
                     <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between"><div><p className="text-sm font-bold uppercase tracking-[0.18em] text-gold">{translate("Días, sedes y horarios")}</p><h2 id="horarios-title" className="mt-2 font-heading text-3xl font-black uppercase sm:text-4xl text-white md:text-5xl">{translate("Entrena durante la ")}<span className="text-gold">{translate("semana")}</span></h2></div><p className="max-w-md text-sm leading-relaxed text-slate-300">{translate("Grupos organizados por edad y nivel. Secretaría confirma el grupo y horario definitivo al reservar plaza.")}</p></div>
                     <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{translate(weeklySchedule.map((schedule) => <article key={schedule.day} className="rounded-2xl border border-gold/25 bg-navy p-5"><div className="flex items-center gap-2 text-gold"><Clock3 className="h-4 w-4" /><h3 className="font-heading text-2xl font-bold uppercase">{translate(schedule.day)}</h3></div><ul className="mt-4 space-y-3 text-sm text-slate-200">{translate(schedule.slots.map((slot) => <li key={slot} className="border-t border-white/10 pt-3 first:border-0 first:pt-0">{translate(slot)}</li>))}</ul></article>))}</div>
-                    <div className="mt-6 grid gap-4 border-t border-white/10 pt-6 md:grid-cols-2"><div className="flex gap-3 rounded-2xl bg-navy p-5"><MapPin className="mt-0.5 h-5 w-5 shrink-0 text-gold" /><p className="text-sm leading-relaxed text-slate-300"><strong className="block text-white">{translate("Tecnificación de porteros")}</strong>{translate("Martes y miércoles · Camp Municipal de Santa Cristina d'Aro. Fútbol 7: 17:15 - 18:30 · Fútbol 11: 18:30 - 19:45.")}</p></div><div className="flex gap-3 rounded-2xl bg-navy p-5"><CalendarDays className="mt-0.5 h-5 w-5 shrink-0 text-gold" /><p className="text-sm leading-relaxed text-slate-300"><strong className="block text-white">{translate("Sesiones de domingo")}</strong>{translate("Camp Municipal de Sant Feliu de Guíxols. Horarios de verano e invierno disponibles en el dossier.")}</p></div></div>
+                    <p className="mt-6 text-sm text-slate-300">Los horarios publicados aquí son los que puedes seleccionar al solicitar la plaza. La asignación definitiva queda pendiente de revisión por edad, nivel y disponibilidad.</p>
                 </section>
 
                 <section className="mt-24 md:mt-32" aria-labelledby="metodologia-title">
@@ -88,7 +80,7 @@ export default async function AcademyPage() {
 
                 <section className="mt-24 scroll-mt-24 md:mt-32" aria-labelledby="tarifas-title">
                     <div className="mx-auto max-w-3xl text-center"><p className="text-sm font-bold uppercase tracking-[0.18em] text-gold">{translate("Planes y cuotas")}</p><h2 id="tarifas-title" className="mt-2 font-heading text-3xl font-black uppercase sm:text-4xl text-white md:text-5xl">{translate("Elige tu ritmo ")}<span className="text-gold">{translate("de entrenamiento")}</span></h2><p className="mt-4 text-slate-300">{translate("Ahora que conoces el programa, elige la opción que mejor encaje con el jugador y vuestra disponibilidad.")}</p></div>
-                    <div className="mt-10 grid gap-5 md:grid-cols-3">{translate(plans.map((plan) => <article key={plan.title} className={`relative flex flex-col rounded-3xl border p-7 ${plan.featured ? 'border-gold bg-gold text-navy shadow-xl shadow-gold/15' : 'border-white/15 bg-white/5 text-white'}`}>{translate(plan.featured && <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-navy px-4 py-1 text-xs font-bold uppercase tracking-wide text-gold">{translate("Opción completa")}</span>)}<CalendarDays className={`h-7 w-7 ${plan.featured ? 'text-navy' : 'text-gold'}`} /><h3 className="mt-5 font-heading text-3xl font-bold uppercase">{translate(plan.title)}</h3><p className={`mt-3 min-h-12 text-sm leading-relaxed ${plan.featured ? 'text-navy/80' : 'text-slate-300'}`}>{translate(plan.detail)}</p><div className="mt-7 border-t border-current/20 pt-5"><span className="font-heading text-5xl font-black">{translate(plan.price)}</span><span className="ml-1 font-bold">{translate(plan.suffix)}</span></div></article>))}</div>
+                    <div className="mt-10 grid gap-5 md:grid-cols-2">{translate(plans.map((plan) => <article key={plan.title} className={`relative flex flex-col rounded-3xl border p-7 ${plan.featured ? 'border-gold bg-gold text-navy shadow-xl shadow-gold/15' : 'border-white/15 bg-white/5 text-white'}`}>{translate(plan.featured && <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-navy px-4 py-1 text-xs font-bold uppercase tracking-wide text-gold">{translate("Opción completa")}</span>)}<CalendarDays className={`h-7 w-7 ${plan.featured ? 'text-navy' : 'text-gold'}`} /><h3 className="mt-5 font-heading text-3xl font-bold uppercase">{translate(plan.title)}</h3><p className={`mt-3 min-h-12 text-sm leading-relaxed ${plan.featured ? 'text-navy/80' : 'text-slate-300'}`}>{translate(plan.detail)}</p><div className="mt-7 border-t border-current/20 pt-5"><span className="font-heading text-5xl font-black">{translate(plan.price)}</span><span className="ml-1 font-bold">{translate(plan.suffix)}</span></div></article>))}</div>
                     <div className="mt-5 grid gap-4 rounded-2xl border border-gold/30 bg-navy-light/80 p-5 text-sm md:grid-cols-[auto_1fr_auto] md:items-center md:px-7"><ShieldCheck className="h-7 w-7 text-gold" /><p className="text-slate-200"><strong className="text-white">{translate("Plan Plus: +50 € al año, en un único pago.")}</strong> {translate(" Incluye posibilidad de recuperar sesiones, condiciones especiales en campus y torneos y beneficios en actividades Academy.")}</p><a className="inline-flex items-center font-bold text-gold hover:text-gold-light" href="/dossier-tecnificacion-2026-27.pdf" target="_blank" rel="noreferrer">{translate("Ver condiciones ")}<ExternalLink className="ml-1 h-4 w-4" /></a></div>
                     <div className="mt-8 text-center"><Button asChild size="lg" className="min-h-14 bg-gold px-8 font-bold uppercase text-navy hover:bg-gold-light"><Link href="/inscripcion?service=academy">{translate("Reserva tu plaza")}</Link></Button><p className="mt-3 text-sm text-slate-400">{translate("Sin pago en este paso. Secretaría confirma grupo, horario y siguientes pasos.")}</p></div>
                 </section>

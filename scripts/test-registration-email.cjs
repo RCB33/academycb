@@ -3,6 +3,7 @@ let calls=0, updates=[], claimed=true, fail=false
 const row={id:'11111111-1111-4111-8111-111111111111',recipient:'test@example.invalid',source_type:'event',event_kind:'received'}
 const db={rpc:async()=>({data:claimed?[row]:[],error:null}),from:()=>({update(value){updates.push(value);return {eq(){return {eq:async()=>({error:null})}}}}})}
 function load(file){const m={exports:{}};new Function('module','exports','require',ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText)(m,m.exports,name=>{
+ if(name==='@/lib/registration-email-details')return {registrationEmailDetails:async()=>null}
  if(name==='server-only')return {}
  if(name==='@/lib/supabase/admin')return {createAdminClient:()=>db}
  if(name==='@/lib/registration-email-content')return load('src/lib/registration-email-content.ts')

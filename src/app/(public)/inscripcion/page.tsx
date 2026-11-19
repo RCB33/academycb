@@ -1,3 +1,4 @@
+import { getAcademyOffer, getCampusOffer } from '@/lib/offering-server'
 
 import { getT } from '@/lib/i18n/server'
 import { translateMetadata } from '@/lib/i18n/translate'
@@ -24,8 +25,13 @@ export async function generateMetadata() {
 export default async function InscripcionPage({ searchParams }: { searchParams: SearchParams }) {
     const translate = await getT()
 
+    const academyOffer = await getAcademyOffer()
     const params = await searchParams
-    if (params.service === 'campus' && !params.activity) redirect('/campus/inscripcion')
+    if(params.service==='campus') {
+        const campus=await getCampusOffer(params.activity)
+        if(campus) redirect(`/campus/inscripcion?edition=${campus.id}`)
+        if(!params.activity) redirect('/campus/inscripcion')
+    }
     const supabase = await createClient()
     const today = new Date().toISOString().slice(0, 10)
     const { data: { user } } = await supabase.auth.getUser()
@@ -73,6 +79,7 @@ export default async function InscripcionPage({ searchParams }: { searchParams: 
             <div className="container relative z-10 -mt-14 max-w-5xl pb-16 md:-mt-20 md:pb-24">
                 {translate(parseService(params.service) === 'academy' && <AcademyEnrollmentInfo />)}
                 <EnrollmentForm
+                    academyOffer={academyOffer}
                     campuses={campuses}
                     tournaments={tournaments}
                     initialService={parseService(params.service)}
@@ -88,11 +95,8 @@ export default async function InscripcionPage({ searchParams }: { searchParams: 
 async function AcademyEnrollmentInfo() {
     const translate = await getT()
 
-    const plans = [
-        { title: 'Una sesión semanal', price: '75 €', suffix: '/ mes', detail: 'Una sesión de entrenamiento por semana.' },
-        { title: 'Dos sesiones semanales', price: '140 €', suffix: '/ mes', detail: 'Una sesión de lunes a viernes y otra el domingo.', featured: true },
-        { title: 'Matrícula de inscripción', price: '30 €', suffix: ' pago único', detail: 'Solo al formalizar la inscripción de un nuevo jugador.' },
-    ]
+    const offer = await getAcademyOffer()
+    const plans = offer.plans.map(p=>({title:p.name,price:`${p.price} €`,suffix:'/ mes',detail:`${p.description} Matrícula nuevos jugadores: ${p.enrollment_fee} €.`,featured:p.sessions_per_week===2}))
 
     return (
         <section className="mb-8 rounded-3xl border border-white/15 bg-navy p-6 text-white shadow-2xl shadow-navy/20 md:mb-10 md:p-10" aria-labelledby="academy-enrollment-title">
@@ -105,7 +109,7 @@ async function AcademyEnrollmentInfo() {
                 <a href="/dossier-tecnificacion-2026-27.pdf" target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center justify-center rounded-xl border border-gold/45 bg-gold/10 px-5 text-sm font-bold text-gold transition hover:bg-gold hover:text-navy"><FileText className="mr-2 h-4 w-4" /> {translate(" Ver dossier PDF ")}<ExternalLink className="ml-2 h-4 w-4" /></a>
             </div>
 
-            <div className="mt-8 grid gap-3 md:grid-cols-3">
+            <div className="mt-8 grid gap-3 md:grid-cols-2">
                 {translate(plans.map((plan) => (
                     <article key={plan.title} className={`rounded-2xl border p-5 ${plan.featured ? 'border-gold bg-gold text-navy' : 'border-white/15 bg-white/5'}`}>
                         <CalendarDays className={`h-5 w-5 ${plan.featured ? 'text-navy' : 'text-gold'}`} />
@@ -116,10 +120,7 @@ async function AcademyEnrollmentInfo() {
                 )))}
             </div>
 
-            <div className="mt-4 grid gap-3 border-t border-white/10 pt-4 text-sm sm:grid-cols-2">
-                <div className="flex gap-3 rounded-xl bg-black/15 p-4"><Clock3 className="mt-0.5 h-5 w-5 shrink-0 text-gold" /><p className="leading-relaxed text-slate-300"><strong className="block text-white">{translate("Sesiones de grupos")}</strong>{translate("Martes a viernes, con sesiones de domingo según grupo.")}</p></div>
-                <div className="flex gap-3 rounded-xl bg-black/15 p-4"><MapPin className="mt-0.5 h-5 w-5 shrink-0 text-gold" /><p className="leading-relaxed text-slate-300"><strong className="block text-white">{translate("Tecnificación de porteros")}</strong>{translate("Martes y miércoles en Santa Cristina d'Aro. Consulta todos los horarios en el dossier.")}</p></div>
-            </div>
+            <p className="mt-5 text-sm text-slate-300">Elige abajo el grupo y horario publicados, la fecha de incorporación y el plan. Verás el importe del primer mes antes de enviar.</p>
 
             <p className="mt-4 text-center text-xs text-slate-400">{translate("Plan Plus: suplemento de 50 € con recuperación de sesiones y beneficios Academy. Consulta sus condiciones en el dossier.")}</p>
         </section>

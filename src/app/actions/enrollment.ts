@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { requireAdmin, requireMarketingAccess } from '@/lib/auth'
 import { createEnrollmentRequest } from '@/lib/enrollment'
+import { onboardAcceptedFamily,prepareAcceptedSubscription } from '@/lib/enrollment-onboarding'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { deliverRegistrationEmails } from '@/lib/registration-email'
 
 export type EnrollmentState = {
@@ -48,11 +50,11 @@ export async function updateEnrollmentRequestStatus(id: string, status: string) 
 }
 
 export async function convertEnrollmentRequest(id: string) {
-    const { supabase } = await requireAdmin()
+    const { supabase,user } = await requireAdmin()
     const parsedId = z.string().uuid().safeParse(id)
     if (!parsedId.success) return { success: false, error: 'Solicitud no válida.' }
 
-    const {data:request,error:requestError}=await supabase.from('enrollment_requests').select('service,activity_id,campus_details').eq('id',parsedId.data).single()
+    const {data:request,error:requestError}=await supabase.from('enrollment_requests').select('service,activity_id,campus_details,academy_details,email').eq('id',parsedId.data).single()
     if(requestError || !request)return {success:false,error:'No se pudo cargar la solicitud.'}
     if(request.service==='campus') {
         if(!request.activity_id || request.campus_details)return {success:false,error:'Revisa y acepta esta solicitud desde Campus → Solicitudes, indicando su edición y el importe de las semanas.'}
@@ -64,14 +66,24 @@ export async function convertEnrollmentRequest(id: string) {
         return {success:true,childId:enrollment?.child_id}
     }
 
-    const { data: childId, error } = await supabase.rpc('convert_enrollment_request', {
+    const { data: childId, error } = await supabase.rpc(request.service==='academy'&&request.academy_details?'accept_academy_request':'convert_enrollment_request', {
         request_uuid: parsedId.data,
     })
     if (error) return { success: false, error: error.message }
+    let notice = ''
+    if(request.service==='academy'&&request.academy_details) {
+        const access=await onboardAcceptedFamily(childId,request.email)
+        const billing=access.guardianId?await prepareAcceptedSubscription(parsedId.data,user.id,childId,access.guardianId):{status:'pending_access'}
+        notice=access.error||('error' in billing?billing.error:'')||((billing.status==='pending_activation')?'Plaza aceptada y recibos creados. La activación de las mensualidades Stripe sigue pendiente.':'Plaza aceptada, jugador vinculado y recibos pendientes creados.')
+        const db=createAdminClient()
+        const {data:latest}=await db.from('enrollment_requests').select('academy_details').eq('id',parsedId.data).single()
+        if(latest?.academy_details) await db.from('enrollment_requests').update({academy_details:{...latest.academy_details,onboarding:{access:access.status||'needs_review',billing:billing.status||'needs_review',billing_request_id:'requestId' in billing?billing.requestId:null}}}).eq('id',parsedId.data)
+    }
     await deliverRegistrationEmails('enrollment', parsedId.data)
 
+    for(const path of ['/admin/gestion','/admin/academia','/admin/finanzas','/portal']) revalidatePath(path,'layout')
     revalidatePath('/admin/leads')
     revalidatePath('/admin/crm/alumnos')
     revalidatePath('/admin/crm/tutores')
-    return { success: true, childId }
+    return { success: true, childId,notice }
 }

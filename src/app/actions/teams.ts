@@ -32,7 +32,9 @@ export async function getTeams() {
         console.error('Error fetching teams:', error)
         return []
     }
-    return data
+    const {data:additional,error:assignmentError}=await supabase.from('academy_group_assignments').select('team_id,child:children(id,full_name,birth_year),membership:academy_memberships!inner(status,end_date)').in('membership.status',['active','pending_payment']).gte('membership.end_date',new Date().toISOString().slice(0,10))
+    if(assignmentError) throw new Error('No se pudieron consultar todas las vinculaciones de grupos.')
+    return (data||[]).map(team=>({...team,players:Array.from(new Map([...(team.players||[]),...(additional||[]).filter(a=>a.team_id===team.id).flatMap(a=>Array.isArray(a.child)?a.child:[a.child])].filter(Boolean).map(c=>[c.id,c])).values())}))
 }
 export async function getTeamById(id: string) {
     const supabase = await createClient()

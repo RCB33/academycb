@@ -21,12 +21,12 @@ export async function GET(request:Request) {
  if(childId)q=q.eq('child_id',childId)
  const requests=await q
  const [receipts,guardians]=childId?await Promise.all([
-  db.from('payments').select('id,description,amount,status,due_date,covered_month,concept_code,manual_receipt_allocations(id)').eq('child_id',childId).in('status',['pending','failed']).order('due_date'),
+  db.from('payments').select('id,description,amount,status,due_date,covered_month,concept_code,manual_receipt_allocations(id)').eq('child_id',childId).eq('type','academy').eq('concept_code','monthly').gt('due_date',new Date().toISOString().slice(0,10)).in('status',['pending','failed']).order('due_date'),
   db.from('child_guardians').select('guardian:guardians(id,full_name,email,phone,user_id)').eq('child_id',childId),
  ]):[{data:[],error:null},{data:[],error:null}]
  if(children.error||requests.error||receipts.error||guardians.error)return reply({error:'No se pudieron cargar los cobros'},500)
  const mode=await stripeCheckoutMode()
- return reply({children:children.data,requests:requests.data,receipts:(receipts.data||[]).filter(p=>!p.manual_receipt_allocations?.length),guardians:guardians.data?.map(g=>g.guardian),cardEnabled:Boolean(mode),recurringEnabled:mode==='test'||(Boolean(mode)&&process.env.STRIPE_RECURRING_PAYMENTS_ENABLED==='true'),emailConfigured:Boolean(process.env.RESEND_API_KEY)})
+ return reply({children:children.data,requests:requests.data,receipts:(receipts.data||[]).filter(p=>!p.manual_receipt_allocations?.length && p.due_date?.endsWith('-01')),guardians:guardians.data?.map(g=>g.guardian),cardEnabled:Boolean(mode),recurringEnabled:mode==='test'||(Boolean(mode)&&process.env.STRIPE_RECURRING_PAYMENTS_ENABLED==='true'),emailConfigured:Boolean(process.env.RESEND_API_KEY)})
 }
 export async function POST(request:Request) {
  if(request.headers.get('origin')!==new URL(request.url).origin)return reply({error:'Origen no permitido'},403)
@@ -38,6 +38,9 @@ export async function POST(request:Request) {
  const db=createAdminClient()
  try {
   if(data.action==='create') {
+   if(data.kind!=='subscription') return reply({error:'Stripe se utiliza únicamente para mensualidades de Academia. Los demás recibos se gestionan por transferencia.'},409)
+   const selected=await db.from('payments').select('id,type,concept_code,due_date').in('id',data.paymentIds)
+   if(selected.error||selected.data.length!==data.paymentIds.length||selected.data.some(p=>p.type!=='academy'||p.concept_code!=='monthly'||!p.due_date?.endsWith('-01'))) return reply({error:'Selecciona solo mensualidades de Academia con vencimiento el día 1.'},409)
    const {mode}=configuredStripe(true)
    const result=await db.rpc('create_billing_request',{id_input:data.id,actor_input:user.id,child_input:data.childId,guardian_input:data.guardianId,kind_input:data.kind,mode_input:mode,title_input:data.title,payments_input:data.paymentIds})
    if(result.error)return reply({error:result.error.code==='P0001'?result.error.message:'No se pudo crear la solicitud'},409)
@@ -47,6 +50,7 @@ export async function POST(request:Request) {
   if(error||!raw)return reply({error:'Solicitud no disponible'},404)
   const r=raw as BillingRequest & {recipient_email:string|null}
   if(data.action==='email') {
+   if(raw.kind!=='subscription') return reply({error:'Este cobro se gestiona por transferencia.'},409)
    if(r.state!=='ready'||new Date(r.expires_at).getTime()<=Date.now())return reply({error:'La solicitud está cerrada o caducada'},409)
    const mode=await stripeCheckoutMode()
    if(mode!==r.mode||r.kind==='subscription'&&mode==='live'&&process.env.STRIPE_RECURRING_PAYMENTS_ENABLED!=='true')return reply({error:'No se envía todavía: esta modalidad de pago está pendiente de activación'},409)

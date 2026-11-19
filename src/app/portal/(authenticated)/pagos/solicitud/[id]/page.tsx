@@ -13,7 +13,7 @@ export default async function BillingRequestPage({params}:{params:Promise<{id:st
  if(error||!data)notFound()
  const r=data as BillingRequest
  const mode=await stripeCheckoutMode()
- const enabled=mode===r.mode&&(r.kind==='payment'||mode==='test'||process.env.STRIPE_RECURRING_PAYMENTS_ENABLED==='true')
+ const enabled=r.kind==='subscription'&&mode===r.mode&&(mode==='test'||process.env.STRIPE_RECURRING_PAYMENTS_ENABLED==='true')
  // Request-time expiry on this authenticated, dynamic server page.
  // eslint-disable-next-line react-hooks/purity
  const expired=new Date(r.expires_at).getTime()<=Date.now()

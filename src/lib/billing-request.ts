@@ -1,4 +1,4 @@
-export type BillingItem = { payment_id: string; position: number; amount_cents: number; due_date: string; snapshot: { description?: string; covered_month?: string } }
+export type BillingItem = { payment_id: string; position: number; amount_cents: number; due_date: string; snapshot: {type?:string; description?: string; covered_month?: string } }
 export type BillingRequest = {
  id: string; child_id: string; guardian_id: string; kind: 'payment' | 'subscription'; mode: 'live' | 'test';
  title: string; state: string; total_cents: number; expires_at: string; created_at: string; email_status: string;

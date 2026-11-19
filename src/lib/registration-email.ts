@@ -1,5 +1,7 @@
 import 'server-only'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { registrationEmailDetails } from '@/lib/registration-email-details'
+import { renderCommunicationEmail } from '@/lib/communication-email'
 import { registrationEmailContent } from '@/lib/registration-email-content'
 
 // Internal helper, never a public server action. Failure cannot undo a saved request.
@@ -22,10 +24,12 @@ export async function deliverRegistrationEmail(id: string) {
     let failure = 'provider_unavailable'
     try {
       if (!process.env.RESEND_API_KEY) { failure = 'missing_api_key'; throw new Error(failure) }
+      const details=await registrationEmailDetails(row.source_type,row.source_id,row.event_kind)
+      const content=details?{subject:details.subject,text:details.message,html:renderCommunicationEmail(details.subject,details.message)}:registrationEmailContent(row.source_type,row.event_kind)
       const response = await fetch('https://api.resend.com/emails', {
         method: 'POST', signal: AbortSignal.timeout(8000),
         headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json', 'Idempotency-Key': `registration-${row.id}` },
-        body: JSON.stringify({ from: process.env.RESEND_FROM_EMAIL || 'Academy Costa Brava <info@academycostabrava.com>', to: [row.recipient], reply_to: 'costabravaacademy@gmail.com', ...registrationEmailContent(row.source_type, row.event_kind) }),
+        body: JSON.stringify({ from: process.env.RESEND_FROM_EMAIL || 'Academy Costa Brava <info@academycostabrava.com>', to: [row.recipient], reply_to: 'costabravaacademy@gmail.com', ...content }),
       })
       if (!response.ok) { failure = `provider_http_${response.status}`; throw new Error(failure) }
       const result = await response.json()

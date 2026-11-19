@@ -60,9 +60,7 @@ export function AdminDesktopSidebar({
             { href: '/admin/calendario', label: 'Calendario general', icon: <CalendarDays size={19} /> },
             ...(isAdmin ? [
                 { href: '/admin/videoteca', label: 'Videoteca', icon: <Video size={19} /> },
-                { href: '/admin/academia', label: 'Academia', icon: <Activity size={19} /> },
-                { href: '/admin/campus', label: 'Campus', icon: <FileText size={19} /> },
-                { href: '/admin/torneos', label: 'Torneos', icon: <Trophy size={19} /> },
+                { href: '/admin/gestion', label: 'Gestión de Academia', icon: <Activity size={19} /> },
                 { href: '/admin/tienda', label: 'Tienda', icon: <ShoppingBag size={19} /> },
             ] : []),
         ] }] : []),

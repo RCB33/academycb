@@ -16,7 +16,7 @@ export const christmasTournaments = [
 
 export const tournamentIds = ['231', 'champions', 'costa-brava'] as const
 export const registrationStatuses: Record<string, string> = { requested: 'Pendiente de validación', awaiting_payment: 'Pendiente de transferencia', proof_review: 'Justificante en revisión', confirmed: 'Inscripción confirmada', cancelled: 'Anulada' }
-export const tournamentRegistrationSchema = z.object({
+export function tournamentRegistrationSchemaFor(events:ReadonlyArray<{id:string;name:string;categories:readonly string[]}>=christmasTournaments) { return z.object({
   request_id: z.string().uuid(), child_id: z.string().uuid().nullable(),
   child_name: z.string().trim().min(3).max(120), birth_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(v => { const d = new Date(v + 'T12:00:00Z'); return !isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v && d <= new Date() }, 'Revisa la fecha de nacimiento.'),
   guardian_name: z.string().trim().min(3).max(120), phone: z.string().trim().regex(/^\+?[\d\s()-]{9,20}$/, 'Revisa el teléfono'),
@@ -27,12 +27,14 @@ export const tournamentRegistrationSchema = z.object({
   image_consent: z.boolean(), privacy_consent: z.literal(true), terms_consent: z.literal(true), participation_consent: z.literal(true), notes: z.string().trim().max(1500),
 }).superRefine((v, ctx) => {
   for (const id of v.tournaments) {
-    const event = christmasTournaments.find(t => t.id === id)!
+    const event = events.find(t => t.id === id)!
     if (!(event.categories as readonly string[]).includes(v.category)) ctx.addIssue({ code: 'custom', path: ['tournaments'], message: `${event.name} no ofrece ${v.category}.` })
   }
   if (v.tournaments.some(t => t !== 'champions') && !v.owns_kit && (!v.shirt_size || !v.shorts_size || !v.socks_size)) ctx.addIssue({ code: 'custom', path: ['shirt_size'], message: 'Selecciona las tres tallas de la equipación.' })
 })
 
+}
+export const tournamentRegistrationSchema=tournamentRegistrationSchemaFor()
 export type TournamentRegistrationInput = z.infer<typeof tournamentRegistrationSchema>
 export function tournamentQuote(ids: readonly string[], ownsKit: boolean) {
   if (!ids.length || ids.length > 3 || new Set(ids).size !== ids.length || ids.some(id => !(tournamentIds as readonly string[]).includes(id))) throw new Error('Selección de torneos no válida')

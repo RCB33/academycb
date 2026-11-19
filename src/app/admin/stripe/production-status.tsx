@@ -34,15 +34,15 @@ export async function StripeProductionStatus() {
     return <div className="mx-auto max-w-3xl space-y-6">
         <header><p className="text-sm text-slate-500">Administración · Producción</p><h1 className="text-3xl font-bold text-navy">Conexión Stripe</h1><p className="mt-2 text-slate-600">Estado de los pagos con tarjeta de Academy.</p></header>
         <section className="space-y-3 rounded-2xl border bg-white p-6">
-            <h2 className="text-xl font-bold">{enabled && apiConnected && canCharge !== false ? 'Pagos con tarjeta activados' : 'Activación pendiente'}</h2>
+            <h2 className="text-xl font-bold">{enabled && apiConnected && canCharge !== false ? 'Conexión de producción disponible' : 'Activación pendiente'}</h2>
             <ul className="list-inside list-disc space-y-2 text-sm">
                 <li>Clave de producción: {keyPresent ? 'guardada' : 'pendiente'}</li>
                 <li>Confirmación automática: {webhookPresent ? 'secreto guardado; comprueba la entrega con la prueba sin cobro' : 'pendiente'}</li>
                 <li>Conexión API: {apiConnected ? 'lectura de Checkout verificada' : 'pendiente de verificar'}</li>
                 <li>Cuenta: {accountName || 'comprueba Academy Costa Brava en Stripe'}</li>
                 <li>Cobros autorizados por Stripe: {canCharge === true ? 'sí' : canCharge === false ? 'no; completa la activación de la cuenta en Stripe' : 'comprueba el estado en Stripe'}</li>
-                <li>Mensualidades automáticas: {process.env.STRIPE_RECURRING_PAYMENTS_ENABLED === 'true' ? 'habilitadas para planes compatibles' : 'pendientes de validación; las cuotas se pueden pagar por recibo'}</li>
-                <li>Nuevos pagos en la web: {enabled ? 'habilitados' : 'desactivados'}</li>
+                <li>Mensualidades automáticas: {process.env.STRIPE_RECURRING_PAYMENTS_ENABLED === 'true' ? 'habilitadas para planes compatibles' : 'pendientes de validación; no hay cobro automático activo'}</li>
+                <li>Uso de Stripe: solo suscripciones mensuales de Academia. Campus, Torneos, matrícula y extras se pagan por transferencia.</li>
             </ul>
             <p className="text-sm text-slate-600">Guardar las credenciales no confirma ningún pago. La web registra el cobro cuando recibe y verifica el aviso de Stripe.</p>
             <div className="flex flex-wrap gap-4 text-sm underline"><Link href="/admin/ajustes">Métodos de pago y planes</Link><a href="https://dashboard.stripe.com/" target="_blank" rel="noopener noreferrer">Abrir Stripe</a></div>

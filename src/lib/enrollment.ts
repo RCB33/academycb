@@ -1,12 +1,16 @@
 import 'server-only'
 
 import { z } from 'zod'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { academySelection } from '@/lib/offering-server'
 import { createClient } from '@/lib/supabase/server'
 import { deliverRegistrationEmails } from '@/lib/registration-email'
 
 const serviceSchema = z.enum(['academy', 'campus', 'tournament'])
 
 export const enrollmentSchema = z.object({
+    plan_id: z.string().optional(), group_id: z.string().optional(), second_group_id: z.string().optional(),
+    start_date: z.string().optional(), plus: z.enum(['yes','no','']).optional(), offer_version: z.string().optional(), payment_choice: z.enum(['monthly_card','transfer','']).optional(),
     service: serviceSchema,
     activity_id: z.string().uuid().optional().or(z.literal('')),
     child_name: z.string().trim().min(2, 'Indica el nombre completo del jugador.').max(120),
@@ -30,7 +34,7 @@ export const enrollmentSchema = z.object({
 
 export type EnrollmentPayload = z.input<typeof enrollmentSchema>
 const familyEnrollmentSchema = enrollmentSchema.omit({ service: true, activity_id: true, child_name: true, birth_date: true }).extend({
-    children: z.array(enrollmentSchema.pick({ service: true, activity_id: true, child_name: true, birth_date: true, linked_child_id: true })).min(1).max(6, 'Puedes enviar hasta 6 jugadores a la vez.'),
+    children: z.array(enrollmentSchema.pick({ service: true, activity_id: true, child_name: true, birth_date: true, linked_child_id: true, plan_id:true,group_id:true,second_group_id:true,start_date:true,plus:true,offer_version:true,payment_choice:true })).min(1).max(6, 'Puedes enviar hasta 6 jugadores a la vez.'),
 })
 export type EnrollmentResult = { success: true; message: string } | { success: false; error: string }
 
@@ -45,11 +49,11 @@ async function resolveActivity(service: z.infer<typeof serviceSchema>, activityI
     if (service === 'campus') {
         const { data } = await supabase
             .from('campuses')
-            .select('id, name, end_date')
+            .select('id, name, end_date, public_program')
             .eq('id', activityId)
             .eq('status', 'published')
             .maybeSingle()
-        if (!data || data.end_date < today) return null
+        if (!data || data.end_date < today || data.public_program) return null
         return { id: data.id, name: data.name }
     }
 
@@ -72,6 +76,8 @@ export async function createEnrollmentRequest(payload: unknown): Promise<Enrollm
         return { success: false, error: parsed.error.issues[0]?.message || 'Revisa los datos de la solicitud.' }
     }
 
+    const authDb=await createClient()
+    const {data:{user}}=await authDb.auth.getUser()
     const rows = []
     const seen = new Set<string>()
     for (const child of parsed.data.children) {
@@ -80,7 +86,27 @@ export async function createEnrollmentRequest(payload: unknown): Promise<Enrollm
         seen.add(identity)
         const activity = await resolveActivity(child.service, child.activity_id || undefined)
         if (!activity) return { success: false, error: `La actividad de ${child.child_name} ya no está disponible. Elige otra opción.` }
+        if(child.linked_child_id) {
+            const {data:linked}=await authDb.rpc('is_guardian_of',{child_uuid:child.linked_child_id})
+            if(linked!==true) return {success:false,error:'El jugador no pertenece a tu cuenta.'}
+            const {data:existing}=await authDb.from('children').select('full_name,birth_date').eq('id',child.linked_child_id).is('archived_at',null).single()
+            if(!existing) return {success:false,error:'Jugador no disponible.'}
+            child.child_name=existing.full_name
+            if(existing.birth_date) child.birth_date=existing.birth_date
+        }
+        let academyDetails = null
+        if(child.service==='academy') {
+            try { academyDetails=await academySelection({plan_id:child.plan_id||'',group_id:child.group_id||'',second_group_id:child.second_group_id,start_date:child.start_date||'',plus:child.plus==='yes',offer_version:child.offer_version||'',payment_choice:child.payment_choice||'monthly_card'},child.birth_date) }
+            catch(e) { return {success:false,error:e instanceof Error?e.message:'Revisa tu elección de Academia.'} }
+        }
+        if(child.linked_child_id) {
+            const authDb=await createClient()
+            const {data:linked}=await authDb.rpc('is_guardian_of',{child_uuid:child.linked_child_id})
+            if(linked!==true) return {success:false,error:'El jugador no pertenece a tu cuenta.'}
+        }
         rows.push({
+            academy_details: academyDetails,
+            submitted_by:user?.id||null,
             id: crypto.randomUUID(),
             service: child.service,
             activity_id: activity.id || null,
@@ -91,12 +117,12 @@ export async function createEnrollmentRequest(payload: unknown): Promise<Enrollm
             guardian_name: parsed.data.guardian_name,
             email: parsed.data.email.toLowerCase(),
             phone: parsed.data.phone,
-            notes: parsed.data.notes || null,
+            notes: [parsed.data.notes, academyDetails ? `Plan: ${academyDetails.plan.name} · ${academyDetails.quote.monthly_price} €/mes\nGrupos: ${academyDetails.groups.map(g=>g.public_offer.day+' '+g.schedule+' '+g.name).join('; ')}\nIncorporación: ${academyDetails.start_date} · Primera cuota: ${academyDetails.quote.first_month} € (${academyDetails.quote.percent} %)\nMatrícula nuevos jugadores: ${academyDetails.quote.enrollment_fee} € · Plus: ${academyDetails.quote.plus} €\nPago solicitado: ${academyDetails.payment_choice==='monthly_card'?'Mensualidades con tarjeta':'Transferencia'} · Fin: ${academyDetails.quote.season_end}` : ''].filter(Boolean).join('\n') || null,
             status: 'new',
         })
     }
 
-    const supabase = await createClient()
+    const supabase = createAdminClient()
     // One insert is atomic: either every child's request is saved or none is.
     const { error } = await supabase.from('enrollment_requests').insert(rows)
 

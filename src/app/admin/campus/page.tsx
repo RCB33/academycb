@@ -95,6 +95,7 @@ export default function CampusPage() {
     }
 
     function openEditCampus(campus: Campus) {
+        if(campus.public_program) {window.location.assign('/admin/gestion/campus');return}
         setEditingCampus(campus)
         setCampusDialogOpen(true)
     }

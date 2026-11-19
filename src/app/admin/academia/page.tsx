@@ -57,6 +57,7 @@ export default function AcademyPage() {
     }
 
     function handleEdit(team: any) {
+        if(team.public_offer) {router.push('/admin/gestion/academia');return}
         setEditTeam(team)
         setEditOpen(true)
     }

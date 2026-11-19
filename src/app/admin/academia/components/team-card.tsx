@@ -16,8 +16,8 @@ interface TeamCardProps {
 
 export function TeamCard({ team, onEdit }: TeamCardProps) {
     const playerCount = team.players?.length || 0
-    const maxPlayers = team.max_players || 16
-    const fillPercentage = Math.round((playerCount / maxPlayers) * 100)
+    const maxPlayers = team.max_players
+    const fillPercentage = maxPlayers ? Math.round((playerCount / maxPlayers) * 100) : 0
 
     async function handleDelete() {
         if (!confirm(`¿Eliminar el equipo "${team.name}"? Los jugadores asignados quedarán sin equipo.`)) return
@@ -84,7 +84,7 @@ export function TeamCard({ team, onEdit }: TeamCardProps) {
                         <div className="flex items-center gap-2 text-sm">
                             <Users className="h-4 w-4 text-slate-400" />
                             <span className="font-black text-slate-900">{playerCount}</span>
-                            <span className="text-slate-400 text-xs">/ {maxPlayers}</span>
+                            <span className="text-slate-400 text-xs">/ {maxPlayers ?? "aforo por definir"}</span>
                         </div>
                         {team.schedule && (
                             <div className="flex items-center gap-2 text-sm">
@@ -98,7 +98,7 @@ export function TeamCard({ team, onEdit }: TeamCardProps) {
                     <div className="space-y-1">
                         <div className="flex justify-between text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                             <span>Plantilla</span>
-                            <span>{fillPercentage}%</span>
+                            <span>{maxPlayers ? `${fillPercentage}%` : "Aforo por definir"}</span>
                         </div>
                         <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
                             <div

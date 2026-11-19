@@ -16,12 +16,12 @@ export const participationTerms = [
 ]
 const text = (max = 150) => z.string().trim().min(1, 'Completa todos los campos obligatorios.').max(max)
 const yesNo = z.enum(['Sí', 'No'], { error: 'Selecciona Sí o No en las autorizaciones.' })
-export const campusRegistrationSchema = z.object({
+export function campusRegistrationSchemaFor(birthFrom=2013,birthTo=2022) { return z.object({
     child_name: text(120),
     birth_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value => {
         const d = new Date(value + 'T00:00:00Z')
-        return !Number.isNaN(d.getTime()) && d.toISOString().slice(0,10) === value && value >= '2013-01-01' && value <= '2022-12-31'
-    }, 'El campus es para nacidos entre 2013 y 2022.'),
+        return !Number.isNaN(d.getTime()) && d.toISOString().slice(0,10) === value && value >= `${birthFrom}-01-01` && value <= `${birthTo}-12-31`
+    }, `El campus es para nacidos entre ${birthFrom} y ${birthTo}.`),
     team: text(), role: z.enum(['Jugador de campo', 'Portero']),
     guardian_name: text(120), email: z.string().trim().email().max(200), phone: z.string().regex(/^\+?[0-9\s()-]{9,20}$/),
     allergies: text(1000), health_card: text(80), medical_consent: yesNo,
@@ -32,4 +32,6 @@ export const campusRegistrationSchema = z.object({
     website: z.string().max(0),
 }).refine(v => v.weeks.length !== 3 || !!v.size, { message: 'Indica la talla de sudadera del pack completo.', path: ['size'] })
 .refine(v => !v.sibling || !!v.sibling_name, { message: 'Indica el nombre del hermano ya inscrito.', path: ['sibling_name'] })
+}
+export const campusRegistrationSchema=campusRegistrationSchemaFor()
 export function campusPrice(weeks: string[]) { return weeks.length === 3 ? 197 : campusWeeks.filter(w => weeks.includes(w.id)).reduce((total,w) => total + w.price, 0) }

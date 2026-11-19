@@ -1,5 +1,36 @@
 # Pagos — auditoría y diseño de implementación
 
+## Gestión conectada — 19 noviembre 2026
+
+### Oferta publicada y solicitud
+
+- Gestión de Academia (`/admin/gestion`) reúne Academia, Campus y Torneos. Cada rama separa **oferta/horarios**, **solicitudes** y **participantes**; Finanzas conserva el registro de cobros.
+- Academia: 12 grupos recuperados de web y dossier, incluidos porteros y domingos; los dos planes vigentes (75/140 €), matrícula de 30 € para nuevos jugadores y Plus anual opcional de 50 €. Los viernes conservan 17:30–19:00, horario web previamente confirmado; el PDF original dice 17:00–18:30. El PDF es un documento estático y no se regenera al editar el gestor. No se inventan aforos ni años exactos de cada categoría: se dejan pendientes en las fichas de grupos y secretaría comprueba edad/nivel.
+- Fuente de Academia: `teams` y `membership_plans`, también utilizados por la operativa. Campus: programa estructurado en la misma edición de `campuses`. Torneos de Navidad: programa y precios en `event_campaign_settings`. Las páginas públicas y los formularios leen estas fuentes; el formulario rechaza una versión que haya cambiado antes de enviarse.
+- Campus Navidad 2026–2027 publicado con las fechas, semanas, horarios, porteros, nacidos 2013–2022 y tarifas facilitados. Nuevas ediciones con programa se crean desde Gestión; las ediciones antiguas se conservan. El descuento de hermano sigue requiriendo comprobación administrativa.
+- Academia guarda la selección de plan, grupo, domingo adicional, fecha de incorporación, Plus y forma de pago en un snapshot calculado en servidor. Campus guarda programa/precio solicitado; Torneos conserva su catálogo solicitado para revisar precios sin sustituirlos por tarifas futuras. Los textos editoriales generales, fotografías y PDF no forman parte de este editor de oferta.
+
+### Familia, aceptación y pagos
+
+1. La familia consulta la oferta, elige y envía. Academia y Campus no exigen cuenta previa. Torneos conserva la verificación de correo existente para vincular con seguridad jugador/documentación; por tanto, el acceso inicial todavía no es idéntico en las tres ramas.
+2. Correo de **solicitud recibida**, sin afirmar plaza ni cobro. Administración ve la selección concreta.
+3. Aceptar Academia crea/reutiliza jugador y tutor, asigna grupo principal, conserva ambos grupos si hay domingo, crea membresía y recibos pendientes en una transacción. Reintentar no duplica recibos. Duplicados de tutor/jugador, solapamientos o cuotas históricas ambiguas bloquean la aceptación.
+4. Primera cuota confirmada por el propietario: días **1–7 = 100 %; 8–15 = 75 %; 16–22 = 50 %; 23–fin = 25 %**. Se redondea a céntimos. Las cuotas siguientes vencen el día 1 y terminan en mayo; el día 5 es el límite operativo de seguimiento, no un segundo cobro. Matrícula y Plus separados, sin repetirlos cuando ya constan.
+5. La aceptación solicita el acceso familiar: reutiliza una cuenta cuyo email ya está verificado o envía invitación para crear contraseña. Nunca envía contraseña ni restablece la de una cuenta existente. Errores se comunican al administrador y requieren revisión/reintento del acceso; no se deshace una plaza ya aceptada.
+6. Correo de **plaza aceptada** con jugador, elección y siguientes pasos. Campus/Torneos: transferencia, importe revisado y WhatsApp 691 17 96 00. Academia: primer pago/matrícula/Plus por transferencia; si se solicitan mensualidades, se prepara la autorización finita sobre recibos futuros cuando el proveedor esté habilitado. Aprobar, invitar y autorizar tarjeta no registran ingresos.
+7. Stripe queda reservado a suscripciones de mensualidades de Academia. Nuevos cobros únicos por tarjeta, Campus, Torneos y adaptador antiguo quedan cerrados; se mantienen webhooks y cancelaciones para reconciliar intentos anteriores. No se modifica el histórico ni se cancelan contratos reales automáticamente.
+
+### Comprobaciones y pendientes reales
+
+- Migración `20261119165354_connected_business_offering`: aditiva salvo admitir aforo pendiente (`NULL`) en grupos. RLS administrativa para asignaciones de grupos; función de vinculación Auth solo servidor. Snapshots de precio protegidos frente a escrituras públicas.
+- Tests de cálculo (ocho límites de tramo, céntimos, mayo sin junio, versiones, precios de Campus/Torneos), PostgreSQL local y prueba conectada con ROLLBACK: membresía, dos grupos, recibos, idempotencia, rechazo de precio falsificado y conservación íntegra de pagos existentes. Lectura real del catálogo: 12 grupos, 2 planes, 1 campus y 3 torneos.
+- TypeScript, lint sin errores, compilación y suites anteriores de pagos, familias, actividades, correo y Stripe simulado correctas. Estas pruebas no acreditan entrega de correo al buzón ni cobro de tarjeta.
+- **Mensualidades LIVE todavía desactivadas**: sigue pendiente el ciclo completo TEST (primera cuota, siguiente, fallo y finalización); el último diagnóstico del proveedor rechazó la creación de Test Clock por permisos de clave. La solicitud puede guardar la preferencia de tarjeta, pero el correo explica que no hay cobro automático aún. No afirmar que solo queda cambiar un interruptor.
+- **Histórico por revisar**: 16 jugadores sin vinculaciones operativas antes de esta entrega; 21 tutores con cinco grupos de correos duplicados, diez sin cuenta y dos contactos incompletos. Ocho recibos antiguos de cuatro jugadores carecen de mes/concepto suficiente. No se infieren datos ni se asignan nuevas cuotas a esas familias.
+- **Operativa de segundo grupo**: se guardan ambos vínculos y se incluyen en el listado administrativo de grupos. Las pantallas heredadas de entrenadores, asistencia y calendario que dependen de `children.team_id` necesitan una revisión separada antes de afirmar cobertura completa del segundo grupo. El horario de la oferta no genera automáticamente sesiones de calendario ni envía avisos de cambio a familias ya inscritas.
+- **Ediciones antiguas y torneos nuevos fuera de campaña** conservan sus gestores operativos; la automatización de alta completa descrita corresponde a las nuevas solicitudes de Academia y los programas/formularios específicos conectados en esta entrega. Solicitudes antiguas sin elección estructurada requieren revisión manual.
+- Seguridad: sin avisos nuevos para los objetos de esta entrega. Persisten avisos anteriores de funciones públicas, compartición y Auth; véanse [RPC públicas](https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable) y [protección de contraseñas](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection). No se cambiaron cuentas de trabajadores ni políticas del proveedor.
+
 ## Recibos para familias y organización mensual — 19 noviembre 2026
 
 - El propietario confirma que quiere recibos para las familias y una administración clara por meses. Sustituye el requisito anterior de implementar facturación fiscal en esta entrega.

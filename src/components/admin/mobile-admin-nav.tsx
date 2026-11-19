@@ -48,9 +48,7 @@ export function MobileAdminNav({ isAdmin, isStaff, isFinance, isMarketing }: { i
             { href: '/admin/leads', label: 'Solicitudes web', icon: <MessageSquare className="h-5 w-5" /> },
         ] }] : []),
         ...(isAdmin ? [{ label: 'Operativa', items: [
-            { href: '/admin/academia', label: 'Academia', icon: <Activity className="h-5 w-5" /> },
-            { href: '/admin/campus', label: 'Campus', icon: <FileText className="h-5 w-5" /> },
-            { href: '/admin/torneos', label: 'Torneos', icon: <Trophy className="h-5 w-5" /> },
+            { href: '/admin/gestion', label: 'Gestión de Academia', icon: <Activity className="h-5 w-5" /> },
             { href: '/admin/videoteca', label: 'Videoteca', icon: <Video className="h-5 w-5" /> },
             { href: '/admin/tienda', label: 'Tienda', icon: <ShoppingBag className="h-5 w-5" /> },
         ] }] : []),

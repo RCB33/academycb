@@ -19,6 +19,7 @@ export async function POST(request:Request,{params}:{params:Promise<{id:string}>
   const {data,error}=await supabase.from('billing_requests').select('*,billing_request_items(*)').eq('id',id).single()
   if(error||!data)return reply({error:'Solicitud no disponible para esta cuenta'},404)
   const r=data as BillingRequest
+  if(r.kind!=='subscription'||r.billing_request_items.some(i=>i.snapshot.type!=='academy')) return reply({error:'Este pago se realiza por transferencia. Stripe solo admite mensualidades de Academia.'},409)
   await requireStripeCheckout()
   const {stripe,mode}=configuredStripe()
   if(r.mode!==mode)return reply({error:'Entorno de pago incorrecto'},409)
