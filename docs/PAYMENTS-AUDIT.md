@@ -46,7 +46,9 @@ Esta revisión complementa la anterior: una ruta HTTP correcta no equivale a hab
 - Baseline financiero: 11 pagos, digest `e9b3ce77d682aabd79e1097a68a22b23`. Conservado en todas las comprobaciones conectadas y después de editar textos de oferta.
 - TypeScript, build, suites de oferta/gestión y catálogo conectado correctos tras los cambios; lint completo sin errores (273 advertencias acumuladas, seis en payments-list).
 - Publicación verificada: `23d3df2` en `dpl_EUrdbBjy7AhXzMFC8p5BxKZprUS6`, seguida del buscador `ba6f100` en `dpl_EnaEndckogu9t9o6fk5G6maVyyRz`, ambas READY con el dominio público. Contador y disponibilidad de pagos observados en producción.
-- Limpieza y revisión final: registrar el cierre al terminar esta ejecución.
+- Ajuste final del buscador publicado en `7e9f2bf` / `dpl_CcBrNcMjHp4PipmiZkuZNkqdYqyU`, READY y dominio asignado. Verificado visualmente: encuentra los dos jugadores QA, abre la ficha y ya no muestra «sin resultados» junto a los resultados.
+- Limpieza completada: sesiones QA revocadas globalmente; eliminados los dos usuarios temporales, dos jugadores ficticios, tutor de prueba y solicitud/outbox etiquetados. Consulta final: cero fixtures de esos IDs y los 11 pagos con el digest original. Se conserva el demo histórico y el correo efectivamente recibido en Gmail. PostgreSQL local de esta auditoría detenido.
+- Captura del dashboard durante la prueba: `auditoria-2026-11-19/dashboard.jpg` en el workspace del propietario; muestra 18 fichas porque incluye los dos jugadores QA ya eliminados. Captura adicional `buscador.jpg`.
 
 
 ## Dashboard visual y portal de actividades — 19 noviembre 2026
