@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -62,6 +62,7 @@ export default function FinancePage() {
     const [students, setStudents] = useState<FinanceStudentOption[]>([])
     const [loading, setLoading] = useState(true)
     const [loadingCobros, setLoadingCobros] = useState(false)
+    const [receiptError,setReceiptError] = useState('')
     const [activeTab, setActiveTab] = useState('general')
     const [expenseDialogOpen, setExpenseDialogOpen] = useState(false)
     const [manualPaymentOpen, setManualPaymentOpen] = useState(false)
@@ -73,19 +74,25 @@ export default function FinancePage() {
     
     // Cobros filters
     const [cobrosSearch, setCobrosSearch] = useState('')
-    const [cobrosFilter, setCobrosFilter] = useState<'all' | 'pending' | 'paid'>('all')
+    const [cobrosFilter, setCobrosFilter] = useState<'all' | 'pending' | 'paid' | 'partial' | 'overdue'>('all')
     
+    const [receiptSource, setReceiptSource] = useState('all')
+    const overviewRequest = useRef(0)
+    const gridRequest = useRef(0)
+
     // Month picker
     const now = new Date()
     const [selectedMonth, setSelectedMonth] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`)
 
     const fetchAll = useCallback(async () => {
+        const request = ++overviewRequest.current
         setLoading(true)
         try {
             const [overview, paymentConfig] = await Promise.all([
                 getFinanceOverview(selectedMonth),
                 getPaymentConfiguration(),
             ])
+            if (request !== overviewRequest.current) return
             setKpis(overview.kpis)
             setTransactions(overview.transactions)
             setExpenses(overview.expenses)
@@ -93,19 +100,25 @@ export default function FinancePage() {
             setPaymentMethods(paymentConfig.methods.filter((method) => method.enabled))
         } catch (error) {
             console.error(error)
+            if (request !== overviewRequest.current) return
+            setKpis(null); setTransactions([]); setExpenses([])
             toast.error('No se pudieron cargar los datos financieros')
         } finally {
-            setLoading(false)
+            if (request === overviewRequest.current) setLoading(false)
         }
     }, [selectedMonth])
 
     const fetchPaymentGrid = useCallback(async () => {
+        const request = ++gridRequest.current
         setLoadingCobros(true)
+        setReceiptError('')
         try {
             const grid = await getMonthlyPaymentGrid(selectedMonth)
-            setPaymentGrid(grid)
+            if (request === gridRequest.current) setPaymentGrid(grid)
+        } catch {
+            if (request === gridRequest.current) { setPaymentGrid([]); setReceiptError('No se pudieron cargar los recibos del mes. Reintenta antes de interpretar los importes.'); toast.error('No se pudieron cargar los recibos del mes') }
         } finally {
-            setLoadingCobros(false)
+            if (request === gridRequest.current) setLoadingCobros(false)
         }
     }, [selectedMonth])
 
@@ -128,12 +141,15 @@ export default function FinancePage() {
         let result = paymentGrid
         if (cobrosSearch) {
             const q = cobrosSearch.toLowerCase()
-            result = result.filter(r => r.childName.toLowerCase().includes(q) || (r.planName || '').toLowerCase().includes(q))
+            result = result.filter(r => r.childName.toLowerCase().includes(q) || (r.planName || '').toLowerCase().includes(q) || r.concept.toLowerCase().includes(q) || (r.coveredMonth || '').includes(q))
         }
         if (cobrosFilter === 'pending') result = result.filter(r => ['pending', 'overdue', 'failed'].includes(r.status))
         if (cobrosFilter === 'paid') result = result.filter(r => r.status === 'paid')
+        if (cobrosFilter === 'partial') result = result.filter(r => r.paidAmount > 0 && r.remainingAmount > 0)
+        if (cobrosFilter === 'overdue') result = result.filter(r => r.status === 'overdue')
+        if (receiptSource !== 'all') result = result.filter(r => r.source === receiptSource)
         return result
-    }, [paymentGrid, cobrosSearch, cobrosFilter])
+    }, [paymentGrid, cobrosSearch, cobrosFilter, receiptSource])
 
     const gridPaidTotal = paymentGrid.reduce((sum, g) => sum + g.paidAmount, 0)
     const gridPendingTotal = paymentGrid.reduce((sum, g) => sum + g.remainingAmount, 0)
@@ -224,6 +240,14 @@ export default function FinancePage() {
         toast.success("CSV exportado")
     }
 
+    function exportReceiptsCSV() {
+        const cell=(value:string|number|null)=>{const raw=String(value ?? '');const safe=/^[=+@\-\t\r]/.test(raw)?"'"+raw:raw;return `"${safe.replaceAll('"','""')}"`}
+        const rows=[['Jugador / comprador','Origen','Concepto','Mes cubierto','Vencimiento','Importe','Abonado','Pendiente','Estado','Método','Referencia'],
+            ...filteredGrid.map(r=>[r.childName,r.source,r.concept,r.coveredMonth,r.dueDate,r.amount.toFixed(2),r.paidAmount.toFixed(2),r.remainingAmount.toFixed(2),STATUS_CFG[r.status]?.label||r.status,r.paymentMethod,r.paymentId])]
+        const url=URL.createObjectURL(new Blob(['\uFEFF'+rows.map(r=>r.map(cell).join(';')).join('\n')],{type:'text/csv;charset=utf-8'}))
+        const link=document.createElement('a');link.href=url;link.download=`recibos_${selectedMonth}.csv`;link.click();URL.revokeObjectURL(url)
+    }
+
     const fmt = (n: number) => n.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     const totalExpenses = kpis?.monthlyExpenses || 0
 
@@ -240,7 +264,7 @@ export default function FinancePage() {
                         <Calendar className="h-4 w-4" /> Gestión centralizada de cobros, pagos y gastos
                     </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                     <Button asChild variant="outline"><Link href="/admin/finanzas/solicitudes">Cobros y suscripciones por enlace</Link></Button>
                     <CollectReceiptDialog onSaved={async () => { await Promise.all([fetchAll(), fetchPaymentGrid()]) }} />
                     <Button onClick={() => setManualPaymentOpen(true)} variant="outline">
@@ -259,13 +283,13 @@ export default function FinancePage() {
                 <CardContent className="py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
                     <div>
                         <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Periodo contable</p>
-                        <p className="text-sm text-slate-600">Todos los totales, movimientos y gastos corresponden al mismo mes.</p>
+                        <p className="text-sm text-slate-600">Vista general: dinero recibido y gastos del mes. Recibos: vencimientos del mes y saldo de cada recibo.</p>
                     </div>
                     <div className="flex items-center gap-2">
                         <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => navigateMonth(-1)} aria-label="Mes anterior">
                             <ChevronLeft className="h-4 w-4" />
                         </Button>
-                        <span className="text-base font-black text-slate-900 capitalize min-w-[170px] text-center">{monthLabel}</span>
+                        <label className="text-sm font-semibold"><span className="sr-only">Seleccionar mes</span><input aria-label="Seleccionar mes" type="month" value={selectedMonth} onChange={e=>{if(/^\d{4}-(0[1-9]|1[0-2])$/.test(e.target.value))setSelectedMonth(e.target.value)}} className="min-w-0 rounded-md border border-slate-200 px-3 py-2" /></label>
                         <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => navigateMonth(1)} aria-label="Mes siguiente">
                             <ChevronRight className="h-4 w-4" />
                         </Button>
@@ -274,7 +298,7 @@ export default function FinancePage() {
             </Card>
 
             {/* KPI ROW */}
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+            <div className="grid grid-cols-2 gap-3 xl:grid-cols-6">
                 <KpiCard label="Cobrado" value={loading ? '...' : `${fmt(kpis?.totalRevenue || 0)}€`}
                     subtitle="En el periodo" color="yellow" icon={<DollarSign className="h-4 w-4" />} />
                 <KpiCard label="Pendiente" value={loading ? '...' : `${fmt(kpis?.pendingPayments || 0)}€`}
@@ -291,12 +315,12 @@ export default function FinancePage() {
 
             {/* TABS */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-                <TabsList className="bg-white border shadow-sm p-1 h-auto">
+                <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 bg-white border shadow-sm p-1">
                     <TabsTrigger value="general" className="font-bold text-xs uppercase tracking-wider data-[state=active]:bg-slate-900 data-[state=active]:text-white px-6 py-2.5 rounded-lg">
                         📊 Vista General
                     </TabsTrigger>
                     <TabsTrigger value="cobros" className="font-bold text-xs uppercase tracking-wider data-[state=active]:bg-slate-900 data-[state=active]:text-white px-6 py-2.5 rounded-lg">
-                        💰 Cobros del Mes
+                        💰 Recibos del mes
                     </TabsTrigger>
                     <TabsTrigger value="gastos" className="font-bold text-xs uppercase tracking-wider data-[state=active]:bg-slate-900 data-[state=active]:text-white px-6 py-2.5 rounded-lg">
                         📝 Gastos
@@ -448,6 +472,7 @@ export default function FinancePage() {
                                                             <RotateCcw className="h-3 w-3 mr-1" /> Reabrir recibo
                                                         </Button>
                                                     ) : <span className="text-slate-300">—</span>}
+                                                    {(tx.paymentId || tx.allocationPaymentId) && <Button asChild size="sm" variant="outline" className="mt-2"><a href={`/api/payments/${tx.paymentId || tx.allocationPaymentId}/receipt`} target="_blank" rel="noopener noreferrer">Recibo</a></Button>}
                                                     {tx.paymentId && tx.manualManageable && <ManualPaymentEditor paymentId={tx.paymentId} onSaved={async () => { await Promise.all([fetchAll(), fetchPaymentGrid()]) }} />}
                                                     {tx.allocationPaymentId && <ReceiptCollectionHistory paymentId={tx.allocationPaymentId} onSaved={async () => { await Promise.all([fetchAll(), fetchPaymentGrid()]) }} />}
                                                 </TableCell>
@@ -464,10 +489,10 @@ export default function FinancePage() {
                 <TabsContent value="cobros" className="space-y-4">
                     {/* Collection controls + % bar */}
                     <div className="flex flex-col gap-4">
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
                             <div>
-                                <p className="text-lg font-black text-slate-900 capitalize">Cobros de {monthLabel}</p>
-                                <p className="text-xs text-slate-500">Solo aparecen recibos con vencimiento en este periodo.</p>
+                                <p className="text-lg font-black text-slate-900 capitalize">Recibos de {monthLabel}</p>
+                                <p className="text-xs text-slate-500">Academia, campus, torneos, tienda y otros. Se agrupan por vencimiento; si no tienen fecha, por el mes de creación. Los abonos pueden haberse recibido en otro mes.</p>
                             </div>
                             <CollectReceiptDialog onSaved={async () => { await Promise.all([fetchAll(), fetchPaymentGrid()]) }} />
                         </div>
@@ -477,7 +502,7 @@ export default function FinancePage() {
                             <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-4">
                                     <Badge className="bg-green-100 text-green-700 border-none text-sm px-4 py-1.5">
-                                        ✓ Cobrado: {fmt(gridPaidTotal)}€
+                                        ✓ Abonado en estos recibos: {fmt(gridPaidTotal)}€
                                     </Badge>
                                     <Badge className="bg-amber-100 text-amber-700 border-none text-sm px-4 py-1.5">
                                         ⏳ Pendiente: {fmt(gridPendingTotal)}€
@@ -498,7 +523,7 @@ export default function FinancePage() {
                             <div className="relative flex-1">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                                 <Input
-                                    placeholder="Buscar alumno por nombre..."
+                                    placeholder="Buscar jugador, comprador o concepto..."
                                     value={cobrosSearch}
                                     onChange={e => setCobrosSearch(e.target.value)}
                                     className="pl-10 bg-white border-slate-200"
@@ -509,11 +534,14 @@ export default function FinancePage() {
                                     </button>
                                 )}
                             </div>
-                            <div className="flex rounded-lg border border-slate-200 bg-white overflow-hidden">
+                            <select aria-label="Tipo de recibo" value={receiptSource} onChange={e=>setReceiptSource(e.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"><option value="all">Todos los conceptos</option>{['Cuotas','Campus','Torneos','Tienda','Otros'].map(source=><option key={source} value={source}>{source}</option>)}</select>
+                            <div className="flex flex-wrap rounded-lg border border-slate-200 bg-white overflow-hidden">
                                 {[
                                     { key: 'all' as const, label: 'Todos' },
                                     { key: 'pending' as const, label: '⏳ Pendientes' },
                                     { key: 'paid' as const, label: '✓ Cobrados' },
+                                    { key: 'partial' as const, label: 'Parciales' },
+                                    { key: 'overdue' as const, label: 'Vencidos' },
                                 ].map(f => (
                                     <button
                                         key={f.key}
@@ -527,18 +555,20 @@ export default function FinancePage() {
                         </div>
                     </div>
 
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-slate-600"><span>{filteredGrid.length} de {paymentGrid.length} recibos</span><Button variant="outline" onClick={exportReceiptsCSV} disabled={loadingCobros || !filteredGrid.length}><Download className="mr-2 h-4 w-4" />Exportar recibos visibles</Button></div>
+
                     {/* Payment Grid */}
                     <Card className="border-none shadow-xl bg-white overflow-hidden">
                         <CardContent className="p-0">
                             {loadingCobros ? (
                                 <div className="text-center py-16 text-slate-400"><Loader2 className="h-7 w-7 mx-auto animate-spin" /></div>
-                            ) : filteredGrid.length === 0 ? (
+                            ) : receiptError ? <div role="alert" className="space-y-3 p-8 text-center text-red-700"><p>{receiptError}</p><Button variant="outline" onClick={()=>void fetchPaymentGrid()}>Reintentar</Button></div> : filteredGrid.length === 0 ? (
                                 <div className="text-center py-16 text-slate-400">
                                     <Euro className="h-12 w-12 mx-auto mb-3 text-slate-200" />
                                     <p className="font-bold">{paymentGrid.length === 0 ? 'No hay cobros para este mes' : 'No se encontraron resultados'}</p>
                                     <p className="text-xs">
                                         {paymentGrid.length === 0
-                                            ? 'Inscribe alumnos en Academia para generar cobros automáticos'
+                                            ? 'Los recibos aparecerán al asignar cuotas o registrar cargos aprobados. Crear un recibo no realiza un cobro.'
                                             : 'Prueba con otros filtros o búsqueda'}
                                     </p>
                                 </div>
@@ -546,9 +576,9 @@ export default function FinancePage() {
                                 <Table>
                                     <TableHeader>
                                         <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
-                                            <TableHead className="font-bold text-slate-500 uppercase text-[10px] tracking-widest pl-6">Alumno</TableHead>
+                                            <TableHead className="font-bold text-slate-500 uppercase text-[10px] tracking-widest pl-6">Jugador / comprador</TableHead>
                                             <TableHead className="font-bold text-slate-500 uppercase text-[10px] tracking-widest">Categoría</TableHead>
-                                            <TableHead className="font-bold text-slate-500 uppercase text-[10px] tracking-widest">Plan</TableHead>
+                                            <TableHead className="font-bold text-slate-500 uppercase text-[10px] tracking-widest">Concepto y mes cubierto</TableHead>
                                             <TableHead className="font-bold text-slate-500 uppercase text-[10px] tracking-widest">Método</TableHead>
                                             <TableHead className="font-bold text-slate-500 uppercase text-[10px] tracking-widest">Vencimiento</TableHead>
                                             <TableHead className="font-bold text-slate-500 uppercase text-[10px] tracking-widest">Importe</TableHead>
@@ -564,17 +594,17 @@ export default function FinancePage() {
                                                         <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold ${row.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
                                                             {row.childName.charAt(0)}
                                                         </div>
-                                                        <span className="font-bold text-sm text-slate-900">{row.childName}</span>
+                                                        <div>{row.childId ? <a href={`/admin/crm/alumnos/${row.childId}`} className="font-bold text-sm text-slate-900 underline">{row.childName}</a> : <span className="font-bold text-sm text-slate-900">{row.childName}</span>}<p className="text-xs text-slate-500">{row.source}</p></div>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="text-xs text-slate-500">{row.categoryName || '—'}</TableCell>
-                                                <TableCell className="text-xs font-medium text-slate-700">{row.planName || '—'}</TableCell>
+                                                <TableCell className="text-xs font-medium text-slate-700"><p className="max-w-64 whitespace-normal">{row.concept}</p>{row.coveredMonth && <p className="mt-1 font-bold">Mes cubierto: {row.coveredMonth}</p>}{row.planName && <p className="mt-1 max-w-64 whitespace-normal text-slate-500">{row.planName}</p>}</TableCell>
                                                 <TableCell>
                                                     <span className="text-xs">
                                                         {['efectivo', 'cash'].includes(row.paymentMethod || '') ? '💵' : ['transferencia', 'transfer'].includes(row.paymentMethod || '') ? '🏦' : '💳'} {row.paymentMethod || 'N/D'}
                                                     </span>
                                                 </TableCell>
-                                                <TableCell className="text-xs text-slate-500">{row.dueDate ? new Date(`${row.dueDate}T12:00:00`).toLocaleDateString('es-ES') : '—'}</TableCell>
+                                                <TableCell className="text-xs text-slate-500">{row.dueDate ? new Date(`${row.dueDate}T12:00:00`).toLocaleDateString('es-ES') : 'Sin vencimiento'}</TableCell>
                                                 <TableCell><span className="font-black text-sm text-slate-900">{row.amount}€</span><p className="text-xs text-green-700">Abonado: {row.paidAmount.toFixed(2)} €</p><p className="text-xs text-amber-800">Pendiente: {row.remainingAmount.toFixed(2)} €</p></TableCell>
                                                 <TableCell>
                                                     {row.paidAmount > 0 && row.remainingAmount > 0 && <Badge variant="outline">Pago parcial</Badge>}
@@ -607,6 +637,7 @@ export default function FinancePage() {
                                                             </Button>}
                                                         </div>
                                                     ) : <span className="text-slate-400">Sin cobro pendiente</span>}
+                                                    <Button asChild size="sm" variant="outline" className="mt-2"><a href={`/api/payments/${row.paymentId}/receipt`} target="_blank" rel="noopener noreferrer"><Download className="mr-1 h-3 w-3" />Recibo</a></Button>
                                                     {row.hasAllocations && <ReceiptCollectionHistory paymentId={row.paymentId} onSaved={async () => { await Promise.all([fetchAll(), fetchPaymentGrid()]) }} />}
                                                 </TableCell>
                                             </TableRow>

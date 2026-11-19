@@ -59,12 +59,12 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
     }
 
     // 3. Fetch orders (Store purchases)
-    const { data: orders } = await supabase
+    const { data: orders } = user.email_confirmed_at && user.email ? await createAdminClient()
         .from('orders')
         .select(`*, order_items (*)`)
-        .eq('customer_email', user.email)
+        .eq('customer_email', user.email.trim().toLowerCase()) : { data: [] }
 
-    // These order IDs already passed the caller's RLS and email filter. Only
+    // These orders are filtered by the confirmed email from Auth.getUser(). Only
     // resolve the receipt IDs here; the payment RPC independently checks ownership.
     const orderIds = (orders || []).map(o => o.id)
     const { data: orderReceipts } = orderIds.length ? await createAdminClient().from('payments').select('id,ref_id,status,method,amount,manual_receipt_allocations(amount,paid_date,method,voided_at)').eq('type', 'shop').in('ref_id', orderIds) : { data: [] }
@@ -79,6 +79,8 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
             balance: receiptBalance(p),
             status: p.status,
             date: p.created_at,
+            coveredMonth: p.covered_month,
+            childName: familyChildren.data?.find(c=>c.id===p.child_id)?.full_name || '',
             method: p.method || 'Sin asignar',
             items: null,
             isStore: false
@@ -93,6 +95,8 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
             balance: orderReceipts?.find(p => p.ref_id === o.id) ? receiptBalance(orderReceipts.find(p => p.ref_id === o.id)!) : undefined,
             status: orderReceipts?.find(p => p.ref_id === o.id)?.status || o.status,
             date: o.created_at,
+            coveredMonth: null,
+            childName: '',
             method: orderReceipts?.find(p => p.ref_id === o.id)?.method || o.payment_method || 'Sin asignar',
             items: o.order_items,
             isStore: true
@@ -169,6 +173,9 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
                                                 <span className="flex items-center"><CreditCard className="mr-1.5 h-4 w-4 text-slate-400"/> {translate(" Método: ")}<span className="capitalize ml-1">{translate(tx.method)}</span></span>
                                             </div>
 
+                                            {tx.childName && <p className="mt-2 text-sm font-semibold">{tx.childName}</p>}
+                                            {tx.coveredMonth && <p className="text-sm text-slate-600">{translate("Mes cubierto: ")}{tx.coveredMonth}</p>}
+
                                             {translate(tx.items && tx.items.length > 0 && (
                                                 <div className="mt-4 pt-3 border-t border-slate-100 flex flex-col gap-1 w-full text-sm">
                                                     <p className="font-bold text-xs text-slate-400 uppercase tracking-widest mb-1">{translate("Artículos")}</p>
@@ -191,6 +198,7 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
                                         <div className="text-3xl font-black text-slate-900 tracking-tight w-full text-right sm:text-center">{translate(Number(tx.amount).toFixed(2))} {translate(" €")}</div>
                                         {translate(tx.balance && <div className="mt-2 text-sm"><p className="text-green-700">{translate("Abonado: ")}{translate(tx.balance.paid.toFixed(2))} {translate(" €")}</p><p className="text-amber-800">{translate("Pendiente: ")}{translate(tx.balance.remaining.toFixed(2))} {translate(" €")}</p></div>)}
 
+                                        {tx.paymentId && <a className="mt-3 flex w-full items-center justify-center rounded-md border border-navy/20 py-2 text-xs font-bold text-navy hover:bg-slate-50" href={`/api/payments/${tx.paymentId}/receipt`} target="_blank" rel="noopener noreferrer">{translate("Descargar recibo")}</a>}
                                         {translate(tx.isStore && (
                                             <a href="/portal/tienda" className="mt-3 flex w-full items-center justify-center rounded-md bg-gold/10 py-2 text-xs font-bold text-navy transition-colors hover:bg-gold/20">
                                                 {translate("Volver a Tienda")}</a>

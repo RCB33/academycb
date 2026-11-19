@@ -70,7 +70,10 @@ export type Expense = {
 }
 
 export type MonthlyPaymentRow = {
-    membershipId: string
+    membershipId: string | null
+    source: string
+    concept: string
+    coveredMonth: string | null
     childId: string | null
     childName: string
     categoryName: string
@@ -411,7 +414,7 @@ export async function getFinanceOverview(monthInput: string): Promise<{
             collectionRate: collectionBase > 0 ? Math.round((totalRevenue / collectionBase) * 100) : 0,
             revenueBySource: Object.entries(sourceTotals).map(([source, amount]) => ({ source, amount })),
         },
-        transactions: transactions.slice(0, 100),
+        transactions,
         expenses,
         students: (studentsResult.data || []) as FinanceStudentOption[],
     }
@@ -420,59 +423,61 @@ export async function getFinanceOverview(monthInput: string): Promise<{
 export async function getMonthlyPaymentGrid(monthInput: string): Promise<MonthlyPaymentRow[]> {
     const { supabase } = await requireFinanceAccess()
     const range = getMonthRange(monthInput)
-
-    const [{ data: memberships, error: membershipError }, { data: graceSetting }] = await Promise.all([
-        supabase
-        .from('academy_memberships')
-        .select('id, child_id, payment_method, status, child:children(id, full_name, category:categories(name)), plan:membership_plans(name)'),
-        supabase.from('academy_settings').select('value').eq('key', 'billing_grace_days').maybeSingle(),
-    ])
-
-    if (membershipError || !memberships?.length) {
-        logQueryError('monthly memberships', membershipError)
-        return []
+    type MonthlyReceipt = PaymentRecord & {
+        covered_month: string | null
+        child: { id: string; full_name: string; category: { name: string } | null } | null
     }
-
-    const membershipMap = new Map(
-        (memberships as unknown as AcademyMembershipRecord[]).map((membership) => [membership.id, membership])
-    )
-    const { data: payments, error: paymentsError } = await supabase
-        .from('payments')
-        .select('id, ref_id, amount, status, method, paid_at, due_date, description, created_at, manual_receipt_allocations(amount,paid_date,method,voided_at)')
-        .eq('type', 'academy')
-        .in('ref_id', [...membershipMap.keys()])
-
-    if (paymentsError) {
-        logQueryError('monthly payments', paymentsError)
-        return []
+    const payments: MonthlyReceipt[] = []
+    // All receipt sources, including standalone charges. Pagination avoids the
+    // Data API's row limit silently hiding part of a busy month.
+    for (let offset = 0; ; offset += 500) {
+        const { data, error } = await supabase.from('payments')
+            .select('id,type,ref_id,child_id,amount,status,method,paid_at,due_date,description,created_at,covered_month,child:children(id,full_name,category:categories(name)),manual_receipt_allocations(amount,paid_date,method,voided_at)')
+            .or(`and(due_date.gte.${range.startDate},due_date.lt.${range.nextDate}),and(due_date.is.null,created_at.gte.${range.startIso},created_at.lt.${range.nextIso})`)
+            .order('id').range(offset, offset + 499)
+        if (error) throw new Error('No se pudieron cargar los recibos del mes')
+        payments.push(...(data || []) as unknown as MonthlyReceipt[])
+        if (!data || data.length < 500) break
     }
-
-    return (payments || [])
-        .filter((payment) => isInRange(payment.due_date || payment.created_at, range.startMs, range.nextMs))
-        .map((payment) => {
-            const membership = membershipMap.get(payment.ref_id)
-            const child = membership?.child
-            const category = child?.category
-            const plan = membership?.plan
-            const balance = receiptBalance(payment)
-            return {
-                membershipId: payment.ref_id,
-                childId: child?.id || null,
-                childName: child?.full_name || 'Sin nombre',
-                categoryName: category?.name || '',
-                planName: plan?.name || '',
-                amount: numberValue(payment.amount),
-                paymentMethod: payment.method || membership?.payment_method || null,
-                status: getPaymentStatus(payment, Number(graceSetting?.value || 0)),
-                paidAt: payment.paid_at || null,
-                paymentId: payment.id,
-                dueDate: payment.due_date || null,
-                paidAmount: balance.paid,
-                remainingAmount: balance.remaining,
-                hasAllocations: balance.hasAllocations,
-            } satisfies MonthlyPaymentRow
-        })
-        .sort((a, b) => a.childName.localeCompare(b.childName, 'es'))
+    const { data: graceSetting, error: graceError } = await supabase.from('academy_settings').select('value').eq('key','billing_grace_days').maybeSingle()
+    if (graceError) throw new Error('No se pudo comprobar el plazo de pago')
+    const membershipMap = new Map<string, { payment_method: string | null; plan: { name: string } | null }>()
+    const orderNames = new Map<string,string>()
+    const ids = [...new Set(payments.filter(p=>p.type==='academy' && p.ref_id).map(p=>p.ref_id!))]
+    for (let offset=0; offset<ids.length; offset+=100) {
+        const {data,error}=await supabase.from('academy_memberships').select('id,payment_method,plan:membership_plans(name)').in('id',ids.slice(offset,offset+100))
+        if(error)throw new Error('No se pudieron cargar los planes asociados')
+        for(const m of (data || []) as unknown as Array<{id:string;payment_method:string|null;plan:{name:string}|null}>)membershipMap.set(m.id,m)
+    }
+    const orderIds=[...new Set(payments.filter(p=>p.type==='shop' && p.ref_id).map(p=>p.ref_id!))]
+    for(let offset=0;offset<orderIds.length;offset+=100) {
+        const {data,error}=await supabase.from('orders').select('id,customer_name').in('id',orderIds.slice(offset,offset+100))
+        if(error)throw new Error('No se pudieron cargar los compradores')
+        for(const order of data || [])orderNames.set(order.id,order.customer_name || 'Compra de tienda')
+    }
+    return payments.map(payment=>{
+        const membership=payment.type==='academy' && payment.ref_id ? membershipMap.get(payment.ref_id) : undefined
+        const balance=receiptBalance(payment)
+        return {
+            membershipId: membership ? payment.ref_id : null,
+            childId: payment.child_id || null,
+            childName: payment.child?.full_name || (payment.type==='shop' && payment.ref_id ? orderNames.get(payment.ref_id) : null) || 'Sin jugador vinculado',
+            categoryName: payment.child?.category?.name || '',
+            planName: membership?.plan?.name || '',
+            source: paymentSource(payment.type),
+            concept: payment.description || paymentSource(payment.type),
+            coveredMonth: payment.covered_month,
+            amount: numberValue(payment.amount),
+            paymentMethod: payment.method || membership?.payment_method || null,
+            status: getPaymentStatus(payment,Number(graceSetting?.value || 0)),
+            paidAt: payment.paid_at || null,
+            paymentId: payment.id,
+            dueDate: payment.due_date || null,
+            paidAmount: balance.paid,
+            remainingAmount: balance.remaining,
+            hasAllocations: balance.hasAllocations,
+        } satisfies MonthlyPaymentRow
+    }).sort((a,b)=>a.childName.localeCompare(b.childName,'es') || (a.coveredMonth || '').localeCompare(b.coveredMonth || '') || a.concept.localeCompare(b.concept,'es'))
 }
 
 async function syncAcademyMembership(supabase: SupabaseClient, membershipId: string) {

@@ -54,7 +54,7 @@ La integración Stripe está disponible detrás de controles de activación. La 
 - Registrar pago: aplicar un importe recibido a uno o varios recibos; parciales y reparto entre hermanos se conservan. Transferencia, efectivo, Bizum o tarjeta externa son registros manuales, no cargos Stripe.
 - El resumen distingue meses sin cuota creada de deudas. No se infieren meses ni promociones de pagos históricos.
 - Recordatorios: prepara texto con saldo actualizado y enlaces a WhatsApp/correo. No envía automáticamente ni acredita entrega. Rechaza recibos saldados/anulados.
-- Comprobantes: PDF por recibo, incluyendo abonos y anulaciones. Compartir usa el selector del dispositivo cuando admite archivos; alternativamente descarga para adjuntarlo. No es factura fiscal ni envío automático por Resend.
+- Recibos: PDF descargable para administración y para la familia propietaria, incluyendo abonos y anulaciones. Las familias filtran su historial por mes; Finanzas → Recibos del mes reúne academia, campus, torneos, tienda y otros, con filtros de estado/origen y CSV. Se genera bajo demanda desde el pago guardado; no es factura fiscal ni envío automático por Resend.
 - Justificantes: privados, solo admin/finanzas; PDF/JPG/PNG hasta 3 MB, accesibles desde Abonos / historial. No se reemplazan archivos previos.
 - Entrenadores: jugadores/evaluaciones/observaciones de equipos asignados y avisos internos de coordinación. No acceden a finanzas. Avisos internos no copian mensajes históricos de familias ni envían email/WhatsApp.
 

@@ -1,5 +1,14 @@
 # Pagos — auditoría y diseño de implementación
 
+## Recibos para familias y organización mensual — 19 noviembre 2026
+
+- El propietario confirma que quiere recibos para las familias y una administración clara por meses. Sustituye el requisito anterior de implementar facturación fiscal en esta entrega.
+- Descarga privada de PDF desde el historial de cada familia y filtro por mes cubierto/vencimiento. Los pagos guardados son la fuente del recibo, generado bajo demanda: no se crea un archivo fiscal inmutable ni se envía automáticamente. Incluye estado, importes, abonos, anulaciones e indicación de IVA incluido, sin aumentar precios.
+- La consulta familiar usa RLS. Para tienda, se comprueba el correo confirmado de Auth contra el comprador del pedido antes de leer el recibo con privilegios de servidor. No se amplían políticas ni se ofrece acceso de servicio a recibos de otros jugadores.
+- Finanzas → Recibos del mes incluye todas las procedencias, incluso cargos sin matrícula/plan: academia, campus, torneos, tienda y otros. Selector mensual, búsqueda, filtros de procedencia/estado, abonado y pendiente por recibo, descarga PDF y exportación CSV del filtro. Paginación de lectura para no truncar meses con más de 500 recibos. La vista general distingue dinero recibido durante el mes de recibos que vencen ese mes.
+- Pruebas: propiedad, acceso denegado, comprador confirmado/no confirmado, parcial/anulado/Stripe, consulta de todas las procedencias, paginación y errores. RLS conectada con fixtures y ROLLBACK demuestra aislamiento entre familias y pérdida de acceso al retirar el vínculo. TypeScript, lint, suites financieras/familiares, i18n y build correctos; PDF inspeccionado visualmente. Navegador con cuenta QA y respuestas sintéticas verifica filtros, CSV, escritorio y móvil; las consultas reales de lectura también responden correctamente.
+- No se crean ni modifican pagos reales. Digest comprobado: 11 pagos, `e9b3ce77d682aabd79e1097a68a22b23`. Cuentas temporales revocadas y eliminadas. Las limitaciones del proveedor Stripe y la falta de prueba de recepción real de correo descritas abajo siguen vigentes.
+
 ## Solicitudes de cobro desde administración — 19 noviembre 2026
 
 - Nuevo flujo `/admin/finanzas/solicitudes`: crear recibos mediante el editor existente, seleccionar tutor y recibos, preparar pago único o mensualidades finitas y compartir enlace por correo/copia/WhatsApp. Visible también en pagos de cada jugador y en el portal del tutor designado. Manual: `docs/ADMIN-BILLING.md`.

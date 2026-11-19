@@ -1,0 +1,16 @@
+// All-source monthly accounting coverage with synthetic data only.
+const assert=require('node:assert/strict'),fs=require('node:fs'),ts=require('typescript')
+let authorized=true,fail=false,calls=[]
+const base={ref_id:null,child_id:null,amount:75,status:'pending',method:'transfer',paid_at:null,due_date:'2026-11-05',description:'Cuota suelta',created_at:'2026-10-01',covered_month:'2026-11',child:null,manual_receipt_allocations:[]}
+let payments=[{...base,id:'standalone',type:'academy'},{...base,id:'campus',type:'campus',amount:100,manual_receipt_allocations:[{amount:40,voided_at:null},{amount:10,voided_at:'2026-11-02'}]},{...base,id:'shop',type:'shop',ref_id:'order',due_date:null,created_at:'2026-11-10',status:'paid',amount:20},{...base,id:'tournament',type:'tournament',status:'cancelled'},{...base,id:'other',type:'other',covered_month:null}]
+function from(table){let first=0,last=499;const filters={};const q={then(resolve,reject){let data=[];if(table==='payments')data=payments.slice(first,last+1);if(table==='academy_settings')data={value:'0'};if(table==='orders')data=[{id:'order',customer_name:'QA Buyer'}];return Promise.resolve({data,error:fail?{message:'Unavailable'}:null}).then(resolve,reject)}};q.range=(a,b)=>{first=a;last=b;calls.push([a,b]);return q};q.or=v=>{assert.ok(v.includes('due_date.gte.2026-11-01')&&v.includes('due_date.lt.2026-12-01')&&v.includes('due_date.is.null'));return q};q.eq=(k,v)=>{filters[k]=v;return q};for(const k of ['select','in','maybeSingle','order'])q[k]=()=>q;return q}
+function load(file){const m={exports:{}};new Function('module','exports','require',ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText)(m,m.exports,n=>{if(n==='next/cache')return {revalidatePath(){}};if(n==='@/lib/auth')return {requireFinanceAccess:async()=>{if(!authorized)throw Error('Denied');return {supabase:{from}}}};if(n==='@/lib/receipt-balance')return load('src/lib/receipt-balance.ts');return require(n)});return m.exports}
+;(async()=>{
+ const {getMonthlyPaymentGrid}=load('src/app/actions/finance.ts')
+ const rows=await getMonthlyPaymentGrid('2026-11');assert.equal(rows.length,5,'no memberships must not hide receipts');assert.deepEqual(new Set(rows.map(r=>r.source)),new Set(['Cuotas','Campus','Tienda','Torneos','Otros']));assert.equal(rows.find(r=>r.paymentId==='campus').paidAmount,40);assert.equal(rows.find(r=>r.paymentId==='campus').remainingAmount,60);assert.equal(rows.find(r=>r.paymentId==='shop').childName,'QA Buyer');assert.equal(rows.find(r=>r.paymentId==='tournament').remainingAmount,0)
+ payments=Array.from({length:501},(_,i)=>({...base,id:String(i),type:'other'}));calls=[];assert.equal((await getMonthlyPaymentGrid('2026-11')).length,501);assert.deepEqual(calls,[[0,499],[500,999]])
+ fail=true;await assert.rejects(()=>getMonthlyPaymentGrid('2026-11'),/No se pudieron/);fail=false
+ authorized=false;await assert.rejects(()=>getMonthlyPaymentGrid('2026-11'),/Denied/);authorized=true
+ await assert.rejects(()=>getMonthlyPaymentGrid('2026-99'),/no válido/)
+ console.log('PASS: all sources and standalone receipts without memberships, partial/voided/cancelled balances, store buyer, pagination beyond 500, query errors and finance authorization. No writes.')
+})().catch(e=>{console.error(e);process.exitCode=1})
