@@ -2,6 +2,7 @@ import { requireAdmin } from '@/lib/auth'
 import { configuredStripe } from '@/lib/stripe-payments'
 import { stripeCheckoutMode } from '@/lib/stripe-availability'
 import Link from 'next/link'
+import { WebhookProbe } from './webhook-probe'
 
 export async function StripeProductionStatus() {
     const { supabase } = await requireAdmin()
@@ -36,7 +37,7 @@ export async function StripeProductionStatus() {
             <h2 className="text-xl font-bold">{enabled && apiConnected && canCharge !== false ? 'Pagos con tarjeta activados' : 'Activación pendiente'}</h2>
             <ul className="list-inside list-disc space-y-2 text-sm">
                 <li>Clave de producción: {keyPresent ? 'guardada' : 'pendiente'}</li>
-                <li>Confirmación automática: {webhookPresent ? 'secreto guardado; la entrega se verifica con un pago' : 'pendiente'}</li>
+                <li>Confirmación automática: {webhookPresent ? 'secreto guardado; comprueba la entrega con la prueba sin cobro' : 'pendiente'}</li>
                 <li>Conexión API: {apiConnected ? 'lectura de Checkout verificada' : 'pendiente de verificar'}</li>
                 <li>Cuenta: {accountName || 'comprueba Academy Costa Brava en Stripe'}</li>
                 <li>Cobros autorizados por Stripe: {canCharge === true ? 'sí' : canCharge === false ? 'no; completa la activación de la cuenta en Stripe' : 'comprueba el estado en Stripe'}</li>
@@ -46,6 +47,7 @@ export async function StripeProductionStatus() {
             <p className="text-sm text-slate-600">Guardar las credenciales no confirma ningún pago. La web registra el cobro cuando recibe y verifica el aviso de Stripe.</p>
             <div className="flex flex-wrap gap-4 text-sm underline"><Link href="/admin/ajustes">Métodos de pago y planes</Link><a href="https://dashboard.stripe.com/" target="_blank" rel="noopener noreferrer">Abrir Stripe</a></div>
         </section>
+        <WebhookProbe />
         <section className="space-y-3 rounded-2xl border bg-white p-6"><h2 className="text-xl font-bold">Últimos intentos de pago</h2>
             {receipts.error || events.error ? <p role="alert">No se pudo consultar el registro completo.</p> : payments.length ? <ul className="space-y-2">{payments.map(p=><li key={p.id} className="rounded-lg border p-3 text-sm">{labels[p.state] || p.state} · {(Number(p.amount_cents)/100).toFixed(2)} €<p className="text-slate-500">{new Date(p.created_at).toLocaleString('es-ES',{timeZone:'Europe/Madrid'})}</p></li>)}</ul> : <p className="text-sm text-slate-600">Todavía no hay intentos de cobro real.</p>}
         </section>

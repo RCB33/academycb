@@ -175,3 +175,13 @@ Las menciones a “pendiente” en las secciones siguientes reflejan su fecha, n
 - Referencia para limitar la suscripción: https://docs.stripe.com/billing/subscriptions/subscription-schedules (`end_behavior=cancel`). Esta programación aún no está conectada.
 - Migración aplicada y reconciliada con historial remoto: `20260913172823_configurable_academy_checkout_prices.sql`. Prueba SQL en transacción revertida: guardado válido y rechazo de decimales, precio ausente y duración excesiva.
 - Asesor de seguridad: no se añaden tablas ni permisos. Persisten avisos anteriores sobre funciones SECURITY DEFINER públicas, OTP superior a una hora y protección de contraseñas filtradas desactivada; revisar antes de entrega. Referencias: https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable y https://supabase.com/docs/guides/platform/going-into-prod#security . No se cambian invitaciones ni permisos ajenos a estos planes.
+# 19/11/2026 — Prueba privada de entrega LIVE sin cobro
+
+- A petición del propietario se añade `/admin/stripe` → «Probar webhook sin cobrar».
+- Solo administradores con sesión vigente; POST requiere mismo origen y JSON. Acceso anónimo y familias rechazado. Claves y URL de Checkout nunca se envían al navegador.
+- Crea una sesión técnica de 1 € sin cliente ni tarjeta, la caduca inmediatamente y reutiliza el intento durante cinco minutos. No crea registros financieros, inscripciones, facturas ni suscripciones en Academy. Si una interrupción impide caducarla, Stripe la caduca automáticamente en menos de una hora; no se expone su URL.
+- El webhook verifica la firma y el entorno antes de procesar `academy_webhook_delivery_probe_v1`. Solo acepta caducidad sin pago; guarda la referencia del evento en los metadatos de esa sesión aislada de Stripe. La pantalla no considera verificada una mera respuesta de la API.
+- No modifica los flags de activación LIVE ni de mensualidades. No añade tablas ni migraciones.
+- Pruebas locales: firmas, acceso, origen, duplicados, caducidad y reintentos con Stripe simulado; suites de pagos, TypeScript, lint de archivos modificados y build.
+- Baseline previo: 11 pagos; digest `e9b3ce77d682aabd79e1097a68a22b23`. Entrega real del diagnóstico pendiente de ejecución tras desplegar.
+

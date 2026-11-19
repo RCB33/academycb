@@ -26,6 +26,34 @@ async function sb(path, method='GET', body) {
   client=createServerClient(api,keys.find(k=>k.name==='anon').api_key,{cookies:{getAll:()=>[...jar].map(([name,value])=>({name,value})),setAll:rows=>rows.forEach(c=>jar.set(c.name,c.value))}})
   const login=await client.auth.signInWithPassword({email,password});assert.equal(login.error,null)
   const headers={Cookie:[...jar].map(([k,v])=>`${k}=${v}`).join('; ')}
+  // Explicit opt-in: creates and immediately expires one isolated LIVE Checkout
+  // session, never follows its payment URL and never supplies a card/customer.
+  if(process.env.ACADEMY_WEBHOOK_PROBE==='1') {
+   const endpoint='/api/admin/stripe/webhook-probe'
+   const anonymous=await fetch(origin+endpoint)
+   assert.equal(anonymous.status,403,'Anonymous diagnostic access denied')
+   const foreign=await fetch(origin+endpoint,{method:'POST',headers:{...headers,Origin:'https://invalid.example','Content-Type':'application/json'},body:'{}'})
+   assert.equal(foreign.status,403,'Cross-origin diagnostic mutation denied')
+   const start=await fetch(origin+endpoint,{method:'POST',headers:{...headers,Origin:origin,'Content-Type':'application/json'},body:'{}'})
+   const result=await start.json()
+   if(!start.ok)throw Error(result.error||`Probe start HTTP ${start.status}`)
+   let probe=result.probe
+   assert.equal(probe.expired,true,'Diagnostic session must be expired')
+   console.log(JSON.stringify({stage:'expired-without-payment',...probe}))
+   for(let i=0;i<12&&!probe.verified;i++) {
+    await new Promise(resolve=>setTimeout(resolve,2000))
+    const check=await fetch(origin+endpoint+'?session_id='+encodeURIComponent(probe.sessionId),{headers})
+    assert.equal(check.status,200)
+    probe=(await check.json()).probe
+   }
+   console.log(JSON.stringify({stage:'signed-webhook-result',...probe}))
+   assert.equal(probe.verified,true,'Stripe delivery not yet verified; inspect event deliveries')
+   await sb('/rest/v1/profiles?id=eq.'+userId,'PATCH',{role:'guardian'})
+   assert.equal((await fetch(origin+endpoint,{headers})).status,403,'Family diagnostic read denied')
+   assert.equal((await fetch(origin+endpoint,{method:'POST',headers:{...headers,Origin:origin,'Content-Type':'application/json'},body:'{}'})).status,403,'Family diagnostic mutation denied')
+   console.log('PASS: anonymous, foreign-origin and family diagnostic access denied')
+   return
+  }
   for(const path of ['/admin/dashboard','/admin/ajustes','/admin/academia','/admin/campus','/admin/campus/solicitudes','/admin/torneos/inscripciones','/admin/finanzas','/admin/actividades/correos']) {
    const page=await fetch(origin+path,{headers,redirect:'manual'}),html=await page.text()
    assert.equal(page.status,200,`${path} HTTP ${page.status}`)

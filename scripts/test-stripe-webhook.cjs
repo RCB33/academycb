@@ -3,11 +3,12 @@ const fs = require('node:fs')
 const path = require('node:path')
 const ts = require('typescript')
 const Stripe = require('stripe')
-let calls = 0, databaseFails = false, databaseCode = null, lastRpc = null
+let calls = 0, databaseFails = false, databaseCode = null, lastRpc = null, probeCalls = 0
 function load(file) {
     const result = { exports: {} }
     function localRequire(name) {
         if (name === 'server-only') return {}
+        if (name === '@/lib/stripe-webhook-probe') return { WEBHOOK_PROBE_PURPOSE: 'academy_webhook_delivery_probe_v1', recordWebhookProbe: async () => { probeCalls++ } }
         if (name === '@/lib/supabase/admin') return { createAdminClient: () => ({ rpc: async (name) => { calls++; lastRpc=name; return { error: databaseFails ? { message: 'test failure',code:databaseCode } : null } } }) }
         if (name.startsWith('@/')) return load(path.resolve('src', name.slice(2) + '.ts'))
         if (name.startsWith('.')) return load(path.resolve(path.dirname(file), name + '.ts'))
@@ -43,6 +44,11 @@ function request(value, signed = true) {
     const before=calls
     assert.equal((await POST(request({...event,type:'customer.created'}))).status,200)
     assert.equal((await POST(request({...event,livemode:true}))).status,400)
+    const probe = {...event,type:'checkout.session.expired',data:{object:{...event.data.object,metadata:{purpose:'academy_webhook_delivery_probe_v1'}}}}
+    assert.equal((await POST(request(probe,false))).status,400)
+    assert.equal(probeCalls,0)
+    assert.equal((await POST(request(probe))).status,200)
+    assert.equal(probeCalls,1)
     assert.equal((await POST(request({...event,data:{object:{...event.data.object,metadata:{purpose:'unrelated'}}}}))).status,200)
     assert.equal(calls,before)
     assert.equal((await POST(request({...event,data:{object:{...event.data.object,metadata:{purpose:'academy_connection_test'}}}}))).status,422)

@@ -2,6 +2,7 @@ import type Stripe from 'stripe'
 import { configuredStripe, verifyPaymentWebhook } from '@/lib/stripe-payments'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { fulfillAcademyCheckout, fulfillAcademyInvoice, syncAcademyInvoiceStatus, syncAcademySubscription } from '@/lib/academy-stripe-contract'
+import { recordWebhookProbe, WEBHOOK_PROBE_PURPOSE } from '@/lib/stripe-webhook-probe'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -49,6 +50,10 @@ export async function POST(request: Request) {
     const session = event.data.object as Stripe.Checkout.Session
     // Metadata routes each signed event to its own persisted ledger.
     const purpose = session.metadata?.purpose
+    if (purpose === WEBHOOK_PROBE_PURPOSE) {
+        try { await recordWebhookProbe(event); return Response.json({ received: true, diagnostic: true }) }
+        catch { return Response.json({ error: 'Webhook diagnostic pending; retry' }, { status: 500 }) }
+    }
     if (purpose === 'academy_contract') {
         try { await fulfillAcademyCheckout(session, event.type); return Response.json({ received: true }) }
         catch { return Response.json({ error: 'Contract confirmation pending; retry' }, { status: 500 }) }
