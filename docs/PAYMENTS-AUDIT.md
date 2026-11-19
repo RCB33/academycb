@@ -1,5 +1,9 @@
 # Pagos — auditoría y diseño de implementación
 
+## Estado más reciente — 19 noviembre 2026
+
+Credenciales LIVE y webhook guardados en Vercel Production; lectura y creación/caducidad de Checkout verificadas. Prueba real de entrega sin cobro superada: `checkout.session.expired`, evento `evt_1UdS3bGk8vSBcmVd9xHkmJys`, recibido y firmado correctamente el 19/11/2026 a las 09:55:08 UTC. No acredita un cobro completo ni el ciclo de suscripción. Los nuevos pagos con tarjeta y las mensualidades automáticas siguen desactivados. La clave restringida no permite consultar el estado de activación de la cuenta Stripe. Los 11 pagos existentes mantienen el digest `e9b3ce77d682aabd79e1097a68a22b23`; usuario QA eliminado y sesión revocada. Esta actualización sustituye las afirmaciones antiguas sobre ausencia de credenciales/entrega LIVE, no los pendientes de negocio y seguridad siguientes.
+
 ## Cierre operativo — 18 noviembre 2026, segunda revisión
 
 - Catálogo cargado desde el dossier: una sesión semanal 75 €/mes, dos sesiones 140 €/mes, matrícula 30 € solo nuevos jugadores. Temporada 15/09/2026–31/05/2027. Se respeta el horario web confirmado por el dueño: 17:30–19:00.
@@ -175,7 +179,7 @@ Las menciones a “pendiente” en las secciones siguientes reflejan su fecha, n
 - Referencia para limitar la suscripción: https://docs.stripe.com/billing/subscriptions/subscription-schedules (`end_behavior=cancel`). Esta programación aún no está conectada.
 - Migración aplicada y reconciliada con historial remoto: `20260913172823_configurable_academy_checkout_prices.sql`. Prueba SQL en transacción revertida: guardado válido y rechazo de decimales, precio ausente y duración excesiva.
 - Asesor de seguridad: no se añaden tablas ni permisos. Persisten avisos anteriores sobre funciones SECURITY DEFINER públicas, OTP superior a una hora y protección de contraseñas filtradas desactivada; revisar antes de entrega. Referencias: https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable y https://supabase.com/docs/guides/platform/going-into-prod#security . No se cambian invitaciones ni permisos ajenos a estos planes.
-# 19/11/2026 — Prueba privada de entrega LIVE sin cobro
+## 19/11/2026 — Prueba privada de entrega LIVE sin cobro
 
 - A petición del propietario se añade `/admin/stripe` → «Probar webhook sin cobrar».
 - Solo administradores con sesión vigente; POST requiere mismo origen y JSON. Acceso anónimo y familias rechazado. Claves y URL de Checkout nunca se envían al navegador.
@@ -183,5 +187,7 @@ Las menciones a “pendiente” en las secciones siguientes reflejan su fecha, n
 - El webhook verifica la firma y el entorno antes de procesar `academy_webhook_delivery_probe_v1`. Solo acepta caducidad sin pago; guarda la referencia del evento en los metadatos de esa sesión aislada de Stripe. La pantalla no considera verificada una mera respuesta de la API.
 - No modifica los flags de activación LIVE ni de mensualidades. No añade tablas ni migraciones.
 - Pruebas locales: firmas, acceso, origen, duplicados, caducidad y reintentos con Stripe simulado; suites de pagos, TypeScript, lint de archivos modificados y build.
-- Baseline previo: 11 pagos; digest `e9b3ce77d682aabd79e1097a68a22b23`. Entrega real del diagnóstico pendiente de ejecución tras desplegar.
+- Baseline previo y posterior: 11 pagos; digest `e9b3ce77d682aabd79e1097a68a22b23`. Sin cambios financieros ni usuarios QA residuales.
+- Código `389679e`, primer despliegue verificado `dpl_DFLBhYnomYwpp4G9PLJETg8zTQBe`. Sesión aislada `cs_live_agkSyo8R2Vr9xxKUjz3xELINFlbrtWC3PcvXtykCKkHULyQLN87BBiVn5l`, caducada sin pago; evento firmado `evt_1UdS3bGk8vSBcmVd9xHkmJys` recibido a las 09:55:08 UTC. La clave admite crear, caducar y actualizar metadatos de Checkout. La entrega real prueba que el secreto del destino coincide con el desplegado.
+- Accesos reales comprobados: anónimo y tutor reciben 403 en la API; POST desde otro origen recibe 403 incluso con sesión de administrador. Cuenta QA cerrada globalmente y eliminada.
 
