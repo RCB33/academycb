@@ -12,6 +12,7 @@ import { useState } from "react"
 import { submitOrderJson } from "@/app/actions/shop"
 import { toast } from "sonner"
 import Link from "next/link"
+import * as Dialog from "@radix-ui/react-dialog"
 
 export default function CartDrawer() {
     const translate = useT()
@@ -69,23 +70,19 @@ export default function CartDrawer() {
     }
 
     return (
-        <div className="fixed inset-0 z-[100] overflow-hidden">
-            {/* Overlay */}
-            <div
-                className="absolute inset-0 bg-navy/60 backdrop-blur-sm transition-opacity"
-                onClick={() => setIsCartOpen(false)}
-            />
-
-            <div className="absolute inset-y-0 right-0 max-w-full flex">
+        <Dialog.Root open={isCartOpen} onOpenChange={setIsCartOpen}>
+            <Dialog.Portal>
+                <Dialog.Overlay className="fixed inset-0 z-[100] bg-navy/60 backdrop-blur-sm" />
+                <Dialog.Content aria-describedby={undefined} className="fixed inset-y-0 right-0 z-[101] flex max-w-full outline-none">
                 <div className="relative w-screen max-w-md pointer-events-auto">
                     <div className="h-full flex flex-col bg-white shadow-2xl animate-in slide-in-from-right duration-300">
                         {/* Header */}
                         <div className="flex items-center justify-between px-6 py-4 border-b">
                             <div className="flex items-center gap-2">
                                 <ShoppingBag className="h-5 w-5 text-primary" />
-                                <h2 className="text-xl font-heading font-bold text-navy uppercase tracking-tight">
+                                <Dialog.Title className="text-xl font-heading font-bold text-navy uppercase tracking-tight">
                                     {translate(isCheckout ? 'Solicitar Pedido' : `Tu Carrito (${totalItems})`)}
-                                </h2>
+                                </Dialog.Title>
                             </div>
                             <button
                                 onClick={() => setIsCartOpen(false)}
@@ -166,7 +163,7 @@ export default function CartDrawer() {
                                     </div>
                                     <label className="flex items-start gap-2 text-xs text-gray-600">
                                         <input type="checkbox" required className="mt-0.5 h-4 w-4" />
-                                        <span>{translate("He leído la ")}<Link href="/privacidad" className="font-medium text-blue-700 underline">{translate("política de privacidad")}</Link> {translate(" y las ")}<Link href="/terminos" className="font-medium text-blue-700 underline">{translate("condiciones")}</Link>{translate(".")}</span>
+                                        <span>{translate("He leído la ")}<Link href="/privacidad" target="_blank" rel="noopener noreferrer" className="font-medium text-blue-700 underline">{translate("política de privacidad")}</Link> {translate(" y las ")}<Link href="/terminos" target="_blank" rel="noopener noreferrer" className="font-medium text-blue-700 underline">{translate("condiciones")}</Link>{translate(".")}</span>
                                     </label>
                                     <Button
                                         type="button"
@@ -194,9 +191,11 @@ export default function CartDrawer() {
                                                     <h3 className="text-base font-heading font-bold text-navy uppercase truncate pr-4">{translate(item.name)}</h3>
                                                     <span className="font-heading font-bold text-primary">{translate(item.price.toFixed(2))}{translate("€")}</span>
                                                 </div>
+                                                <p className="text-sm text-slate-600">{translate("Talla")}: {item.size}</p>
                                                 <div className="flex items-center gap-4 mt-3">
                                                     <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden h-8">
                                                         <button
+                                                            aria-label={`${translate("Reducir cantidad")}: ${item.name}`}
                                                             onClick={() => updateQuantity(item.id, item.quantity - 1)}
                                                             className="px-2 hover:bg-gray-50 text-gray-500 border-r"
                                                         >
@@ -204,6 +203,7 @@ export default function CartDrawer() {
                                                         </button>
                                                         <span className="px-3 text-sm font-bold text-navy w-8 text-center">{translate(item.quantity)}</span>
                                                         <button
+                                                            aria-label={`${translate("Aumentar cantidad")}: ${item.name}`}
                                                             onClick={() => updateQuantity(item.id, item.quantity + 1)}
                                                             className="px-2 hover:bg-gray-50 text-gray-500 border-l"
                                                         >
@@ -211,6 +211,7 @@ export default function CartDrawer() {
                                                         </button>
                                                     </div>
                                                     <button
+                                                        aria-label={`${translate("Quitar del carrito")}: ${item.name}`}
                                                         onClick={() => removeItem(item.id)}
                                                         className="text-gray-400 hover:text-red-500 transition-colors"
                                                     >
@@ -254,7 +255,8 @@ export default function CartDrawer() {
                         ))}
                     </div>
                 </div>
-            </div>
-        </div>
+                </Dialog.Content>
+            </Dialog.Portal>
+        </Dialog.Root>
     )
 }

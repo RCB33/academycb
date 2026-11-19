@@ -65,6 +65,8 @@ export function ProductCard({ product }: { product: Product }) {
                             {translate(product.sizes.map(size => (
                                 <button
                                     key={size}
+                                    type="button"
+                                    aria-pressed={selectedSize === size}
                                     onClick={() => setSelectedSize(size)}
                                     className={`h-8 min-w-[2rem] px-2 text-xs font-bold rounded-md border transition-colors ${
                                         selectedSize === size

@@ -31,11 +31,11 @@ export function PortalPlayerSwitcher({
     return (
         <section className={compact ? 'border-t border-navy/10 bg-white px-4 py-2.5' : 'mt-5 rounded-2xl border border-gold/25 bg-gold/5 p-3'} aria-label={translate("Cambiar jugador")}>
             <div className="mb-1.5 flex items-center justify-between gap-2">
-                <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-navy/65">
+                <span className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.14em] ${compact ? 'text-navy/65' : 'text-slate-300'}`}>
                     <UsersRound className="h-3.5 w-3.5 text-gold" />
                     {translate(currentPlayer ? 'Jugador seleccionado' : 'Mis jugadores')}
                 </span>
-                <Link href="/portal/dashboard" className="text-[11px] font-bold text-navy underline-offset-2 hover:text-gold hover:underline">
+                <Link href="/portal/dashboard" className={`text-[11px] font-bold underline-offset-2 hover:underline ${compact ? 'text-navy hover:text-gold' : 'text-gold hover:text-white'}`}>
                     {translate("Ver todos")}</Link>
             </div>
             <div className="relative">

@@ -120,13 +120,15 @@ export function MonthlyCalendar({ events, onDateClick, onEventClick }: MonthlyCa
                         </div>
                         <div className="flex-1 overflow-y-auto scrollbar-hide space-y-1 mt-1">
                             {translate(dayEvents.map((evt) => (
-                                <div
+                                <button
+                                    type="button"
+                                    aria-label={`${translate("Ver actividad")}: ${evt.title}`}
                                     key={evt.id}
                                     onClick={(e) => {
                                         e.stopPropagation()
                                         onEventClick?.(evt)
                                     }}
-                                    className="text-white text-[10px] md:text-xs rounded-md px-1.5 py-1 truncate cursor-pointer hover:brightness-90 transition-all border-l-2 border-white/20"
+                                    className="block w-full text-left text-white text-[10px] md:text-xs rounded-md px-1.5 py-1 truncate cursor-pointer hover:brightness-90 transition-all border-l-2 border-white/20"
                                     style={{ backgroundColor: evt.color || '#1e3a8a' }}
                                     title={translate(evt.title)}
                                 >
@@ -135,7 +137,7 @@ export function MonthlyCalendar({ events, onDateClick, onEventClick }: MonthlyCa
                                         <span className="truncate">{translate(evt.is_all_day ? 'Todo el día' : format(parseISO(evt.start_date), 'HH:mm'))}</span>
                                         {translate(evt.category_name && <span className="font-mono bg-black/20 px-1 rounded truncate ml-1">{translate(evt.category_name)}</span>)}
                                     </div>
-                                </div>
+                                </button>
                             )))}
                         </div>
                     </div>

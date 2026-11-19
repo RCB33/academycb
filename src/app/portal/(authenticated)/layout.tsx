@@ -1,4 +1,5 @@
 
+import CartDrawer from '@/app/(public)/components/cart-drawer'
 import { LanguageSwitcher } from '@/lib/i18n/client'
 import { getT } from '@/lib/i18n/server'
 import { createClient } from '@/lib/supabase/server'
@@ -97,6 +98,7 @@ export default async function AuthenticatedLayout({
                 </main>
             </div>
 
+            <CartDrawer />
             {/* Global Signature Check */}
             <GlobalSignatureGuard userId={user.id} />
         </div>

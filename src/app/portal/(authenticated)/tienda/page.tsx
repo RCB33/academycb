@@ -1,4 +1,5 @@
 
+import { PortalCartButton } from '@/components/portal/cart-button'
 import { getT } from '@/lib/i18n/server'
 import { createClient } from '@/lib/supabase/server'
 import { ProductCard } from '@/components/portal/product-card'
@@ -21,6 +22,8 @@ export default async function TiendaPage() {
     return (
         <div className="max-w-6xl mx-auto space-y-8">
             <PortalPageHeader icon={<ShoppingBag className="h-6 w-6" />} title={translate("Tienda oficial")} description={translate("Material oficial Academy para tus jugadores, con entrega coordinada por la academia.")} />
+
+            <div className="flex justify-end"><PortalCartButton /></div>
 
             {translate(products.length === 0 ? (
                 <div className="text-center py-24 bg-white rounded-2xl border border-dashed text-slate-500">

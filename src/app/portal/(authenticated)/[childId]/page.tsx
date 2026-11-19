@@ -153,7 +153,7 @@ export default async function ChildPage({ params }: { params: Promise<{ childId:
                                 ) : (
                                     <>
                                         <h3 className="text-xl font-black mb-1 text-slate-300">{translate("Sin eventos")}</h3>
-                                        <p className="text-slate-500 text-sm mb-4">{translate("No hay entrenamientos ni partidos próximos.")}</p>
+                                        <p className="text-slate-500 text-sm mb-4">{translate("No hay entrenamientos ni partidos próximos.")}</p><Button asChild size="sm" className="bg-gold font-bold text-navy hover:bg-gold-light"><Link href="/portal/calendario">{translate("Ver calendario")}</Link></Button>
                                     </>
                                 ))}
                             </div>

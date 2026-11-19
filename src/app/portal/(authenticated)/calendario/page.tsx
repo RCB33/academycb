@@ -2,7 +2,8 @@
 import { getT } from '@/lib/i18n/server'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { MonthlyCalendar, CalendarEvent } from '@/components/ui/monthly-calendar'
+import { CalendarEvent } from '@/components/ui/monthly-calendar'
+import { FamilyCalendar } from '@/components/portal/family-calendar'
 import { CalendarDays } from 'lucide-react'
 import { PortalPageHeader } from '@/components/portal/portal-page-header'
 
@@ -69,12 +70,9 @@ export default async function FamilyCalendarPage() {
             {translate(childIds.length === 0 ? (
                 <div className="bg-white p-8 text-center rounded-xl border border-dashed text-slate-500">
                     {translate("No tienes alumnos vinculados actualmente, por lo que el calendario está vacío.")}</div>
-            ) : events.length === 0 ? (
-                <div className="bg-white p-8 text-center rounded-xl border border-dashed text-slate-500">
-                    {translate("No hay actividades publicadas para tu familia en este periodo.")}</div>
             ) : (
                 <div className="bg-white p-4 md:p-6 rounded-xl border shadow-sm">
-                    <MonthlyCalendar events={events} />
+                    <FamilyCalendar events={events} />
                 </div>
             ))}
         </div>
