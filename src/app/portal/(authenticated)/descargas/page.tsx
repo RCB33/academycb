@@ -65,7 +65,7 @@ export default async function DescargasPage() {
     const filesWithUrls = await Promise.all(
         files.map(async (file) => {
             const { data } = await supabase.storage.from('downloads').createSignedUrl(file.name, 3600)
-            return { ...file, url: data?.signedUrl || '#' }
+            return { ...file, url: data?.signedUrl || null }
         })
     )
 
@@ -89,10 +89,11 @@ export default async function DescargasPage() {
                     {translate(filesWithUrls.map((file) => (
                         <a
                             key={file.id || file.name}
-                            href={file.url}
+                            href={file.url || undefined}
+                            aria-disabled={!file.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="block group"
+                            className={`block group ${!file.url ? 'opacity-60' : ''}`}
                         >
                             <Card className="border shadow-sm hover:shadow-lg transition-all group-hover:-translate-y-0.5 overflow-hidden bg-white">
                                 <CardContent className="p-0">
@@ -104,6 +105,7 @@ export default async function DescargasPage() {
                                             <p className="truncate text-sm font-bold text-slate-900 transition-colors group-hover:text-gold">
                                                 {translate(file.name.replace(/\.[^/.]+$/, '').replace(/_/g, ' '))}
                                             </p>
+                                            {!file.url && <p className="text-xs text-amber-800">{translate("Archivo no disponible. Contacta con Academy.")}</p>}
                                             <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium mt-1">
                                                 <span className="uppercase">{translate(file.name.split('.').pop())}</span>
                                                 {translate(file.metadata?.size && (

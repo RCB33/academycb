@@ -6,6 +6,7 @@ import { getEventFamily } from '@/app/actions/event-registrations'
 import { EventRegistrationForm } from './registration-form'
 import { EventAccess } from './access'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 
 export async function generateMetadata() {
     const translate = await getT()
@@ -17,6 +18,15 @@ export default async function EventRegistrationPage({ searchParams }: { searchPa
   const { torneo, attempt } = await searchParams
   const db = await createClient()
   const { data: { user } } = await db.auth.getUser()
+  if (user) {
+    const { data: profile } = await db.from('profiles').select('role').eq('id', user.id).maybeSingle()
+    if (profile?.role === 'guardian') {
+      const params = new URLSearchParams()
+      if (torneo) params.set('torneo', torneo)
+      if (attempt) params.set('attempt', attempt)
+      redirect(`/portal/torneos${params.size ? `?${params}` : ''}`)
+    }
+  }
   let family: Awaited<ReturnType<typeof getEventFamily>> | null = null
   let error = ''
   if (user) { try { family = await getEventFamily() } catch (e) { error = e instanceof Error ? e.message : 'No se pudo recuperar la cuenta.' } }

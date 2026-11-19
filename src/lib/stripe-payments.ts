@@ -15,7 +15,7 @@ export async function createReceiptCheckout(input: { kind?: 'receipt' | 'event';
     const origin = new URL(input.returnOrigin)
     if (origin.protocol !== 'https:' || origin.origin !== input.returnOrigin || origin.username || origin.password) throw new Error('URL de retorno inválida.')
     const purpose = input.kind === 'event' ? 'academy_event' : 'academy_receipt'
-    const returnPath = input.kind === 'event' ? '/torneos/inscripcion' : '/portal/pagos'
+    const returnPath = input.kind === 'event' ? '/portal/torneos' : '/portal/pagos'
     const session = await stripe.checkout.sessions.create({
         mode: 'payment', locale: 'es', payment_method_types: ['card'],
         line_items: [{ quantity: 1, price_data: { currency: 'eur', unit_amount: input.amountCents, product_data: { name: input.description.slice(0, 200) } } }],

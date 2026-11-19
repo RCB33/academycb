@@ -2,7 +2,7 @@
 import { getT } from '@/lib/i18n/server'
 import { createClient } from '@/lib/supabase/server'
 import { profileImageUrl } from '@/lib/profile-image'
-import { updateProfile } from '@/app/actions/profiles'
+import { ProfileDetailsForm } from '@/components/portal/profile-details-form'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -60,19 +60,21 @@ export default async function ProfilePage() {
                             <CardDescription>{translate(user.email)}</CardDescription>
                             <div className="mt-2">
                                 <Badge variant="secondary" className="capitalize">
-                                    {translate(profile?.role || 'Estudiante')}
+                                    {translate('Familia')}
                                 </Badge>
                             </div>
                         </div>
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <form action={updateProfile} className="space-y-4">
+                    <ProfileDetailsForm>
                         <div className="grid gap-2">
                             <Label htmlFor="full_name">{translate("Nombre Completo")}</Label>
                             <Input
                                 id="full_name"
                                 name="full_name"
+                                minLength={2}
+                                maxLength={120}
                                 defaultValue={profile?.full_name || ''}
                                 placeholder={translate("Tu nombre")}
                                 required
@@ -83,6 +85,8 @@ export default async function ProfilePage() {
                             <Input
                                 id="phone"
                                 name="phone"
+                                type="tel"
+                                maxLength={30}
                                 defaultValue={guardian?.phone || ''}
                                 placeholder={translate("Tu número de teléfono")}
                             />
@@ -101,7 +105,7 @@ export default async function ProfilePage() {
                         </div>
                         <Button type="submit" className="w-full bg-gold font-bold text-navy hover:bg-gold-light">
                             {translate("Guardar Cambios")}</Button>
-                    </form>
+                    </ProfileDetailsForm>
                 </CardContent>
             </Card>
 
@@ -141,7 +145,7 @@ export default async function ProfilePage() {
                     <p className="mb-4 text-sm text-muted-foreground">{translate("Secretaría comprobará tu identidad antes de realizar cambios sensibles.")}</p>
                 </CardContent>
                 <CardFooter className="rounded-b-2xl border-t bg-slate-50">
-                    <Button asChild variant="outline" className="border-navy/20 text-navy hover:bg-navy hover:text-white"><Link href="/contacto">{translate("Contactar con Academy")}</Link></Button>
+                    <Button asChild variant="outline" className="border-navy/20 text-navy hover:bg-navy hover:text-white"><Link href="/portal/ayuda">{translate("Contactar con Academy")}</Link></Button>
                 </CardFooter>
             </Card>
         </div>

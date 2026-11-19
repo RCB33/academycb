@@ -59,7 +59,7 @@ export async function submitEventRegistration(input: unknown) {
     if (error) return { error: error.message }
     await deliverRegistrationEmails('event', data as string)
     revalidatePath('/admin/torneos/inscripciones')
-    revalidatePath('/torneos/inscripcion')
+    revalidatePath('/torneos/inscripcion'); revalidatePath('/portal/torneos')
     return { id: data as string }
   } catch (e) { return { error: e instanceof Error ? e.message : 'No se pudo enviar la solicitud.' } }
 }
@@ -83,7 +83,7 @@ export async function uploadEventFile(form: FormData) {
     if (uploadError) throw new Error('No se pudo guardar el archivo.')
     const { error } = await db.rpc('attach_event_file', { registration: id, actor: user.id, file_kind: kind, file_path: path, file_name: file.name.replace(/[\r\n/\\]/g, '_').slice(0, 150) })
     if (error) { await db.storage.from('event-documents').remove([path]); throw new Error(error.message) }
-    revalidatePath('/torneos/inscripcion'); revalidatePath('/admin/torneos/inscripciones')
+    revalidatePath('/torneos/inscripcion'); revalidatePath('/portal/torneos'); revalidatePath('/admin/torneos/inscripciones')
     return { success: true }
   } catch (e) { return { error: e instanceof Error ? e.message : 'No se pudo adjuntar el archivo.' } }
 }
@@ -119,7 +119,7 @@ export async function reviewEventRegistration(form: FormData) {
     const { error } = await db.rpc('review_event_registration', { registration: id, actor: user.id, operation, selections, amount, deadline, note })
     if (error) throw new Error(error.message)
     await deliverRegistrationEmails('event', id)
-    revalidatePath('/admin/torneos/inscripciones'); revalidatePath('/torneos/inscripcion'); revalidatePath('/admin/finanzas')
+    revalidatePath('/admin/torneos/inscripciones'); revalidatePath('/torneos/inscripcion'); revalidatePath('/portal/torneos'); revalidatePath('/admin/finanzas')
     return { success: true }
   } catch (e) { return { error: e instanceof Error ? e.message : 'No se pudo actualizar la inscripción.' } }
 }
@@ -130,7 +130,7 @@ export async function saveEventBankHolder(form: FormData) {
     const holder = z.string().trim().min(3).max(150).parse(form.get('bank_holder'))
     const { error } = await createAdminClient().from('event_campaign_settings').update({ bank_holder: holder }).eq('id', 'christmas-2026')
     if (error) throw new Error('No se pudo guardar el titular.')
-    revalidatePath('/admin/torneos/inscripciones'); revalidatePath('/torneos/inscripcion')
+    revalidatePath('/admin/torneos/inscripciones'); revalidatePath('/torneos/inscripcion'); revalidatePath('/portal/torneos')
     return { success: true }
   } catch (e) { return { error: e instanceof Error ? e.message : 'Revisa el titular de la cuenta.' } }
 }
