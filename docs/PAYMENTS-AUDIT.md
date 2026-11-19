@@ -14,7 +14,14 @@ Esta sección actualiza los pendientes de alta manual, domingo y correo de la au
 - Recuperación real recibida: `1a1f54a4113405d5`. Invitación y recuperación consumidas solo para una cuenta QA nueva en alias del buzón autorizado; verificados destino correcto de establecer contraseña, creación/cambio, inicio de sesión por contraseña y revocación global. Cuenta habitual del dueño intacta.
 - Stripe: no se han ejecutado operaciones ni modificado configuración. `STRIPE_RECURRING_PAYMENTS_ENABLED=false`; el flag general LIVE ya estaba `true` en el baseline de producción y se conserva, no se activa en esta tarea. No confundir la bandera general preexistente con habilitar las mensualidades.
 - Migraciones publicadas: `20261119193027`, `20261119193029`, `20261119193030`. Sin backfill. Revisión del asesor: única nueva función pública SECURITY DEFINER `get_session_players`, intencionalmente limitada a nombre/id, con auth + acceso explícito a la sesión y revocación anónima. Las advertencias anteriores no se ocultan; referencia: https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable .
-- Baseline preservado: pagos 11 / `e9b3ce77d682aabd79e1097a68a22b23`; jugadores 16 / `c360e872784dfe3a6551eb46cf5f0812`; tutores 21 / `f58812a50087db64a251255b28d0c105`; membresías 0; calendario 7 / `5353fe35735ab612253526a3872d3d78`. Se verificará otra vez tras la limpieza visual final.
+- Baseline preservado: pagos 11 / `e9b3ce77d682aabd79e1097a68a22b23`; jugadores 16 / `c360e872784dfe3a6551eb46cf5f0812`; tutores 21 / `f58812a50087db64a251255b28d0c105`; membresías 0; calendario 7 / `5353fe35735ab612253526a3872d3d78`. Verificados de nuevo tras la limpieza visual final: mismos recuentos y digests; cero cuentas QA de esta tarea.
+
+### Cierre y publicación
+
+- Publicado `6c2f74d` en `dpl_7YwXvwvvuXsbqBkGqWLC4CaXS7GY`, READY, comprobado también desde `www.academycostabrava.com`.
+- Prueba conectada adicional en rollback con entrenador y familia QA: acceso al jugador del domingo, lista por sesión, inserción de asistencia, rechazo de fecha incorrecta, calendario/nombre del grupo para su familia, denegación de lista completa a la familia y ausencia de pagos visibles al entrenador. Todo revertido; no se alteró ningún trabajador existente.
+- Revisión visual de producción: plan de 140 €, martes + domingo, fecha 23/11/2026 → 35 € (25 %) + 30 € de matrícula = 65 € iniciales; siguientes seis cuotas de 140 €, final mayo, total 905 €. Botón de revisión bloqueado sin domingo. No se pulsó confirmación: la persistencia se verificó en rollback.
+- Captura: `auditoria-2026-11-19/alta-manual-prorrateo.jpg` en el workspace del propietario. Ficha y dos cuentas QA eliminadas después de revocar sesiones; PostgreSQL temporal detenido. Configuración temporal y enlaces de autenticación retirados del disco.
 
 ## Auditoría funcional integral — 19 noviembre 2026, tarde
 
