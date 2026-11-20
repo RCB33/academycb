@@ -1,3 +1,10 @@
+## Inscripción: efectivo/Stripe y solicitudes conjuntas — 20 noviembre 2026
+
+- Academia sola muestra efectivo y tarjeta con Stripe. El servidor rechaza transferencias (incluidos formularios antiguos) con «Para Academia solo se acepta efectivo o tarjeta con Stripe.», sin exponer el error técnico del enum.
+- La casilla explícita de interés en Campus permite una solicitud conjunta con efectivo, tarjeta o transferencia. Se guarda como nueva, identificada «Academia + Campus · pendiente de contacto», con el método solicitado en notas y sin `academy_details` facturables: requiere revisión manual. También se admiten lotes Academia/Campus, incluido un mismo jugador en actividades diferentes; sigue bloqueado duplicar la misma actividad.
+- Se conserva la validación de actividad publicada, pertenencia de la ficha y consentimientos. No se modifican RPC, tablas, permisos ni flags de Stripe; no se activan mensualidades ni se cobran solicitudes.
+- Verificación: `node scripts/test-enrollment-payment-options.cjs` cubre opciones de UI, error de transferencia, tres métodos conjuntos, revisión manual, duplicados y propiedad con inserciones/correos simulados. Pasan oferta/prorrateo, correo simulado, i18n, TypeScript y build. Lint afectado: sin errores, dos advertencias preexistentes de navegación. No se han realizado pruebas de base de datos ni envíos reales; no se afirma una nueva comprobación del digest ni entrega real de email.
+
 ## Formas de pago acordadas y estado mensual — 20 noviembre 2026
 
 Publicación funcional `0103d21`, READY. Navegador real: ficha y listado de jugadores, selector Efectivo/Stripe y cambio de mes (diciembre del piloto muestra Pendiente) verificados. Correo renderizado con CTA y efectivo por WhatsApp; no se envió un correo real. QA sin cambios de acuerdos/pagos: sesiones revocadas y cuenta temporal eliminada. Capturas `auditoria-2026-11-20/ficha-formas-pago.jpg` y `correo-efectivo-stripe.jpg`. Digest histórico final conservado.

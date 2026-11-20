@@ -6,11 +6,14 @@ import { academySelection } from '@/lib/offering-server'
 import { createClient } from '@/lib/supabase/server'
 import { deliverRegistrationEmails } from '@/lib/registration-email'
 
+import { academyPaymentMessage, combinedEnrollmentMessage, enrollmentPaymentLabel, isCombinedEnrollment } from '@/lib/enrollment-payment'
+
 const serviceSchema = z.enum(['academy', 'campus', 'tournament'])
 
 export const enrollmentSchema = z.object({
     plan_id: z.string().optional(), group_id: z.string().optional(), second_group_id: z.string().optional(),
-    start_date: z.string().optional(), plus: z.enum(['yes','no','']).optional(), offer_version: z.string().optional(), payment_choice: z.enum(['monthly_card','cash','']).optional(),
+    start_date: z.string().optional(), plus: z.enum(['yes','no','']).optional(), offer_version: z.string().optional(), payment_choice: z.enum(['monthly_card','cash','transfer',''], { error: 'Elige una forma de pago válida: efectivo, tarjeta con Stripe o transferencia cuando corresponda.' }).optional(),
+    campus_interest: z.enum(['yes', 'no', '']).optional(),
     service: serviceSchema,
     activity_id: z.string().uuid().optional().or(z.literal('')),
     child_name: z.string().trim().min(2, 'Indica el nombre completo del jugador.').max(120),
@@ -34,7 +37,7 @@ export const enrollmentSchema = z.object({
 
 export type EnrollmentPayload = z.input<typeof enrollmentSchema>
 const familyEnrollmentSchema = enrollmentSchema.omit({ service: true, activity_id: true, child_name: true, birth_date: true }).extend({
-    children: z.array(enrollmentSchema.pick({ service: true, activity_id: true, child_name: true, birth_date: true, linked_child_id: true, plan_id:true,group_id:true,second_group_id:true,start_date:true,plus:true,offer_version:true,payment_choice:true })).min(1).max(6, 'Puedes enviar hasta 6 jugadores a la vez.'),
+    children: z.array(enrollmentSchema.pick({ service: true, activity_id: true, child_name: true, birth_date: true, linked_child_id: true, plan_id:true,group_id:true,second_group_id:true,start_date:true,plus:true,offer_version:true,payment_choice:true,campus_interest:true })).min(1).max(6, 'Puedes enviar hasta 6 jugadores a la vez.'),
 })
 export type EnrollmentResult = { success: true; message: string } | { success: false; error: string }
 
@@ -76,12 +79,19 @@ export async function createEnrollmentRequest(payload: unknown): Promise<Enrollm
         return { success: false, error: parsed.error.issues[0]?.message || 'Revisa los datos de la solicitud.' }
     }
 
+    const combined = isCombinedEnrollment(parsed.data.children)
+    for (const child of parsed.data.children) {
+        if (child.service === 'academy' && !combined && !['cash', 'monthly_card'].includes(child.payment_choice || '')) {
+            return { success: false, error: academyPaymentMessage }
+        }
+    }
+
     const authDb=await createClient()
     const {data:{user}}=await authDb.auth.getUser()
     const rows = []
     const seen = new Set<string>()
     for (const child of parsed.data.children) {
-        const identity = `${child.child_name.toLocaleLowerCase()}|${child.birth_date}`
+        const identity = `${child.child_name.toLocaleLowerCase()}|${child.birth_date}|${child.service}`
         if (seen.has(identity)) return { success: false, error: `Has añadido dos veces a ${child.child_name}. Revisa los jugadores.` }
         seen.add(identity)
         const activity = await resolveActivity(child.service, child.activity_id || undefined)
@@ -95,8 +105,8 @@ export async function createEnrollmentRequest(payload: unknown): Promise<Enrollm
             if(existing.birth_date) child.birth_date=existing.birth_date
         }
         let academyDetails = null
-        if(child.service==='academy') {
-            try { academyDetails=await academySelection({plan_id:child.plan_id||'',group_id:child.group_id||'',second_group_id:child.second_group_id,start_date:child.start_date||'',plus:child.plus==='yes',offer_version:child.offer_version||'',payment_choice:child.payment_choice||'monthly_card'},child.birth_date) }
+        if(child.service==='academy' && !combined) {
+            try { academyDetails=await academySelection({plan_id:child.plan_id||'',group_id:child.group_id||'',second_group_id:child.second_group_id,start_date:child.start_date||'',plus:child.plus==='yes',offer_version:child.offer_version||'',payment_choice:child.payment_choice!},child.birth_date) }
             catch(e) { return {success:false,error:e instanceof Error?e.message:'Revisa tu elección de Academia.'} }
         }
         if(child.linked_child_id) {
@@ -110,14 +120,14 @@ export async function createEnrollmentRequest(payload: unknown): Promise<Enrollm
             id: crypto.randomUUID(),
             service: child.service,
             activity_id: activity.id || null,
-            activity_name: activity.name,
+            activity_name: combined && child.service === 'academy' ? 'Academia + Campus · pendiente de contacto' : activity.name,
             child_name: child.child_name,
             linked_child_id: child.linked_child_id || null,
             birth_date: child.birth_date,
             guardian_name: parsed.data.guardian_name,
             email: parsed.data.email.toLowerCase(),
             phone: parsed.data.phone,
-            notes: [parsed.data.notes, academyDetails ? `Plan: ${academyDetails.plan.name} · ${academyDetails.quote.monthly_price} €/mes\nGrupos: ${academyDetails.groups.map(g=>g.public_offer.day+' '+g.schedule+' '+g.name).join('; ')}\nIncorporación: ${academyDetails.start_date} · Primera cuota: ${academyDetails.quote.first_month} € (${academyDetails.quote.percent} %)\nMatrícula nuevos jugadores: ${academyDetails.quote.enrollment_fee} € · Plus: ${academyDetails.quote.plus} €\nPago solicitado: ${academyDetails.payment_choice==='monthly_card'?'Mensualidades con tarjeta':'Efectivo'} · Fin: ${academyDetails.quote.season_end}` : ''].filter(Boolean).join('\n') || null,
+            notes: [parsed.data.notes, combined ? `${combinedEnrollmentMessage}\nForma de pago solicitada: ${enrollmentPaymentLabel(child.payment_choice)}${child.service === 'academy' ? `\nPreferencias de Academia: plan ${child.plan_id || 'por concretar'}; grupo ${child.group_id || 'por concretar'}; incorporación ${child.start_date || 'por concretar'}.` : ''}` : '', academyDetails ? `Plan: ${academyDetails.plan.name} · ${academyDetails.quote.monthly_price} €/mes\nGrupos: ${academyDetails.groups.map(g=>g.public_offer.day+' '+g.schedule+' '+g.name).join('; ')}\nIncorporación: ${academyDetails.start_date} · Primera cuota: ${academyDetails.quote.first_month} € (${academyDetails.quote.percent} %)\nMatrícula nuevos jugadores: ${academyDetails.quote.enrollment_fee} € · Plus: ${academyDetails.quote.plus} €\nPago solicitado: ${academyDetails.payment_choice==='monthly_card'?'Mensualidades con tarjeta':'Efectivo'} · Fin: ${academyDetails.quote.season_end}` : ''].filter(Boolean).join('\n') || null,
             status: 'new',
         })
     }
@@ -135,8 +145,8 @@ export async function createEnrollmentRequest(payload: unknown): Promise<Enrollm
 
     return {
         success: true,
-        message: rows.length > 1
-            ? `Hemos recibido las solicitudes de tus ${rows.length} jugadores. Secretaría revisará cada plaza y contactará contigo para confirmar los siguientes pasos.`
+        message: combined ? 'Solicitud de Academia + Campus recibida. Secretaría contactará contigo para concretar las actividades y la forma de pago. No se ha realizado ningún cobro.' : rows.length > 1
+            ? `Hemos recibido tus ${rows.length} solicitudes. Secretaría revisará cada plaza y contactará contigo para confirmar los siguientes pasos.`
             : 'Solicitud recibida. Secretaría revisará la plaza y contactará contigo para confirmar los siguientes pasos.',
     }
 }

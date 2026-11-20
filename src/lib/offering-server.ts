@@ -1,4 +1,5 @@
 import 'server-only'
+import { academyPaymentMessage } from '@/lib/enrollment-payment'
 import { stripeCheckoutMode } from '@/lib/stripe-availability'
 import { createHash } from 'node:crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -38,7 +39,7 @@ export async function getTournamentOffer():Promise<TournamentOffer> {
   return {...tournamentProgramSchema.parse(data.public_program),version:data.updated_at}
 }
 export async function academySelection(input:{plan_id:string;group_id:string;second_group_id?:string;start_date:string;plus:boolean;offer_version:string;payment_choice:string},birthDate:string) {
-  if(!['cash','monthly_card'].includes(input.payment_choice)) throw new Error('Elige efectivo o mensualidades con tarjeta para Academia.')
+  if(!['cash','monthly_card'].includes(input.payment_choice)) throw new Error(academyPaymentMessage)
   const offer=await getAcademyOffer()
   if(input.offer_version!==offer.version) throw new Error('Los horarios o precios han cambiado. Recarga y revisa tu selección antes de enviarla.')
   const plan=offer.plans.find(p=>p.id===input.plan_id)

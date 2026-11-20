@@ -1,4 +1,5 @@
 'use client'
+import { EnrollmentPaymentChoice } from './enrollment-payment-choice'
 import { AcademySelection } from './academy-selection'
 import type { AcademyOffer } from '@/lib/offering'
 import { useT } from '@/lib/i18n/client'
@@ -53,7 +54,7 @@ export default function EnrollmentForm({
         const data = Object.fromEntries(formData)
         const campusPreferences = players.filter(id => formData.get(`player_${id}_service`) === 'campus').map(id => `${formData.get(`player_${id}_child_name`)}: ${formData.get(`player_${id}_campus_period`) || 'Periodo por confirmar'} · ${formData.get(`player_${id}_campus_role`) || 'Modalidad por confirmar'}`)
         if (campusPreferences.length) data.notes = [data.notes, ...campusPreferences].filter(Boolean).join('\n')
-        const children = players.map((id) => Object.fromEntries(['service', 'activity_id', 'child_name', 'birth_date', 'linked_child_id', 'plan_id', 'group_id', 'second_group_id', 'start_date', 'plus', 'offer_version', 'payment_choice'].map((key) => [key, formData.get(`player_${id}_${key}`) || ''])))
+        const children = players.map((id) => Object.fromEntries(['service', 'activity_id', 'child_name', 'birth_date', 'linked_child_id', 'plan_id', 'group_id', 'second_group_id', 'start_date', 'plus', 'offer_version', 'payment_choice', 'campus_interest'].map((key) => [key, formData.get(`player_${id}_${key}`) || ''])))
 
         try {
             const response = await fetch('/api/enrollment', {
@@ -118,6 +119,7 @@ function PlayerFields({ academyOffer, prefix, campuses, tournaments, initialServ
     const translate = useT()
 
     const [service, setService] = useState<EnrollmentService>(initialService)
+    const [campusInterest, setCampusInterest] = useState(false)
     const [selectedChild, setSelectedChild] = useState('')
     const child = familyPlayers.find(c => c.id === selectedChild)
     const [activityId, setActivityId] = useState(initialActivityId)
@@ -141,7 +143,20 @@ function PlayerFields({ academyOffer, prefix, campuses, tournaments, initialServ
                 {translate(familyPlayers.length > 0 && <label className="mt-4 block text-sm font-bold">{translate("Usar una ficha existente")}<select name={`${prefix}linked_child_id`} value={selectedChild} onChange={e => setSelectedChild(e.target.value)} className="mt-2 block w-full rounded-lg border p-3"><option value="">{translate("Nuevo jugador")}</option>{translate(familyPlayers.map(c => <option key={c.id} value={c.id}>{translate(c.full_name)}</option>))}</select></label>)}
                 <div key={selectedChild} className="mt-4 grid gap-5 sm:grid-cols-2"><Field label={translate("Nombre completo del jugador")} name={`${prefix}child_name`} required autoComplete="name" defaultValue={child?.full_name || ''} readOnly={!!child} /><Field label={translate("Fecha de nacimiento")} name={`${prefix}birth_date`} type="date" required defaultValue={child?.birth_date || ''} /></div>
             </section>
-            {service === 'academy' && <AcademySelection prefix={prefix} offer={academyOffer} />}
+            {service === 'academy' && <>
+                <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-4 text-sm font-semibold text-navy">
+                    <input type="checkbox" checked={campusInterest} onChange={event => setCampusInterest(event.target.checked)} className="mt-0.5 h-4 w-4 accent-gold" />
+                    <span>{translate('También quiero solicitar Campus para este jugador')}</span>
+                </label>
+                <input type="hidden" name={`${prefix}campus_interest`} value={campusInterest ? 'yes' : 'no'} />
+                <fieldset hidden={campusInterest} disabled={campusInterest}>
+                    <AcademySelection prefix={prefix} offer={academyOffer} />
+                </fieldset>
+                {campusInterest && <section className="space-y-4 rounded-2xl border border-gold/40 bg-amber-50/40 p-5">
+                    <h3 className="text-xl font-black text-navy">{translate('Academia + Campus')}</h3>
+                    <EnrollmentPaymentChoice prefix={prefix} combined />
+                </section>}
+            </>}
 
     </div>
 }

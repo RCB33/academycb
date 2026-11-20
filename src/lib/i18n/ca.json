@@ -1497,5 +1497,14 @@
   "Entrando al portal…": "Entrant al portal…",
   "Está tardando un poco más. Seguimos preparando tu acceso.": "Està trigant una mica més. Continuem preparant el teu accés.",
   "Un momento, estamos comprobando tus datos.": "Un moment, estem comprovant les teves dades.",
-  "Estamos preparando tu espacio Academy.": "Estem preparant el teu espai Academy."
+  "Estamos preparando tu espacio Academy.": "Estem preparant el teu espai Academy.",
+  "Para Academia solo se acepta efectivo o tarjeta con Stripe.": "Per a Acadèmia només s’accepta efectiu o targeta amb Stripe.",
+  "Solicitud de Academia + Campus. Secretaría contactará contigo para concretar las actividades y la forma de pago. Enviar la solicitud no confirma plazas ni realiza ningún cobro.": "Sol·licitud d’Acadèmia + Campus. Secretaria contactarà amb tu per concretar les activitats i la forma de pagament. Enviar la sol·licitud no confirma places ni fa cap cobrament.",
+  "Puedes solicitar tarjeta con Stripe. Te avisaremos cuando esté disponible el enlace para autorizar las mensualidades. No se cobra al enviar la solicitud.": "Pots sol·licitar targeta amb Stripe. T’avisarem quan estigui disponible l’enllaç per autoritzar les mensualitats. No es cobra en enviar la sol·licitud.",
+  "Tarjeta con Stripe": "Targeta amb Stripe",
+  "También quiero solicitar Campus para este jugador": "També vull sol·licitar Campus per a aquest jugador",
+  "Academia + Campus": "Acadèmia + Campus",
+  "Solicitud de Academia + Campus recibida. Secretaría contactará contigo para concretar las actividades y la forma de pago. No se ha realizado ningún cobro.": "Sol·licitud d’Acadèmia + Campus rebuda. Secretaria contactarà amb tu per concretar les activitats i la forma de pagament. No s’ha fet cap cobrament.",
+  "Elige una forma de pago válida: efectivo, tarjeta con Stripe o transferencia cuando corresponda.": "Tria una forma de pagament vàlida: efectiu, targeta amb Stripe o transferència quan correspongui.",
+  "Hemos recibido tus {count} solicitudes. Secretaría revisará cada plaza y contactará contigo para confirmar los siguientes pasos.": "Hem rebut les teves {count} sol·licituds. Secretaria revisarà cada plaça i contactarà amb tu per confirmar els passos següents."
 }

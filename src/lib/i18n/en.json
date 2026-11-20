@@ -1497,5 +1497,14 @@
   "Entrando al portal…": "Entering the portal…",
   "Está tardando un poco más. Seguimos preparando tu acceso.": "This is taking a little longer. We’re still preparing your access.",
   "Un momento, estamos comprobando tus datos.": "One moment, we’re checking your details.",
-  "Estamos preparando tu espacio Academy.": "We’re getting your Academy space ready."
+  "Estamos preparando tu espacio Academy.": "We’re getting your Academy space ready.",
+  "Para Academia solo se acepta efectivo o tarjeta con Stripe.": "Academy only accepts cash or card payments through Stripe.",
+  "Solicitud de Academia + Campus. Secretaría contactará contigo para concretar las actividades y la forma de pago. Enviar la solicitud no confirma plazas ni realiza ningún cobro.": "Academy + Camp request. Our office will contact you to agree on activities and payment arrangements. Submitting this request does not confirm places or charge you.",
+  "Puedes solicitar tarjeta con Stripe. Te avisaremos cuando esté disponible el enlace para autorizar las mensualidades. No se cobra al enviar la solicitud.": "You can request card payments through Stripe. We will let you know when the link to authorise monthly payments is available. Submitting this request does not charge you.",
+  "Tarjeta con Stripe": "Card through Stripe",
+  "También quiero solicitar Campus para este jugador": "I also want to request Camp for this player",
+  "Academia + Campus": "Academy + Camp",
+  "Solicitud de Academia + Campus recibida. Secretaría contactará contigo para concretar las actividades y la forma de pago. No se ha realizado ningún cobro.": "Academy + Camp request received. Our office will contact you to agree on activities and payment arrangements. You have not been charged.",
+  "Elige una forma de pago válida: efectivo, tarjeta con Stripe o transferencia cuando corresponda.": "Choose a valid payment method: cash, card through Stripe, or bank transfer where available.",
+  "Hemos recibido tus {count} solicitudes. Secretaría revisará cada plaza y contactará contigo para confirmar los siguientes pasos.": "We have received your {count} requests. Our office will review each place and contact you to confirm the next steps."
 }
