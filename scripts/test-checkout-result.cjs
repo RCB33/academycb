@@ -1,0 +1,25 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),ts=require('typescript');
+const sid='cs_test_123456789012345678901234567890';
+let contract,attempt,request,session,setup,schedule,sub,reads;
+function reset(){reads=0;contract={id:'contract',mode:'test',choice:'monthly',total_cents:100,unit_cents:100,fee_cents:0,stripe_schedule_id:'sched',stripe_subscription_id:'sub'};attempt=null;request=null;setup={status:'succeeded',livemode:false,metadata:{academy_contract_id:'contract'},customer:'cus'};session={livemode:false,status:'complete',mode:'setup',metadata:{purpose:'academy_contract',academy_contract_id:'contract'},customer:'cus',setup_intent:setup};schedule={livemode:false,metadata:{...session.metadata},customer:'cus',subscription:'sub',status:'active',end_behavior:'cancel',phases:[{start_date:1795160000,end_date:1797752000}]};sub={livemode:false,metadata:{...session.metadata},status:'active',latest_invoice:{status:'draft',currency:'eur',livemode:false,amount_paid:0,billing_reason:'subscription_create',attempt_count:0}};}
+const db={from:table=>{const q={select:()=>q,eq:()=>q,maybeSingle:async()=>({data:table==='academy_checkout_contracts'?contract:attempt,error:null}),single:async()=>({data:request,error:null})};return q}};
+const stripe={checkout:{sessions:{retrieve:async()=>{reads++;return session}}},subscriptionSchedules:{retrieve:async()=>schedule},subscriptions:{retrieve:async()=>sub}};
+const m={exports:{}};new Function('module','exports','require',ts.transpileModule(fs.readFileSync('src/lib/checkout-result.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText)(m,m.exports,n=>{if(n==='server-only')return{};if(n==='./supabase/admin')return{createAdminClient:()=>db};if(n==='./stripe-payments')return{configuredStripe:()=>({stripe,mode:'test'})};throw Error('Unexpected dependency '+n)});
+const result=()=>m.exports.checkoutResult(sid);
+(async()=>{
+ reset();assert.equal(await m.exports.checkoutResult('contract'),null);assert.equal(reads,0);
+ contract=null;assert.equal(await result(),null);assert.equal(reads,0,'Unknown capabilities do not reach Stripe');
+ reset();let r=await result();assert.equal(r.state,'authorized');assert.equal(r.amountCents,100);assert.equal(r.finite,true);assert.equal(r.endsAt,1797752000);assert.deepEqual(Object.keys(r).sort(),['amountCents','endsAt','finite','startsAt','state','test'].sort());
+ contract.stripe_schedule_id=null;assert.equal((await result()).state,'authorized');
+ reset();session.status='open';assert.equal((await result()).state,'incomplete');session.status='expired';assert.equal((await result()).state,'expired');
+ reset();session.livemode=true;assert.equal(await result(),null);reset();session.metadata.academy_contract_id='other';assert.equal(await result(),null);reset();session.mode='payment';assert.equal(await result(),null);
+ reset();setup.customer='wrong';assert.equal((await result()).state,'processing');
+ reset();schedule.metadata.academy_contract_id='other';assert.equal(await result(),null);reset();schedule.customer='wrong';assert.equal(await result(),null);
+ reset();sub.latest_invoice={...sub.latest_invoice,status:'paid',amount_paid:100};assert.equal((await result()).state,'paid');sub.latest_invoice.amount_paid=101;assert.equal(await result(),null);sub.latest_invoice.amount_paid=100;sub.latest_invoice.livemode=true;assert.equal(await result(),null);
+ reset();sub.latest_invoice.status='open';sub.latest_invoice.attempt_count=1;assert.equal((await result()).state,'attention');
+ reset();sub.status='canceled';assert.equal((await result()).state,'ended');
+ reset();contract.choice='full';session.mode='payment';session.payment_status='unpaid';assert.equal((await result()).state,'processing');session.payment_status='paid';session.currency='eur';session.amount_total=100;assert.equal((await result()).state,'paid');session.amount_total=200;assert.equal(await result(),null);
+ reset();contract=null;attempt={id:'attempt',request_id:'request',schedule_id:'sched',subscription_id:null};request={kind:'subscription',mode:'test',total_cents:200,billing_request_items:[{position:1,amount_cents:100},{position:0,amount_cents:100}]};session.metadata={purpose:'academy_billing_request',billing_attempt_id:'attempt'};setup.metadata={billing_attempt_id:'attempt'};schedule.metadata={...session.metadata};schedule.subscription=null;schedule.status='not_started';assert.equal((await result()).state,'authorized');
+ const middleware=fs.readFileSync('src/lib/supabase/middleware.ts','utf8');assert.ok(middleware.includes("'/pago/resultado'"));for(const file of ['academy-stripe-contract','billing-request-stripe']){const code=fs.readFileSync('src/lib/'+file+'.ts','utf8');assert.match(code,/pago\/resultado\?session_id=\{CHECKOUT_SESSION_ID\}/)}
+ console.log('PASS result: authorization is not payment, unknown/mismatched session denied, exact provider amount/currency, paid/pending/failure/end, future billing, no PII or writes, public success URL.');
+})().catch(e=>{console.error(e);process.exitCode=1});

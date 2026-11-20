@@ -20,6 +20,7 @@ const PUBLIC_ROUTES = [
   '/privacidad',
   '/cookies',
   '/bienvenida',
+  '/pago/resultado',
   '/robots.txt',
   '/sitemap.xml',
   '/manifest.webmanifest',

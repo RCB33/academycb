@@ -16,8 +16,8 @@ export async function createAcademyCheckout(c: AcademyContract, email: string) {
     const common: Stripe.Checkout.SessionCreateParams = {
         locale: 'es', payment_method_types: ['card'], metadata,
         expires_at: Math.floor(new Date(c.expires_at).getTime() / 1000),
-        success_url: `${c.return_origin}/portal/pagos?contract=${c.id}`,
-        cancel_url: `${c.return_origin}/portal/pagos?contract=${c.id}&cancelled=1`,
+        success_url: `${c.return_origin}/pago/resultado?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${c.return_origin}/pago/resultado?cancelled=1`,
     }
     if (c.choice === 'full') {
         return stripe.checkout.sessions.create({ ...common, mode: 'payment', customer_email: email,

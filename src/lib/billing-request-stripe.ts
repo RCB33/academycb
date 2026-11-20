@@ -24,7 +24,7 @@ export async function createBillingCheckout(r: BillingRequest,a: BillingAttempt,
  const metadata={purpose,billing_attempt_id:a.id}
  const common={locale:'es' as const,payment_method_types:['card'] as Stripe.Checkout.SessionCreateParams.PaymentMethodType[],metadata,
   expires_at:Math.floor(new Date(a.expires_at).getTime()/1000),
-  success_url:`${origin}/portal/pagos/solicitud/${r.id}`,cancel_url:`${origin}/portal/pagos/solicitud/${r.id}`}
+  success_url:`${origin}/pago/resultado?session_id={CHECKOUT_SESSION_ID}`,cancel_url:`${origin}/pago/resultado?cancelled=1`}
  if(r.kind==='payment')return stripe.checkout.sessions.create({...common,mode:'payment',customer_email:email,payment_intent_data:{metadata},
   line_items:[{quantity:1,price_data:{currency:'eur',unit_amount:Number(r.total_cents),product_data:{name:r.title}}}]}, {idempotencyKey:`billing-checkout-${a.id}`})
  const customer=await stripe.customers.create({email,metadata},{idempotencyKey:`billing-customer-${a.id}`})

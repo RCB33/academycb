@@ -32,7 +32,7 @@ const api=moduleResult.exports
  let [p,o]=seen.checkout.at(-1)
  assert.equal(p.mode,'setup');assert.equal(p.customer,'cus_unit');assert.equal(p.payment_intent_data,undefined)
  assert.match(p.custom_text.submit.message,/3 mensualidades/);assert.match(p.custom_text.submit.message,/Sin renovación/)
- assert.equal(p.success_url,`${c.return_origin}/portal/pagos?contract=${c.id}`)
+ assert.equal(p.success_url,`${c.return_origin}/pago/resultado?session_id={CHECKOUT_SESSION_ID}`)
  const session={id:c.stripe_session_id,livemode:false,customer:'cus_unit',setup_intent:'seti_unit',metadata:{academy_contract_id:c.id}}
  setupCustomer='cus_foreign'
  await assert.rejects(()=>api.fulfillAcademyCheckout(session,'checkout.session.completed'))
