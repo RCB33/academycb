@@ -39,7 +39,7 @@ export function FifaCard({ stats, child, ovr, className, editablePhoto = false }
             animate={{ opacity: 1, y: 0 }}
             className={`flex justify-center ${className}`}
         >
-            <div className="relative w-full max-w-[320px] aspect-[2/3] bg-slate-950 rounded-[2rem] shadow-[0_0_30px_rgba(234,179,8,0.4)] overflow-hidden border-[3px] border-yellow-500/80 flex flex-col text-white">
+            <div className="relative w-full min-w-0 max-w-[320px] min-h-[480px] bg-slate-950 rounded-[2rem] shadow-[0_0_30px_rgba(234,179,8,0.4)] overflow-hidden border-[3px] border-yellow-500/80 flex flex-col text-white">
 
                 {/* Background Effects */}
                 <div className="absolute inset-0 opacity-20 [background-image:radial-gradient(circle_at_center,rgba(255,255,255,0.18)_0,transparent_1px)] [background-size:8px_8px]"></div>
@@ -48,7 +48,7 @@ export function FifaCard({ stats, child, ovr, className, editablePhoto = false }
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] h-[85%] border border-yellow-500/20 rounded-[1.5rem] z-0"></div>
 
                 {/* Card Content */}
-                <div className="relative z-10 h-full flex flex-col p-5">
+                <div className="relative z-10 flex flex-1 flex-col p-5">
 
                     {/* Top Section: Rating & Position */}
                     <div className="flex justify-between items-start mb-2">
@@ -76,7 +76,7 @@ export function FifaCard({ stats, child, ovr, className, editablePhoto = false }
 
                     {/* Player Name */}
                     <div className="text-center mb-4 relative">
-                        <h2 className="text-2xl font-[900] text-white uppercase tracking-wider drop-shadow-md border-b-2 border-yellow-500/50 inline-block pb-1 px-4">
+                        <h2 className="max-w-full break-words text-2xl font-[900] text-white uppercase tracking-wider drop-shadow-md border-b-2 border-yellow-500/50 inline-block pb-1 px-2">
                             {translate(child?.full_name || 'JUGADOR')}
                         </h2>
                     </div>

@@ -27,9 +27,10 @@ interface TrophyCardProps {
     }
     isEarned: boolean
     earnedAt?: string
+    note?: string | null
 }
 
-export function TrophyCard({ achievement, isEarned, earnedAt }: TrophyCardProps) {
+export function TrophyCard({ achievement, isEarned, earnedAt, note }: TrophyCardProps) {
     const translate = useT()
 
     const Icon = ICONS[achievement.icon] || Trophy
@@ -69,6 +70,7 @@ export function TrophyCard({ achievement, isEarned, earnedAt }: TrophyCardProps)
                     </p>
                 </div>
 
+                {isEarned && note && <p className="w-full whitespace-pre-wrap break-words rounded-xl bg-amber-50 p-3 text-xs leading-relaxed text-slate-700">{note}</p>}
                 {translate(isEarned && earnedAt && (
                     <div className="pt-2">
                         <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-yellow-100/50 text-yellow-700 text-[10px] font-bold border border-yellow-200/40">

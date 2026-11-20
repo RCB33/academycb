@@ -4,7 +4,8 @@ import { useT } from '@/lib/i18n/client'
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Activity } from "lucide-react"
-import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, Radar } from 'recharts'
+import { PlayerRadarChart } from '@/components/admin/player-radar-chart'
+import { EvaluationMessage } from '@/components/coach/evaluation-message'
 import { FifaCard } from "@/components/fifa-card"
 import { PlayerEvolutionChart } from "@/components/admin/player-evolution-chart"
 
@@ -16,6 +17,7 @@ type Stats = {
     defending: number
     physical: number
     discipline: number
+    notes?: string | null
 }
 
 export default function PlayerFIFAStats({ stats, history, child }: { stats: Stats | null, history: any[], child: any }) {
@@ -28,15 +30,6 @@ export default function PlayerFIFAStats({ stats, history, child }: { stats: Stat
 
     // Calculate Gamification Level (1 to 10)
     const level = Math.max(1, Math.min(10, Math.floor(ovr / 10)))
-
-    const radarData = [
-        { subject: 'S3-PAC', A: stats.pace, fullMark: 99 },
-        { subject: 'TIR-SHO', A: stats.shooting, fullMark: 99 },
-        { subject: 'PAS-PAS', A: stats.passing, fullMark: 99 },
-        { subject: 'REG-DRI', A: stats.dribbling, fullMark: 99 },
-        { subject: 'DEF-DEF', A: stats.defending, fullMark: 99 },
-        { subject: 'FIS-PHY', A: stats.physical, fullMark: 99 },
-    ]
 
     return (
         <div className="grid lg:grid-cols-3 gap-6">
@@ -55,23 +48,13 @@ export default function PlayerFIFAStats({ stats, history, child }: { stats: Stat
                             </div>
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="h-[300px] w-full flex justify-center">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
-                                <PolarGrid />
-                                <PolarAngleAxis dataKey="subject" />
-                                <Radar
-                                    name="Stats"
-                                    dataKey="A"
-                            stroke="#D4AF37"
-                            fill="#D4AF37"
-                                    fillOpacity={0.5}
-                                />
-                            </RadarChart>
-                        </ResponsiveContainer>
+                    <CardContent className="w-full">
+                        <PlayerRadarChart metrics={stats}/>
+                        <p className="text-center text-sm text-slate-500">{translate('Disciplina')} <strong className="text-navy">{stats.discipline}/99</strong></p>
                     </CardContent>
                 </Card>
 
+                <EvaluationMessage notes={stats.notes}/>
                 <PlayerEvolutionChart metricsHistory={history} />
             </div>
         </div>

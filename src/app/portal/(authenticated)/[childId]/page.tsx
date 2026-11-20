@@ -183,6 +183,7 @@ export default async function ChildPage({ params }: { params: Promise<{ childId:
                                     achievement={achievement}
                                     isEarned={!!earned}
                                     earnedAt={earned?.earned_at}
+                                    note={earned?.note}
                                 />
                             )
                         }))}

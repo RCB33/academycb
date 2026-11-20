@@ -33,7 +33,7 @@ export function PlayerRadarChart({ metrics }: PlayerRadarChartProps) {
     return (
         <div className="h-[250px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-                <RadarChart cx="50%" cy="50%" outerRadius="80%" data={data}>
+                <RadarChart cx="50%" cy="50%" outerRadius="62%" data={data}>
                     <PolarGrid stroke="#e2e8f0" />
                     <PolarAngleAxis
                         dataKey="subject"
@@ -41,7 +41,7 @@ export function PlayerRadarChart({ metrics }: PlayerRadarChartProps) {
                     />
                     <PolarRadiusAxis
                         angle={30}
-                        domain={[0, 100]}
+                        domain={[0, 99]}
                         tick={false}
                         axisLine={false}
                     />
@@ -51,6 +51,7 @@ export function PlayerRadarChart({ metrics }: PlayerRadarChartProps) {
                         stroke="#eab308"
                         fill="#eab308"
                         fillOpacity={0.5}
+                        isAnimationActive={false}
                     />
                 </RadarChart>
             </ResponsiveContainer>
