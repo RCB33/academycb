@@ -5,14 +5,14 @@ const { NextRequest } = require('next/server')
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'mock-only-password-setup-secret'
 const user = { id: '11111111-1111-4111-8111-111111111111', email: 'family@example.invalid' }
 const session = { access_token: 'private-access-token', refresh_token: 'private-refresh-token' }
-let verifyError, refreshError, updateError, loginError, calls = [], used = false
+let verifyError, refreshError, updateError, loginError, loginThrows, profileThrows, calls = [], used = false
 const recovery = { auth: {
     async verifyOtp(input) { calls.push(['verify', input]); if (verifyError || used || input.token !== '12345678') return { data: {}, error: verifyError || { status: 400 } }; used = true; return { data: { user, session }, error: null } },
     async refreshSession(input) { calls.push(['refresh', input]); return { data: { user, session: { ...session, refresh_token: 'rotated-refresh-token' } }, error: refreshError } },
     async updateUser(input) { calls.push(['update', input]); return { data: { user }, error: updateError } },
     async signOut(input) { calls.push(['revoke', input]); return { error: null } },
 } }
-const browser = { auth: { async signInWithPassword(input) { calls.push(['login', input]); return { data: { user }, error: loginError } } }, from() { return { select() { return this }, eq() { return this }, async maybeSingle() { return { data: { role: 'guardian' } } } } } }
+const browser = { auth: { async signInWithPassword(input) { calls.push(['login', input]); if (loginThrows) throw new Error('network interrupted'); return { data: { user }, error: loginError } } }, from() { return { select() { return this }, eq() { return this }, async maybeSingle() { if (profileThrows) throw new Error('profile unavailable'); return { data: { role: 'guardian' } } } } } }
 const modules = new Map()
 function load(file) {
     if (modules.has(file)) return modules.get(file)
@@ -81,6 +81,14 @@ const password = { action: 'password', password: 'A-new-test-password-99', confi
     assert.equal(calls[3][1].email, user.email)
     loginError = { status: 400 }
     assert.deepEqual(await (await route.POST(request(password, cookie))).json(), { success: true, next: '/portal' }, 'Saved password remains usable if automatic sign-in fails')
+    loginError = null; loginThrows = true
+    const interruptedLogin = await route.POST(request(password, cookie))
+    assert.equal(interruptedLogin.status, 200)
+    assert.deepEqual(await interruptedLogin.json(), { success: true, next: '/portal' }, 'Automatic login exception must not turn a saved password into a failure')
+    assert.equal(interruptedLogin.cookies.get(crypto.setupCookie).value, '')
+    loginThrows = false; profileThrows = true
+    assert.deepEqual(await (await route.POST(request(password, cookie))).json(), { success: true, next: '/portal' }, 'Role lookup failure preserves successful password change')
+    profileThrows = false
     const get = await route.GET(new NextRequest(origin + '/api/auth/email-code', { headers: { cookie: `${crypto.setupCookie}=${cookie}` } }))
     assert.match(get.headers.get('cache-control'), /no-store/)
     assert.deepEqual(await get.json(), { step: 'password', email: user.email })

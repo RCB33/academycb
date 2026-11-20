@@ -501,3 +501,11 @@ Las menciones a “pendiente” en las secciones siguientes reflejan su fecha, n
 - Supabase aceptó las dos plantillas; una lectura posterior confirmó exactamente ambos asuntos/HTML, OTP de 8 dígitos y 1.800 segundos. Sin cambios de SMTP ni otros ajustes de Auth.
 - Prueba del flujo completo repetida en `www.academycostabrava.com`: ocho comprobaciones reales de invitación, bloqueo previo a contraseña, inicio de sesión y recuperación superadas; cuenta desechable eliminada y cero cuentas `qa-code-%@example.invalid` residuales. No se ha verificado entrega a un buzón real.
 - Digest final idéntico al inicial: 21 pagos; `13ac2fe6f6d8c3721523c18b62853160`.
+
+## 20/11/2026 — Confirmación de contraseña y repetición en móvil
+
+- El propietario confirmó recepción del correo al abrir el flujo real. Los registros Auth muestran verificación correcta a las 09:46:47 UTC, contraseña guardada a las 09:47:03 y login por contraseña a las 09:47:04. Vercel devolvió 200 al primer guardado y 401 a un segundo envío a las 09:47:23; no consta navegación al portal entre ambos. No se ha determinado por qué ese navegador no completó la primera navegación.
+- La pantalla conserva ahora un estado terminal «Contraseña guardada», limpia las contraseñas, impide repetir el envío y ofrece un enlace normal para entrar además del intento de navegación automática. Un fallo de navegación no se convierte en un mensaje de fallo de contraseña. El aviso de verificación usada/caducada indica cómo entrar si la contraseña ya se guardó.
+- Tras guardar la contraseña, excepciones de inicio de sesión automático o consulta del rol devuelven éxito con acceso al login; no invitan a repetir una operación ya completada.
+- Regresión: pruebas de API con fallo posterior al guardado; componente con navegación bloqueada, doble envío y limpieza de contraseña. Reproducción real con cuenta desechable y sesión previa: recuperación y nuevo acceso correctos; cuenta eliminada. Sin modificar la contraseña del propietario durante el diagnóstico.
+- Baseline financiero: 21 pagos; digest `13ac2fe6f6d8c3721523c18b62853160`. Asesores revisados: avisos previos de funciones SECURITY DEFINER, RLS sin políticas y protección de contraseñas filtradas, sin cambios de esquema ni permisos.

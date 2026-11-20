@@ -57,15 +57,18 @@ export async function POST(request: NextRequest) {
             response.cookies.set(setupCookie, sealPasswordSetup({ ...pending, access_token: session.session.access_token, refresh_token: session.session.refresh_token }), cookieOptions)
             return response
         }
-        // Invalidate the temporary recovery session before issuing a normal login.
-        await client.auth.signOut({ scope: 'local' })
-        const browserClient = await createClient()
-        const { data: login, error: loginError } = await browserClient.auth.signInWithPassword({ email: pending.email, password: password.data.password })
+        // The password is already saved. A failure in automatic login or role
+        // lookup must not report that the password change failed and invite a retry.
         let next = '/portal'
-        if (!loginError && login.user) {
-            const { data: profile } = await browserClient.from('profiles').select('role').eq('id', login.user.id).maybeSingle()
-            next = (profile?.role === 'guardian' && billingReturnPath(password.data.next || null)) || getRoleHome(isAppRole(profile?.role) ? profile.role : null)
-        }
+        try {
+            await client.auth.signOut({ scope: 'local' })
+            const browserClient = await createClient()
+            const { data: login, error: loginError } = await browserClient.auth.signInWithPassword({ email: pending.email, password: password.data.password })
+            if (!loginError && login.user) {
+                const { data: profile } = await browserClient.from('profiles').select('role').eq('id', login.user.id).maybeSingle()
+                next = (profile?.role === 'guardian' && billingReturnPath(password.data.next || null)) || getRoleHome(isAppRole(profile?.role) ? profile.role : null)
+            }
+        } catch { /* The user can sign in with the password just saved. */ }
         const response = reply({ success: true, next })
         response.cookies.set(setupCookie, '', { ...cookieOptions, maxAge: 0 })
         return response
