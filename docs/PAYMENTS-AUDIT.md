@@ -1,3 +1,16 @@
+## Enlace de pago desde ficha y correo de marca — 20 noviembre 2026
+
+Publicado `797ff9e` + `a2ba63c`; versión funcional Vercel `dpl_Dqp3xmMVuuoUPsCDs6rfF3honSqy`, READY. Base comprobada con fetch explícito `b1882d3`. Sin migración ni cambios de flags/pagos.
+
+- Acceso visible «Enviar enlace de pago» junto a «Asignar plan» en la ficha del jugador. Abre el panel con ese jugador seleccionado, enlace de vuelta, selección de tutor, cuotas existentes y preparación del correo. No crea recibos nuevos; requiere plan/cuotas y cuenta del tutor vinculada. Los conceptos que no son mensualidades de Academia siguen por transferencia.
+- Correo HTML con logo, azul/dorado, jugador/tutor, cuota mensual, número de cuotas, total, primer/último cobro, alternativa de transferencia y justificante por WhatsApp. CTA unificada: **Activar pago mensual con tarjeta**. El enlace estándar mantiene la revisión/autorización desde la cuenta del tutor y luego Stripe; no se anuncia falsamente un acceso directo sin login. El resultado posterior de Stripe continúa público.
+- Vista previa del mismo HTML que enviará el servidor; destinatario y asunto visibles, confirmación integrada y prevención de envío repetido. Cancelación con diálogo de aplicación, sin confirmación nativa bloqueante. Plantilla privada del piloto también actualizada para futuros usos, sin reenviar ni intentar modificar el correo ya recibido.
+- El servidor valida vínculo tutor/jugador, correo actual, jugador no archivado y cuotas pendientes sin historial manual, con importes/fechas coincidentes. Cuotas pagadas o modificadas requieren revisión. Escape de contenido en HTML; origen del enlace validado; vista previa limitada a administración/finanzas.
+- **Mensualidades LIVE generales siguen desactivadas**: permite preparar/previsualizar, pero no enviar/cobrar. El endpoint también bloquea el envío; no es una mera desactivación visual.
+- Verificación: nueva suite `test-payment-request-email.cjs` con proveedor simulado, igualdad preview/envío, doble clic, permisos/origen, flag desactivado, contenido e importes y tutor/cuotas obsoletos. Suites existentes de notificaciones y Stripe, TypeScript, lint afectado y build correctos. Ningún correo real enviado en esta tarea.
+- Navegador real: cuenta administradora QA desechable, ficha del jugador ficticio existente, clic en nuevo acceso y jugador preseleccionado verificados. Correo renderizado localmente en móvil 390 px con datos de muestra, sin enviarlo. Vista previa HTTP anónima denegada 403. La cuenta QA y sus sesiones se retiraron, sin cambiar la cuenta del propietario.
+- Captura: workspace `auditoria-2026-11-20/enviar-enlace-ficha.jpg`. Se conservan los 11 pagos históricos con digest `e9b3ce77d682aabd79e1097a68a22b23`. No se creó ninguna solicitud de cobro de prueba en producción.
+
 ## Retorno de Stripe sin inicio de sesión — 20 noviembre 2026, 09:26 CET
 
 El propietario completó Checkout. La operación fue **autorización de tarjeta**, no un pago confirmado: contrato activo y schedule `sub_sched_1Udn2HGk8vSBcmVddapqXjSu`, suscripción `sub_1Udn2HGk8vSBcmVdBP1LPICl`, recibo de 1 € todavía pendiente. Consulta real de Stripe desde la nueva página: tarjeta autorizada, comienzo 20/11/2026, fin 20/12/2026, `end_behavior=cancel`. Falta acreditar `invoice.paid` y su reflejo en Academy; no se forzó ningún cobro, factura ni conciliación.
