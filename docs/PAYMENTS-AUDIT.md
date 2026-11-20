@@ -1,3 +1,9 @@
+## Cuenta ficticia del portal y grupo — 20 noviembre 2026
+
+A petición del propietario se conserva `padre@demo.test` (rol guardian) con el jugador ficticio Álex de prueba, ID `e32d7cda-d76f-4a87-bc51-c250add479b5`. Vinculado al grupo Domingo · Fútbol 7, categoría Alevín. Alta de demostración del 1/12/2026 al 31/5/2027 con plan privado inactivo «Academia · Demo sin cobros», precio cero, cobros online deshabilitados. Sin recibos, contratos Stripe ni correos. No modificar ni borrar esta cuenta automáticamente: el propietario la está usando para explorar.
+
+Comprobación con la sesión de padre: una única ficha visible, inscripción activa en Mis actividades, 26 sesiones publicadas del 6/12/2026 al 30/5/2027, domingos 15:00–16:30 (Europe/Madrid). Se reutilizan las sesiones existentes del grupo sin reescribirlas. Los 21 pagos previos conservan el digest `13ac2fe6f6d8c3721523c18b62853160`. Corrección de hora en tarjeta de próximo evento y calendario (`b5f63f2`, `25cf92e`): hora explícita de Madrid, no UTC del servidor; hora sin truncar en celdas estrechas. TypeScript correcto y lint sin errores (tres avisos preexistentes).
+
 ## Formas de pago independientes por actividad — 20 noviembre 2026
 
 Esta instrucción posterior del propietario sustituye la excepción de pago compartido para Academia + Campus descrita más abajo.
