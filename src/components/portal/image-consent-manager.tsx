@@ -4,7 +4,7 @@ import { useT } from '@/lib/i18n/client'
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { CONSENT_VERSION, GENERAL_DOCUMENT } from '@/lib/image-consent'
+import { CONSENT_VERSION, GENERAL_DOCUMENT, imageConsentOptions } from '@/lib/image-consent'
 import { Camera, CheckCircle2, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SignatureModal } from './signature-modal'
@@ -27,7 +27,7 @@ export function ImageConsentManager({ guardianId, players }: { guardianId: strin
 
     function startDecision(child: ChildConsent) {
         setSigningChild(child)
-        setOptions(child.consent?.consent_options || EMPTY_OPTIONS)
+        setOptions(imageConsentOptions(child.consent?.consent_options))
     }
 
     return <div className="grid gap-5 lg:grid-cols-2">

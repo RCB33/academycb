@@ -4,6 +4,7 @@ const ids=['11111111-1111-4111-8111-111111111111','22222222-2222-4222-8222-22222
 let owned=true,signed=true,rows=[],uploads=0,removes=0,fail=false;
 const db={from(table){const q={select:()=>q,eq:()=>q,limit:()=>q,single:async()=>({data:owned?{id:ids[0]}:null}),maybeSingle:async()=>({data:table==='guardians'?(owned?{id:ids[0]}:null):signed?{id:ids[0]}:null}),then:resolve=>resolve({data:ids.slice(1).map(child_id=>({child_id})),error:null}),insert:async r=>{if(fail)return {error:{message:'simulated failure'}};rows.push(r);return {error:null}}};return q},storage:{from:()=>({upload:async()=>{uploads++;return {error:null}},remove:async()=>{removes++;return {error:null}}})}};
 const a=load('src/app/actions/signatures.ts',{'@/lib/supabase/server':{createClient:async()=>db},'next/cache':{revalidatePath:()=>{}},'next/headers':{headers:async()=>new Headers()},'@/lib/auth':{requireUser:async()=>({supabase:db,user:{id:ids[0]}}),requireAdmin:async()=>({supabase:db})},'@/lib/image-consent':load('src/lib/image-consent.ts')});
+const normalize=load('src/lib/image-consent.ts').imageConsentOptions;assert.deepEqual(normalize({portal_internal:'true'}),{portal_internal:false,public_communications:false});
 const no={portal_internal:false,public_communications:false},yes={portal_internal:true,public_communications:false};
 const input={guardianId:ids[0],documentType:'Condiciones Generales Academia',documentVersion:'2026.11',signatureBase64:'data:image/png;base64,iVBORw0KGgo=',playerConsents:[{childId:ids[1],options:yes},{childId:ids[2],options:no}],confirmed:true};
 (async()=>{

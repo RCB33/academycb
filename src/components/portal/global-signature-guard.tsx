@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { GlobalSignatureWrapper } from './global-signature-wrapper'
-import { GENERAL_DOCUMENT, IMAGE_DOCUMENT, NO_IMAGE_CONSENT, type ConsentPlayer } from '@/lib/image-consent'
+import { GENERAL_DOCUMENT, IMAGE_DOCUMENT, imageConsentOptions, type ConsentPlayer } from '@/lib/image-consent'
 
 export async function GlobalSignatureGuard({ userId }: { userId: string }) {
     const db = await createClient()
@@ -19,7 +19,7 @@ export async function GlobalSignatureGuard({ userId }: { userId: string }) {
         if (!child || child.archived_at) return []
         const consent = records.data.find(s => s.child_id === child.id && s.document_type === IMAGE_DOCUMENT)
         if (hasSigned && consent) return []
-        return [{ id: child.id, fullName: child.full_name, options: consent?.consent_options || NO_IMAGE_CONSENT }]
+        return [{ id: child.id, fullName: child.full_name, options: imageConsentOptions(consent?.consent_options) }]
     })
     if (hasSigned && !players.length) return null
     return <GlobalSignatureWrapper guardianId={guardian.id} players={players} preferencesOnly={hasSigned} />

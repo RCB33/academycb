@@ -1,4 +1,5 @@
 
+import { imageConsentOptions } from '@/lib/image-consent'
 import { getT } from '@/lib/i18n/server'
 import { createClient } from '@/lib/supabase/server'
 import { CommunityComposer } from '@/components/portal/community-composer'
@@ -21,7 +22,7 @@ export default async function CommunityWallPage() {
 
     const children = (childLinks || []).map((link: any) => link.child).filter(Boolean).map((child: any) => {
         const consent = (imageConsents || []).find((item: any) => item.child_id === child.id)
-        return { ...child, can_share_media: Boolean(consent?.consent_options?.portal_internal), consent_options: consent?.consent_options || { portal_internal: false, public_communications: false } }
+        return { ...child, can_share_media: imageConsentOptions(consent?.consent_options).portal_internal, consent_options: imageConsentOptions(consent?.consent_options) }
     }) as { id: string; full_name: string; can_share_media: boolean; consent_options: { portal_internal: boolean; public_communications: boolean } }[]
     const childNames = new Map(children.map((child) => [child.id, child.full_name]))
     const { data: posts } = await supabase.from('community_posts').select('*').order('published_at', { ascending: false }).order('created_at', { ascending: false }).limit(50)
