@@ -1,4 +1,5 @@
 'use client'
+import { useViewOnly } from '@/components/admin/view-only'
 import { useT } from '@/lib/i18n/client'
 
 
@@ -19,6 +20,7 @@ type ChildConsent = {
 const EMPTY_OPTIONS: ConsentOptions = { portal_internal: false, public_communications: false }
 
 export function ImageConsentManager({ guardianId, players }: { guardianId: string; players: ChildConsent[] }) {
+    const viewOnly = useViewOnly()
     const translate = useT()
 
     const [signingChild, setSigningChild] = useState<ChildConsent | null>(null)
@@ -41,7 +43,7 @@ export function ImageConsentManager({ guardianId, players }: { guardianId: strin
                 <div className="space-y-4 p-5 text-sm text-slate-600">
                     <div className={`flex items-start gap-2 rounded-xl p-3 ${hasConsent ? 'bg-green-50 text-green-800' : 'bg-slate-50 text-slate-700'}`}><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" /><span>{translate(hasConsent ? `${translate("Autorización registrada")}${child.consent ? ` · v${child.consent.document_version}` : ''}` : 'Sin autorización de imagen activa')}</span></div>
                     <ul className="space-y-2 text-xs leading-relaxed"><li className="flex gap-2"><CheckCircle2 className={`h-4 w-4 shrink-0 ${current.portal_internal ? 'text-green-600' : 'text-slate-300'}`} />{translate("Portal Familias, Videoteca y Muro Academy: ")}<strong>{translate(current.portal_internal ? 'Autorizado' : 'No autorizado')}</strong></li><li className="flex gap-2"><CheckCircle2 className={`h-4 w-4 shrink-0 ${current.public_communications ? 'text-green-600' : 'text-slate-300'}`} />{translate("Web, redes sociales y comunicación pública: ")}<strong>{translate(current.public_communications ? 'Autorizado' : 'No autorizado')}</strong></li></ul>
-                    <Button type="button" variant={hasConsent ? 'outline' : 'default'} className={hasConsent ? 'w-full border-navy text-navy hover:bg-navy hover:text-white' : 'w-full bg-gold font-bold text-navy hover:bg-gold/80'} onClick={() => startDecision(child)}>{translate(hasConsent ? 'Modificar o retirar autorización' : 'Decidir autorización')}</Button>
+                    <Button disabled={viewOnly} type="button" variant={hasConsent ? 'outline' : 'default'} className={hasConsent ? 'w-full border-navy text-navy hover:bg-navy hover:text-white' : 'w-full bg-gold font-bold text-navy hover:bg-gold/80'} onClick={() => startDecision(child)}>{translate(hasConsent ? 'Modificar o retirar autorización' : 'Decidir autorización')}</Button>
                 </div>
             </article>
         }))}

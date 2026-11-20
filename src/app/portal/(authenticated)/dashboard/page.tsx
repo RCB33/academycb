@@ -1,8 +1,8 @@
+import { getPortalViewer } from '@/lib/admin-view'
 
 import { PlayerProfileDetails } from '@/components/portal/player-profile-details'
 import { PlayerPhotoEditor } from '@/components/portal/player-photo-editor'
 import { getT } from '@/lib/i18n/server'
-import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card"
@@ -12,8 +12,7 @@ import { ArrowRight, UsersRound } from "lucide-react"
 export default async function DashboardPage() {
     const translate = await getT()
 
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const { supabase, user, view } = await getPortalViewer()
 
     // Get Guardian ID
     const { data: guardian } = await supabase

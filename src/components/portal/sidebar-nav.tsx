@@ -54,7 +54,7 @@ export function SidebarNav({ collapsed = false }: { collapsed?: boolean }) {
 
 type FamilyPlayer = { id: string; full_name: string; birth_year?: number | null }
 
-export function PortalDesktopSidebar({ players, userEmail, signOut }: { players: FamilyPlayer[]; userEmail: string; signOut: () => Promise<void> }) {
+export function PortalDesktopSidebar({ players, userEmail, signOut, viewOnly = false }: { players: FamilyPlayer[]; userEmail: string; signOut: () => Promise<void>; viewOnly?: boolean }) {
     const translate = useT()
 
     const [collapsed, setCollapsed] = useState(false)
@@ -80,8 +80,8 @@ export function PortalDesktopSidebar({ players, userEmail, signOut }: { players:
         <div className="flex justify-center py-3"><LanguageSwitcher compact={collapsed} /></div>
         <SidebarNav collapsed={collapsed} />
         <div className={cn('shrink-0 border-t border-white/10 bg-navy-dark/30', collapsed ? 'p-2' : 'p-4')}>
-            {translate(!collapsed && <div className="mb-3 flex items-center gap-3 rounded-xl bg-white/5 p-2"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gold text-xs font-black text-navy">{translate(userEmail.charAt(0).toUpperCase())}</div><p className="min-w-0 flex-1 truncate text-xs text-slate-200">{translate(userEmail)}</p><NotificationBell /></div>)}
-            <form action={signOut}><button className={cn('flex min-h-11 w-full items-center rounded-xl text-sm font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white', collapsed ? 'justify-center px-2' : 'gap-3 px-3')} title={translate("Cerrar sesión")}><LogOut className="h-[18px] w-[18px]" />{translate(!collapsed && 'Cerrar sesión')}</button></form>
+            {translate(!collapsed && <div className="mb-3 flex items-center gap-3 rounded-xl bg-white/5 p-2"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gold text-xs font-black text-navy">{translate(userEmail.charAt(0).toUpperCase())}</div><p className="min-w-0 flex-1 truncate text-xs text-slate-200">{translate(userEmail)}</p>{!viewOnly && <NotificationBell />}</div>)}
+            {!viewOnly && <form action={signOut}><button className={cn('flex min-h-11 w-full items-center rounded-xl text-sm font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white', collapsed ? 'justify-center px-2' : 'gap-3 px-3')} title={translate("Cerrar sesión")}><LogOut className="h-[18px] w-[18px]" />{translate(!collapsed && 'Cerrar sesión')}</button></form>}
         </div>
     </aside>
 }

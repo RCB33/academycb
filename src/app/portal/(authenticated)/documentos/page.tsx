@@ -1,8 +1,8 @@
+import { getPortalViewer } from '@/lib/admin-view'
 
 import { getT } from '@/lib/i18n/server'
 import { redirect } from 'next/navigation'
 import { Archive, Calendar, Camera, CheckCircle, FileText, ShieldCheck } from 'lucide-react'
-import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ImageConsentManager } from '@/components/portal/image-consent-manager'
 import { PortalPageHeader } from '@/components/portal/portal-page-header'
@@ -12,8 +12,7 @@ const IMAGE_DOCUMENT = 'Autorización de imagen y vídeo'
 export default async function DocumentosPage() {
     const translate = await getT()
 
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const { supabase, user, view } = await getPortalViewer()
     if (!user) redirect('/portal')
 
     const { data: guardian } = await supabase.from('guardians').select('id').eq('user_id', user.id).maybeSingle()

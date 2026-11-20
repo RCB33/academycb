@@ -1,4 +1,5 @@
 'use client'
+import { useViewOnly } from '@/components/admin/view-only'
 import { useT } from '@/lib/i18n/client'
 
 
@@ -7,13 +8,14 @@ import { payReceipt, payEventRegistration } from './actions'
 import { Button } from '@/components/ui/button'
 
 export function PayReceiptButton({ paymentId, test, event = false }: { paymentId: string; test: boolean; event?: boolean }) {
+    const viewOnly = useViewOnly()
     const translate = useT()
 
     const inFlight = useRef(false)
     const [busy, setBusy] = useState(false)
     const [error, setError] = useState('')
     return <div className="mt-3 w-full max-w-xs">
-        <Button className="min-h-12 w-full bg-gold text-navy" disabled={busy} onClick={async () => {
+        <Button className="min-h-12 w-full bg-gold text-navy" disabled={viewOnly || busy} onClick={async () => {
             if (inFlight.current) return
             inFlight.current = true; setBusy(true); setError('')
             try {

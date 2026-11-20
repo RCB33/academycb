@@ -1,6 +1,6 @@
+import { getPortalViewer } from '@/lib/admin-view'
 
 import { getT } from '@/lib/i18n/server'
-import { createClient } from '@/lib/supabase/server'
 import { Receipt, Calendar, CreditCard, ShoppingBag, GraduationCap, Tent, Trophy as TrophyIcon } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { redirect } from 'next/navigation'
@@ -18,12 +18,13 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
     const translate = await getT()
 
     const params = await searchParams
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const { supabase, user, view } = await getPortalViewer()
 
     if (!user) redirect('/portal')
     const checkoutMode = await stripeCheckoutMode()
-    const { data: billingRequests, error: billingError } = await supabase.from('billing_requests').select('*,billing_request_items(*)').in('state',['ready','processing','active','cancelling']).order('created_at',{ascending:false})
+    let billingQuery = supabase.from('billing_requests').select('*,billing_request_items(*)')
+    if (view) billingQuery = billingQuery.eq('guardian_id',view.selectedId)
+    const { data: billingRequests, error: billingError } = await billingQuery.in('state',['ready','processing','active','cancelling']).order('created_at',{ascending:false})
     if(billingError)throw new Error('No se pudieron cargar las solicitudes de cobro')
     const { data: attempts } = await supabase.from('receipt_checkout_attempts').select('id,payment_id,state,mode').eq('owner_id', user.id).order('created_at', { ascending: false }).limit(100)
     const returnedAttempt = attempts?.find(a => a.id === params.attempt)

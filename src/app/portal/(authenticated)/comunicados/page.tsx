@@ -1,6 +1,6 @@
+import { getPortalViewer, getFamilyViewScope } from '@/lib/admin-view'
 
 import { getT } from '@/lib/i18n/server'
-import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Bell, Calendar as CalendarIcon, Megaphone } from "lucide-react"
 import { redirect } from 'next/navigation'
@@ -11,8 +11,7 @@ export const dynamic = 'force-dynamic'
 export default async function ComunicadosWallPage() {
     const translate = await getT()
 
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const { supabase, user, view } = await getPortalViewer()
 
     if (!user) redirect('/portal')
 
@@ -29,13 +28,14 @@ export default async function ComunicadosWallPage() {
         )
     }
 
-    // RLS checks the exact recipients, with compatibility for legacy messages.
-    const { data: messages } = await supabase
-        .from('broadcast_logs')
-        .select('*')
-        .eq('channel', 'portal')
-        .order('created_at', { ascending: false })
-        .limit(30) // Last 30 messages
+    const scope = view ? await getFamilyViewScope() : null
+    const names = new Set(scope?.children.flatMap(c => [c.category,c.team].flatMap(r => Array.isArray(r) ? r : [r]).filter(Boolean).map(r => r!.name)) || [])
+    let query = supabase.from('broadcast_logs').select('*').eq('channel','portal')
+    if (view) {
+        const categories = ['Todos',...names].filter((name): name is string => typeof name === 'string').map(name => JSON.stringify(name)).join(',')
+        query = query.or(`recipient_user_ids.cs.{${user.id}},and(recipient_user_ids.is.null,category_name.in.(${categories}))`)
+    }
+    const { data: messages } = await query.order('created_at',{ascending:false}).limit(30)
 
     return (
         <div className="max-w-3xl mx-auto space-y-6">

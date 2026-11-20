@@ -1,3 +1,6 @@
+import { getAdminView } from '@/lib/admin-view'
+import { AdminViewBar } from '@/components/admin/admin-view-bar'
+import { ViewOnly } from '@/components/admin/view-only'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { CoachNav } from '@/components/coach/coach-nav'
@@ -26,6 +29,7 @@ export default async function CoachLayout({
         redirect('/portal')
     }
 
+    const view = await getAdminView('coach')
     const signOut = async () => {
         'use server'
         const sb = await createClient()
@@ -35,9 +39,10 @@ export default async function CoachLayout({
 
     return (
         <div className="flex h-[100dvh] min-h-[100dvh] flex-col overflow-hidden bg-slate-50">
-            <CoachNav signOut={signOut} />
+            {view && <AdminViewBar view={view}/>}
+            <CoachNav signOut={signOut} viewOnly={Boolean(view)} />
             <CoachMain>
-                {children}
+                <ViewOnly enabled={Boolean(view)}>{children}</ViewOnly>
             </CoachMain>
         </div>
     )

@@ -1,4 +1,5 @@
 'use client'
+import { useViewOnly } from '@/components/admin/view-only'
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Camera, Loader2, UserCircle } from 'lucide-react'
@@ -7,6 +8,7 @@ import { profileImageUrl } from '@/lib/profile-image'
 import { savePlayerPhoto } from '@/app/actions/player-photo'
 
 export function PlayerPhotoEditor({ childId, name, avatarUrl, variant = 'avatar' }: { variant?: 'avatar' | 'card'; childId: string; name: string; avatarUrl?: string | null }) {
+    const viewOnly = useViewOnly()
     const t = useT(), router = useRouter()
     const [pending, start] = useTransition()
     const [error, setError] = useState('')
@@ -19,7 +21,7 @@ export function PlayerPhotoEditor({ childId, name, avatarUrl, variant = 'avatar'
         </div>
         <span className={`inline-flex min-h-10 items-center gap-1 rounded-lg border bg-white px-2 text-xs font-semibold text-navy ${variant==='card'?'absolute bottom-2 z-30 shadow-lg':''}`}>
             {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}{t(src ? 'Cambiar foto' : 'Añadir foto')}
-            <input type="file" accept="image/jpeg,image/png,image/webp" aria-label={`${t('Foto de')} ${name}`} disabled={pending} className="absolute inset-0 z-40 h-full w-full cursor-pointer opacity-0" onChange={event => {
+            <input type="file" accept="image/jpeg,image/png,image/webp" aria-label={`${t('Foto de')} ${name}`} disabled={pending || viewOnly} className="absolute inset-0 z-40 h-full w-full cursor-pointer opacity-0" onChange={event => {
                 const file = event.target.files?.[0]; event.target.value = ''; if (!file) return
                 setError('')
                 if (file.size > 3 * 1024 * 1024) { setError(t('La foto supera los 3 MB. Reduce su tamaño antes de subirla.')); return }

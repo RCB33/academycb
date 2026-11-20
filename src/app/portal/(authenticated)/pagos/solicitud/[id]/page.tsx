@@ -1,3 +1,4 @@
+import { getAdminView } from '@/lib/admin-view'
 import { requireUser } from '@/lib/auth'
 import { notFound } from 'next/navigation'
 import { stripeCheckoutMode } from '@/lib/stripe-availability'
@@ -10,7 +11,8 @@ export default async function BillingRequestPage({params}:{params:Promise<{id:st
  if(!/^[0-9a-f-]{36}$/i.test(id))notFound()
  const {supabase}=await requireUser()
  const {data,error}=await supabase.from('billing_requests').select('*,billing_request_items(*),billing_request_attempts(id,state,billing_status)').eq('id',id).single()
- if(error||!data)notFound()
+ const view=await getAdminView('parents')
+ if(error||!data||(view&&data.guardian_id!==view.selectedId))notFound()
  const r=data as BillingRequest
  const mode=await stripeCheckoutMode()
  const enabled=r.kind==='subscription'&&mode===r.mode&&(mode==='test'||process.env.STRIPE_RECURRING_PAYMENTS_ENABLED==='true')

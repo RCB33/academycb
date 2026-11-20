@@ -1,4 +1,5 @@
 'use client'
+import { useViewOnly } from '@/components/admin/view-only'
 import { useT } from '@/lib/i18n/client'
 
 
@@ -19,6 +20,7 @@ type Product = {
 }
 
 export function ProductCard({ product }: { product: Product }) {
+    const viewOnly = useViewOnly()
     const translate = useT()
 
     const { addToCart } = useCart()
@@ -82,7 +84,7 @@ export function ProductCard({ product }: { product: Product }) {
             <CardFooter className="pt-0">
                 <Button
                     onClick={handleAddToCart}
-                    disabled={product.stock <= 0}
+                    disabled={viewOnly || product.stock <= 0}
                     className="w-full border-none bg-gold font-bold text-navy shadow-md shadow-gold/20 hover:bg-gold-light"
                 >
                     <ShoppingCart className="mr-2 h-4 w-4" /> {translate(" Añadir al carrito")}</Button>
