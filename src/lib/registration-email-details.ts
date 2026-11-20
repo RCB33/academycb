@@ -34,7 +34,7 @@ export async function registrationEmailDetails(source:string,id:string,kind:stri
     const {data:r,error}=await db.from('enrollment_requests').select('service,child_name,activity_name,status,academy_details,campus_details').eq('id',id).single()
     if(error||!r) throw new Error('Registration unavailable')
     const a=r.academy_details
-    const selection=a?`${a.plan.name}\n${a.groups.map((g:{name:string;schedule:string;public_offer:{day:string;location:string}})=>`${g.name} · ${g.public_offer.day} · ${g.schedule}\n${g.public_offer.location}`).join('\n')}\nIncorporación: ${a.start_date}`:r.activity_name
+    const selection=a?`${a.plan.name}\n${a.groups.map((g:{name:string;schedule:string;public_offer?:{day:string;location:string}|null})=>[g.name,g.public_offer?.day,g.schedule,g.public_offer?.location].filter(Boolean).join(' · ')).join('\n')}\nIncorporación: ${a.start_date}`:r.activity_name
     if(kind==='received') return {subject:`${r.child_name}, hemos recibido tu solicitud`,message:`La solicitud de ${r.child_name} se ha guardado correctamente.\n\n${selection}\n\nEl equipo revisará disponibilidad, edad y grupo. Te comunicaremos la aceptación y los siguientes pasos por correo. Este mensaje no confirma una plaza ni acredita un pago. Todavía no realices ningún pago.${contact}`}
     if(kind!=='reviewed'||r.status!=='enrolled') return null
     let payment='',detail=selection
