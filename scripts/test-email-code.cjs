@@ -39,7 +39,7 @@ const password = { action: 'password', password: 'A-new-test-password-99', confi
     const pending = { ...session, email: user.email, userId: user.id, expiresAt: Date.now() + 600000 }
     const sealed = crypto.sealPasswordSetup(pending)
     assert.deepEqual(crypto.openPasswordSetup(sealed), pending)
-    assert.equal(crypto.openPasswordSetup('x' + sealed.slice(1)), null)
+    assert.equal(crypto.openPasswordSetup((sealed[0] === 'x' ? 'y' : 'x') + sealed.slice(1)), null)
     assert.equal(crypto.openPasswordSetup(crypto.sealPasswordSetup({ ...pending, expiresAt: Date.now() - 1 })), null)
     assert.equal(crypto.openPasswordSetup('invalid'), null)
     assert(!sealed.includes(session.refresh_token))

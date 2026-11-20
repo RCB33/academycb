@@ -1,3 +1,4 @@
+import { operationalLog } from '@/lib/operational-log'
 import { requireUser } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { configuredStripe } from '@/lib/stripe-payments'
@@ -27,7 +28,7 @@ export async function POST(request:Request,{params}:{params:Promise<{id:string}>
   const origin=stripePaymentOrigin(request.headers.get('origin'),mode,process.env.VERCEL_URL)
   const db=createAdminClient()
   const reserved=await db.rpc('reserve_billing_request',{request_input:id,owner_input:user.id,mode_input:mode,total_input:consent.totalCents})
-  if(reserved.error||!reserved.data)return reply({error:'El recibo ha cambiado, el enlace ha caducado o no corresponde a tu cuenta. Contacta con Academy.'},409)
+  if(reserved.error||!reserved.data){operationalLog('billing.reservation_rejected',{source:'billing',status:409});return reply({error:'El recibo ha cambiado, el enlace ha caducado o no corresponde a tu cuenta. Contacta con Academy.'},409)}
   const a=reserved.data as BillingAttempt
   if(['active','completed'].includes(a.state))return reply({error:'Esta solicitud ya está autorizada o cobrada. No repitas el proceso.'},409)
   if(a.session_id) {
@@ -52,5 +53,5 @@ export async function POST(request:Request,{params}:{params:Promise<{id:string}>
    return reply({error:'Administración está cancelando esta solicitud. No se ha iniciado ningún cobro.'},409)
   }
   return reply({url:session.url})
- }catch{return reply({error:'No se pudo iniciar el pago. No se ha confirmado ningún cargo; consulta el estado antes de reintentar.'},409)}
+ }catch{operationalLog('billing.checkout_failed',{source:'billing',status:409});return reply({error:'No se pudo iniciar el pago. No se ha confirmado ningún cargo; consulta el estado antes de reintentar.'},409)}
 }

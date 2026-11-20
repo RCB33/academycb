@@ -1,3 +1,4 @@
+import { operationalLog } from '@/lib/operational-log'
 import { requireRole } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 
@@ -14,9 +15,10 @@ export async function POST(request: Request) {
     }
     try {
         const { error } = await createAdminClient().rpc('record_guardian_portal_visit', { p_user_id: userId })
-        if (error) return new Response(null, { status: 503 })
+        if (error) { operationalLog('portal.visit_failed',{source:'portal',status:503}); return new Response(null, { status: 503 }) }
         return new Response(null, { status: 204 })
     } catch {
+        operationalLog('portal.visit_failed',{source:'portal',status:503})
         return new Response(null, { status: 503 })
     }
 }

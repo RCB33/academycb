@@ -1,3 +1,4 @@
+import { operationalLog } from '@/lib/operational-log'
 import 'server-only'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { registrationEmailDetails } from '@/lib/registration-email-details'
@@ -11,7 +12,7 @@ export async function deliverRegistrationEmails(source: 'enrollment' | 'event' |
     const { data, error } = await db.from('registration_email_outbox').select('id').eq('source_type', source).eq('source_id', sourceId).neq('status', 'sent').order('created_at').limit(10)
     if (error) throw error
     for (const row of data || []) await deliverRegistrationEmail(row.id)
-  } catch { console.error('registration_email_queue_unavailable') }
+  } catch { operationalLog('email.queue_failed',{source:'email'}) }
 }
 
 export async function deliverRegistrationEmail(id: string) {
@@ -38,7 +39,8 @@ export async function deliverRegistrationEmail(id: string) {
       if (saved.error) throw saved.error
       return
     } catch {
+      operationalLog('email.delivery_failed',{source:'email'})
       await db.from('registration_email_outbox').update({ status: 'failed', last_error: failure }).eq('id', id).eq('status', 'sending')
     }
-  } catch { console.error('registration_email_delivery_failed') }
+  } catch { operationalLog('email.delivery_failed',{source:'email'}) }
 }

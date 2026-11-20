@@ -1,3 +1,4 @@
+import { operationalLog } from '@/lib/operational-log'
 import type Stripe from 'stripe'
 import { configuredStripe, verifyPaymentWebhook } from '@/lib/stripe-payments'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -15,7 +16,7 @@ export async function POST(request: Request) {
     // Environment validation still requires explicit live activation.
     try {
         configuredStripe(true)
-    } catch { return Response.json({ error: 'Webhook not configured' }, { status: 503 }) }
+    } catch { operationalLog('stripe.configuration_failed',{source:'stripe',status:503}); return Response.json({ error: 'Webhook not configured' }, { status: 503 }) }
     const signature = request.headers.get('stripe-signature')
     if (!signature) return Response.json({ error: 'Missing signature' }, { status: 400 })
     // Bound the raw payload even when Content-Length is absent or untrusted.
@@ -39,15 +40,15 @@ export async function POST(request: Request) {
     if (isRetiredOwnerPilotEvent(event)) return Response.json({ received: true, retiredPilot: true })
     if (event.type === 'invoice.paid') {
         try { const invoice=event.data.object as Stripe.Invoice; if(!await fulfillBillingInvoice(invoice))await fulfillAcademyInvoice(invoice); return Response.json({ received: true }) }
-        catch { return Response.json({ error: 'Invoice confirmation pending; retry' }, { status: 500 }) }
+        catch { operationalLog('stripe.confirmation_failed',{source:'invoice',status:500}); return Response.json({ error: 'Invoice confirmation pending; retry' }, { status: 500 }) }
     }
     if (['invoice.payment_failed','invoice.payment_action_required'].includes(event.type)) {
         try { const invoice=event.data.object as Stripe.Invoice & {subscription?:string}; const value=invoice.parent?.subscription_details?.subscription||invoice.subscription; const id=typeof value==='string'?value:value?.id; if(!id||!await syncBillingSubscription(id))await syncAcademyInvoiceStatus(invoice); return Response.json({ received: true }) }
-        catch { return Response.json({ error: 'Invoice status pending; retry' }, { status: 500 }) }
+        catch { operationalLog('stripe.confirmation_failed',{source:'invoice',status:500}); return Response.json({ error: 'Invoice status pending; retry' }, { status: 500 }) }
     }
     if (['customer.subscription.updated','customer.subscription.deleted'].includes(event.type)) {
         try { const id=(event.data.object as Stripe.Subscription).id; if(!await syncBillingSubscription(id))await syncAcademySubscription(id); return Response.json({ received: true }) }
-        catch { return Response.json({ error: 'Subscription status pending; retry' }, { status: 500 }) }
+        catch { operationalLog('stripe.confirmation_failed',{source:'subscription',status:500}); return Response.json({ error: 'Subscription status pending; retry' }, { status: 500 }) }
     }
     if (!supported.has(event.type)) return Response.json({ received: true, ignored: true })
     const session = event.data.object as Stripe.Checkout.Session
@@ -55,15 +56,15 @@ export async function POST(request: Request) {
     const purpose = session.metadata?.purpose
     if (purpose === 'academy_billing_request') {
         try { await fulfillBillingCheckout(session,event.type); return Response.json({ received: true }) }
-        catch { return Response.json({ error: 'Billing confirmation pending; retry' }, { status: 500 }) }
+        catch { operationalLog('stripe.confirmation_failed',{source:'billing',status:500}); return Response.json({ error: 'Billing confirmation pending; retry' }, { status: 500 }) }
     }
     if (purpose === WEBHOOK_PROBE_PURPOSE) {
         try { await recordWebhookProbe(event); return Response.json({ received: true, diagnostic: true }) }
-        catch { return Response.json({ error: 'Webhook diagnostic pending; retry' }, { status: 500 }) }
+        catch { operationalLog('stripe.confirmation_failed',{source:'probe',status:500}); return Response.json({ error: 'Webhook diagnostic pending; retry' }, { status: 500 }) }
     }
     if (purpose === 'academy_contract') {
         try { await fulfillAcademyCheckout(session, event.type); return Response.json({ received: true }) }
-        catch { return Response.json({ error: 'Contract confirmation pending; retry' }, { status: 500 }) }
+        catch { operationalLog('stripe.confirmation_failed',{source:'contract',status:500}); return Response.json({ error: 'Contract confirmation pending; retry' }, { status: 500 }) }
     }
     if (purpose !== 'academy_connection_test' && purpose !== 'academy_receipt' && purpose !== 'academy_event') return Response.json({ received: true, ignored: true })
     if (purpose === 'academy_connection_test' && session.livemode) return Response.json({ error: 'Diagnostic cannot be live' }, { status: 400 })
@@ -77,7 +78,7 @@ export async function POST(request: Request) {
             ...(purpose !== 'academy_connection_test' ? { intent_input: typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id || null } : {}),
         })
         if (event.type === 'checkout.session.expired' && error?.code === 'P0002') return Response.json({ received: true, ignored: true })
-        if (error) return Response.json({ error: 'Confirmation not committed; retry' }, { status: 500 })
+        if (error) { operationalLog('stripe.confirmation_failed',{source:'stripe',status:500}); return Response.json({ error: 'Confirmation not committed; retry' }, { status: 500 }) }
         return Response.json({ received: true })
-    } catch { return Response.json({ error: 'Confirmation unavailable; retry' }, { status: 500 }) }
+    } catch { operationalLog('stripe.confirmation_failed',{source:'stripe',status:500}); return Response.json({ error: 'Confirmation unavailable; retry' }, { status: 500 }) }
 }

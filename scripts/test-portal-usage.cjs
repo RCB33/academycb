@@ -2,9 +2,9 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const ts = require('typescript')
 function load(file, mocks = {}) {
-    const module = { exports: {} }
-    new Function('module', 'exports', 'require', ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022 } }).outputText)(module, module.exports, name => mocks[name] || require(name))
-    return module.exports
+    const m = { exports: {} }
+    new Function('module', 'exports', 'require', ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022 } }).outputText)(m, m.exports, name => name==='@/lib/operational-log'?load('src/lib/operational-log.ts',{'server-only':{}}):mocks[name] || require(name))
+    return m.exports
 }
 const model = load('src/lib/portal-usage.ts')
 const base = { id: 'contact', full_name: 'Álvaro Tutor', email: 'test@example.invalid', user_id: 'family', role: 'guardian', players: [{ id: 'child', full_name: 'María Jugadora' }], first_seen_at: null, last_seen_at: null, duplicateEmail: false }

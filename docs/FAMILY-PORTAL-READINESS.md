@@ -2,6 +2,18 @@
 
 Actualización posterior: el propietario autorizó activar las mensualidades generales. Production tiene `STRIPE_RECURRING_PAYMENTS_ENABLED=true`; las nuevas solicitudes de Academia con tarjeta reciben el enlace individual al aceptar su plaza, siempre que la preparación y el vínculo familiar sean correctos. El enlace de las nuevas altas con tarjeta reúne primer mes, matrícula aplicable y Plus opcional; después solo se cobra la cuota mensual, sin renovación al finalizar temporada. Se ha publicado también la PWA con instalación y pantalla offline. Evidencia y límites de comprobación en la sección inicial de `PAYMENTS-AUDIT.md`; las menciones a mensualidades desactivadas de auditorías anteriores son históricas.
 
+## Registros operativos — 20 noviembre 2026, 18:30 Madrid
+
+Comprobación de solo lectura: diez tutores reales con cuenta guardian vinculada, ocho con marca de contraseña configurada y dos pendientes. Una visita visible registrada hoy; las demás visitas anteriores al contador son desconocidas. Una nueva solicitud de Academia recibida a las 17:14 Madrid sigue pendiente de aceptación. Son hechos distintos: cuenta, contraseña, solicitud y uso del portal. No se aceptaron solicitudes ni se enviaron mensajes durante esta revisión.
+
+Vercel: consulta de errores de las últimas 24 horas devuelve 13 entradas de despliegues anteriores (sesiones no válidas y validación de oferta); la consulta de peticiones 5xx de 14:30–17:30 UTC devuelve cero. La oferta pública actual filtra borradores privados antes de validar; su regresión pasa. Supabase Auth, misma ventana: un rechazo por credenciales incorrectas y una sesión sin refresh token. Esto no atribuye los intentos a un padre concreto ni demuestra ausencia de todos los posibles errores. Outbox de inscripción: cinco mensajes con aceptación del proveedor, ninguno pendiente/fallido; no equivale a recepción o lectura en el buzón.
+
+Se añaden logs JSON `academy_ops` a Vercel: arranque de instrumentación, excepciones capturadas por Next en servidor, códigos rechazados/expirados, contraseña guardada o rechazada, fallo de acceso automático, visita no registrada, correo fallido y errores de Checkout/webhook. Incluyen fecha, categoría, nivel, estado HTTP cuando aplica, versión y digest numérico de Next. No se serializan errores, mensajes libres, solicitudes, cookies, cabeceras, rutas reales, emails, tokens, códigos, contraseñas ni datos de pago. Vercel aporta la correlación de petición. No se crea una API pública de telemetría ni se añaden escrituras de base de datos por cada error.
+
+Consulta operativa: `vercel logs --project academycb --scope roques-projects-bd4f7acb --environment production --since 24h --query academy_ops --json`. Los rechazos previstos son warnings; los fallos técnicos son errores. Conservar también Auth logs para el inicio de sesión del navegador. No constituye vigilancia humana continua, alertas externas ni cobertura de todos los fallos del navegador. La retención depende del proveedor.
+
+Pruebas: redacción de datos sensibles, vocabulario cerrado, correlación por versión, severidad y fallo del logger sin interrumpir la operación; suites de acceso por código, contraseña, correos, visitas y Stripe con proveedores simulados. TypeScript y lint de archivos afectados. Se corrige un test de manipulación aleatoria para que cambie siempre el primer carácter, y el cargador de pruebas acepta el módulo de logs. Sin cambios de esquema, pagos, cuentas o suscripciones.
+
 ## Uso real del portal
 
 Administración → Más herramientas (o Más en móvil) → Uso del Portal Familias, `/admin/familias`.
