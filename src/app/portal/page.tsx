@@ -8,7 +8,7 @@ export default async function LoginPage() {
     const translate = await getT()
 
     return (
-        <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-navy relative overflow-hidden">
+        <div className="flex min-h-[100dvh] items-center justify-center pt-[calc(3rem+env(safe-area-inset-top))] pb-[calc(3rem+env(safe-area-inset-bottom))] px-4 sm:px-6 lg:px-8 bg-navy relative overflow-hidden">
             {/* Background Decorations */}
             <div className="absolute inset-0 z-0">
                 <div className="absolute top-0 right-0 w-96 h-96 bg-secondary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />

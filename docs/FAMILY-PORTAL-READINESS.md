@@ -1,5 +1,7 @@
 # Portal Familias — revisión del 20/11/2026
 
+Actualización posterior: el propietario autorizó activar las mensualidades generales. Production tiene `STRIPE_RECURRING_PAYMENTS_ENABLED=true`; las nuevas solicitudes de Academia con tarjeta reciben el enlace individual al aceptar su plaza, siempre que la preparación y el vínculo familiar sean correctos. Se ha publicado también la PWA con instalación y pantalla offline. Evidencia y límites de comprobación en la sección inicial de `PAYMENTS-AUDIT.md`; las menciones a mensualidades desactivadas de auditorías anteriores son históricas.
+
 ## Uso real del portal
 
 Administración → Más herramientas (o Más en móvil) → Uso del Portal Familias, `/admin/familias`.
