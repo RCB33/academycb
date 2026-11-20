@@ -1,3 +1,16 @@
+## Retorno de Stripe sin inicio de sesión — 20 noviembre 2026, 09:26 CET
+
+El propietario completó Checkout. La operación fue **autorización de tarjeta**, no un pago confirmado: contrato activo y schedule `sub_sched_1Udn2HGk8vSBcmVddapqXjSu`, suscripción `sub_1Udn2HGk8vSBcmVdBP1LPICl`, recibo de 1 € todavía pendiente. Consulta real de Stripe desde la nueva página: tarjeta autorizada, comienzo 20/11/2026, fin 20/12/2026, `end_behavior=cancel`. Falta acreditar `invoice.paid` y su reflejo en Academy; no se forzó ningún cobro, factura ni conciliación.
+
+Corrección publicada `cdaffed`, Vercel `dpl_A9ga5AUYstVhfzhVcVvFM1wVDuYW`, READY:
+
+- Nuevos Checkout de contratos Academy y solicitudes de mensualidades regresan a `/pago/resultado?session_id={CHECKOUT_SESSION_ID}`, fuera del portal protegido. Los enlaces ya creados conservan su retorno anterior; para este piloto ya completado se entregó al propietario el enlace de resultado de su sesión existente, sin repetir Checkout.
+- Resultado consultado en servidor, vinculando sesión persistida, entorno, metadatos, cliente, contrato/schedule e importe. Autorización de tarjeta nunca equivale a cobro. Estados separados de pago confirmado, autorizado, procesando, atención, incompleto, caducado y finalizado. La consulta no escribe datos ni crea/intenta cargos.
+- Acceso mediante identificador Stripe de alta entropía; no se acepta un UUID de contrato para consultar sin sesión. Respuesta mínima sin nombres, correos, tarjeta ni documentos financieros. Sin caché, sin indexación y sin referrer. Un identificador desconocido no dispara consultas a Stripe.
+- Vista móvil azul/dorada con logo, importe, fin de suscripción, botón de actualizar, advertencia contra duplicar pagos y acceso opcional al portal. Ocho actualizaciones automáticas durante un minuto; después permite volver a consultar sin mantener un sondeo indefinido.
+- Verificación: tests Stripe existentes, nueva suite de estados/vinculación/importe/privacidad sin escrituras, TypeScript, lint afectado y build correctos. HTTP anónimo 200 sin redirección, cabeceras privadas/no-referrer/noindex verificadas. Cancelación y sesión desconocida no presentan éxito. Navegador real a 390×844: resultado autorizado y botón de actualizar comprobados; captura guardada en el workspace `auditoria-2026-11-20/resultado-stripe-movil.jpg`.
+- Los 11 pagos antiguos conservan `e9b3ce77d682aabd79e1097a68a22b23`. No se activaron mensualidades generales ni se modificó ningún registro financiero.
+
 ## Piloto LIVE autorizado por el propietario — 20 noviembre 2026
 
 Nueva autorización expresa: una única suscripción LIVE de **1 € total, un mes, sin matrícula/extras ni renovación**, para `rokecordoba@gmail.com`. No habilita las mensualidades para el resto de familias. `STRIPE_RECURRING_PAYMENTS_ENABLED=false` se conserva.
