@@ -49,3 +49,11 @@ Resolver fichas duplicadas o sin acceso, especialmente cuando el email podría p
 - Jugador Demo Roque queda archivado, conservando sus dos pagos y referencias. Los planes privados de prueba ya estaban inactivos/no publicables; no se activaron ni alteraron importes.
 - Antes de aplicar se ejecutó el borrado exacto en una transacción revertida. La aplicación definitiva verificó digests de todos los jugadores y tutores ajenos al alcance y de todos los pagos; cualquier cambio no previsto abortaba la transacción. Copia privada de los fixtures bajo `tmp/demo-cleanup/backup-20261120.json`, fuera del repositorio.
 - Verificación final: 16 jugadores activos, sin niños QA; 22 fichas de tutor y 10 cuentas familiares. Equipo real conservado: Karen, Manu (dos emails), Roque y Mocere. Cero cuentas demo retiradas residuales. 21 pagos, mismo digest `13ac2fe6f6d8c3721523c18b62853160`.
+
+## Fallo de inscripción detectado y resuelto en la revisión final
+
+- La comprobación HTTP anónima detectó `/inscripcion` con 500. Los logs de Vercel identificaron una validación Zod de precio y fechas: `getAcademyOffer` validaba todos los planes antes de excluir los inactivos. El plan privado «Academia · Demo sin cobros», con precio cero y sin temporada, bloqueaba así la página pública aunque no estuviera publicado.
+- Se retiró únicamente ese plan demo ya sin matrículas, comprobando que los pagos y los otros planes no cambiaban. `/inscripcion` volvió a 200 inmediatamente.
+- El código filtra ahora planes inactivos, grupos no publicados y campus no publicados antes de validar la oferta pública. No relaja la validación de precios o fechas de la oferta publicada. Los borradores privados tampoco alteran la versión que valida una inscripción en curso.
+- Regresión `scripts/test-public-offer-drafts.cjs`, incluida en `npm run test:offering`, reproduce el plan privado incompleto y verifica que la oferta pública sigue intacta; una oferta activa inválida continúa fallando. TypeScript y lint correctos.
+- La prueba SQL de galería usa ahora una familia sintética creada y revertida dentro de su transacción, sin depender de las cuentas demo eliminadas. Repetida con RLS real y digest financiero intacto.
