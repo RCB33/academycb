@@ -38,12 +38,12 @@ export default async function DocumentosPage() {
     }))
 
     return <div className="space-y-8">
-        <PortalPageHeader icon={<ShieldCheck className="h-6 w-6" />} title={translate("Documentos y autorizaciones")} description={translate("Decide, firma y consulta toda la documentación de tus jugadores desde un único lugar.")} />
+        <PortalPageHeader icon={<ShieldCheck className="h-6 w-6" />} title={translate("Documentos y autorizaciones")} description={translate("Consulta tu firma inicial y gestiona los permisos de tus jugadores sin volver a firmar.")} />
 
         <section className="space-y-4" aria-labelledby="family-decisions-title">
             <div className="flex items-start gap-3">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gold text-navy"><Camera className="h-5 w-5" /></span>
-                <div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-gold">{translate("Decisiones de la familia")}</p><h2 id="family-decisions-title" className="font-heading text-2xl font-black uppercase text-navy">{translate("Autorizaciones")}</h2><p className="mt-1 max-w-3xl text-sm leading-relaxed text-slate-500">{translate("Gestiona por separado el uso privado y público de fotografías y vídeos. La decisión es opcional, puede retirarse y cada cambio queda registrado con fecha, versión y firma.")}</p></div>
+                <div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-gold">{translate("Decisiones de la familia")}</p><h2 id="family-decisions-title" className="font-heading text-2xl font-black uppercase text-navy">{translate("Autorizaciones")}</h2><p className="mt-1 max-w-3xl text-sm leading-relaxed text-slate-500">{translate("Gestiona por separado el uso privado y público de fotografías y vídeos. La decisión es opcional, puede retirarse y cada cambio queda registrado con fecha, versión y tu cuenta de tutor.")}</p></div>
             </div>
             {translate(guardian && players.length > 0 ? <ImageConsentManager guardianId={guardian.id} players={players} /> : <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-6 py-10 text-center text-sm text-slate-500">{translate("No hay jugadores vinculados a esta cuenta.")}</div>)}
         </section>
@@ -51,7 +51,7 @@ export default async function DocumentosPage() {
         <section className="space-y-4 border-t border-slate-200 pt-8" aria-labelledby="signed-documents-title">
             <div className="flex items-start gap-3">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-navy text-gold"><Archive className="h-5 w-5" /></span>
-                <div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-gold">{translate("Archivo familiar")}</p><h2 id="signed-documents-title" className="font-heading text-2xl font-black uppercase text-navy">{translate("Firmados y descargables")}</h2><p className="mt-1 text-sm text-slate-500">{translate("Historial de consentimientos y documentos firmados por el tutor legal.")}</p></div>
+                <div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-gold">{translate("Archivo familiar")}</p><h2 id="signed-documents-title" className="font-heading text-2xl font-black uppercase text-navy">{translate("Firmas y decisiones registradas")}</h2><p className="mt-1 text-sm text-slate-500">{translate("Historial de documentos firmados y decisiones de imagen confirmadas por el tutor.")}</p></div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -63,6 +63,7 @@ export default async function DocumentosPage() {
                         <div className="ml-10 text-xs text-slate-500">{translate("Versión: ")}<span className="rounded bg-slate-100 px-1 font-mono">{translate(doc.document_version)}</span></div>
                         {translate(doc.child?.full_name && <div className="ml-10 text-xs text-slate-500">{translate("Jugador: ")}<span className="font-semibold text-slate-700">{translate(doc.child.full_name)}</span></div>)}
                         {translate(doc.document_type === IMAGE_DOCUMENT && <div className="ml-10 rounded-lg bg-slate-50 p-2 text-xs text-slate-600">{translate("Uso interno: ")}<strong>{translate(doc.consent_options?.portal_internal ? 'autorizado' : 'no autorizado')}</strong> {translate(" · Uso público: ")}<strong>{translate(doc.consent_options?.public_communications ? 'autorizado' : 'no autorizado')}</strong></div>)}
+                        {!doc.signature_image_path && <p className="ml-10 text-xs text-slate-500">{translate('Decisión confirmada desde tu cuenta, sin una nueva firma.')}</p>}
                         {translate(doc.signedUrl && <div className="mt-1 border-t border-slate-100 pt-3"><a href={doc.signedUrl} target="_blank" rel="noreferrer" className="flex items-center text-sm font-bold text-gold transition-colors hover:text-navy hover:underline"><FileText className="mr-1.5 h-4 w-4" />{translate("Ver firma registrada")}</a></div>)}
                     </CardContent>
                 </Card>) : <div className="col-span-full flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-white py-14 text-center shadow-sm"><div className="mb-4 rounded-full bg-slate-50 p-4"><FileText className="h-8 w-8 text-slate-400" /></div><h3 className="text-lg font-bold text-slate-700">{translate("Todavía no hay documentos firmados")}</h3><p className="mt-1 max-w-sm text-sm text-slate-500">{translate("Cuando registres una autorización o la academia añada documentación, aparecerá aquí.")}</p></div>)}

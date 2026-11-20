@@ -1,25 +1,13 @@
 'use client'
-
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { SignatureModal } from './signature-modal'
+import { CONSENT_VERSION, GENERAL_DOCUMENT, type ConsentPlayer } from '@/lib/image-consent'
 
-interface GlobalSignatureWrapperProps {
-    guardianId: string;
-    documentType: string;
-    documentVersion: string;
-}
-
-export function GlobalSignatureWrapper({ guardianId, documentType, documentVersion }: GlobalSignatureWrapperProps) {
+export function GlobalSignatureWrapper({ guardianId, players, preferencesOnly }: { guardianId: string; players: ConsentPlayer[]; preferencesOnly: boolean }) {
     const [isOpen, setIsOpen] = useState(true)
-
-    return (
-        <SignatureModal
-            isOpen={isOpen}
-            onClose={() => setIsOpen(false)}
-            guardianId={guardianId}
-            documentType={documentType}
-            documentVersion={documentVersion}
-            onSuccess={() => setIsOpen(false)}
-        />
-    )
+    const router = useRouter()
+    return <SignatureModal isOpen={isOpen} onClose={() => setIsOpen(false)} guardianId={guardianId}
+        documentType={GENERAL_DOCUMENT} documentVersion={CONSENT_VERSION} players={players} preferencesOnly={preferencesOnly}
+        onSuccess={() => { setIsOpen(false); router.refresh() }} />
 }

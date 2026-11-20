@@ -8,8 +8,10 @@ import { createCommunityPost } from '@/app/actions/community-wall'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { SignatureModal } from './signature-modal'
+import { CONSENT_VERSION, GENERAL_DOCUMENT, type ImageConsentOptions } from '@/lib/image-consent'
 
-type Child = { id: string; full_name: string; can_share_media: boolean }
+type Child = { id: string; full_name: string; can_share_media: boolean; consent_options: ImageConsentOptions }
 type MediaDetails = { extension: string; mediaType: 'image' | 'video'; mimeType: string }
 
 const uploadableMedia: Record<string, MediaDetails> = {
@@ -33,7 +35,7 @@ function getMediaDetails(file: File): MediaDetails | null {
     return mediaByExtension[extension] || null
 }
 
-export function CommunityComposer({ players }: { players: Child[] }) {
+export function CommunityComposer({ players, guardianId }: { players: Child[]; guardianId?: string }) {
     const translate = useT()
 
     const formRef = useRef<HTMLFormElement>(null)
@@ -44,7 +46,10 @@ export function CommunityComposer({ players }: { players: Child[] }) {
     const [message, setMessage] = useState<string | null>(null)
     const [isError, setIsError] = useState(false)
     const [uploading, setUploading] = useState(false)
+    const [permissionOverrides, setPermissionOverrides] = useState<Record<string, ImageConsentOptions>>({})
+    const [editingPermission, setEditingPermission] = useState(false)
     const selectedChild = players.find((child) => child.id === selectedChildId)
+    const canShare = (child: Child) => (permissionOverrides[child.id] || child.consent_options).portal_internal
     const [previewUrl, setPreviewUrl] = useState<string | null>(null)
 
     useEffect(() => {
@@ -106,9 +111,10 @@ export function CommunityComposer({ players }: { players: Child[] }) {
             setMessage('Elige primero el jugador al que corresponde este logro.')
             return
         }
-        if (selectedFile && !selectedChild?.can_share_media) {
+        if (selectedFile && (!selectedChild || !canShare(selectedChild))) {
             setIsError(true)
-            setMessage('Para compartir foto o vídeo, activa primero el uso interno en Autorizaciones para este jugador.')
+            setMessage('Revisa aquí el permiso de imagen del jugador. No hace falta salir del muro ni volver a firmar.')
+            setEditingPermission(true)
             return
         }
 
@@ -181,14 +187,17 @@ export function CommunityComposer({ players }: { players: Child[] }) {
                         const active = child.id === selectedChildId
                         return <button key={child.id} type="button" onClick={() => { setSelectedChildId(child.id); setMessage(null); setIsError(false) }} className={`flex items-center gap-3 rounded-2xl border p-3 text-left transition ${active ? 'border-gold bg-gold/10 ring-1 ring-gold/40' : 'border-slate-200 bg-white hover:border-gold/50'}`}>
                             <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-heading font-black ${active ? 'bg-gold text-navy' : 'bg-navy/8 text-navy'}`}>{translate(child.full_name.slice(0, 1).toUpperCase())}</span>
-                            <span className="min-w-0 flex-1"><span className="block truncate text-sm font-bold text-navy">{translate(child.full_name)}</span><span className={`mt-0.5 block text-xs ${child.can_share_media ? 'text-emerald-700' : 'text-slate-500'}`}>{translate(child.can_share_media ? 'Foto y vídeo permitidos' : 'Solo publicación de texto')}</span></span>
+                            <span className="min-w-0 flex-1"><span className="block truncate text-sm font-bold text-navy">{translate(child.full_name)}</span><span className={`mt-0.5 block text-xs ${canShare(child) ? 'text-emerald-700' : 'text-slate-500'}`}>{translate(canShare(child) ? 'Foto y vídeo permitidos' : 'Foto y vídeo desactivados')}</span></span>
                             {translate(active && <CheckCircle2 className="h-5 w-5 shrink-0 text-gold" />)}
                         </button>
                     }))}
                 </div>
             </fieldset>
 
-            <div className="grid gap-3 sm:grid-cols-2"><label className="rounded-2xl border border-gold/45 bg-gold/10 p-3"><span className="flex items-center gap-2 text-sm font-bold text-navy"><input type="radio" name="visibility" value="community" defaultChecked className="accent-gold" />{translate("Comunidad Academy")}</span><span className="mt-1 block pl-6 text-xs text-slate-600">{translate("Lo ven las familias dentro del portal.")}</span></label><label className="rounded-2xl border border-slate-200 bg-white p-3"><span className="flex items-center gap-2 text-sm font-bold text-navy"><input type="radio" name="visibility" value="private" className="accent-gold" /><LockKeyhole className="h-3.5 w-3.5" />{translate("Solo mi familia")}</span><span className="mt-1 block pl-6 text-xs text-slate-600">{translate("Solo tu familia y Academy.")}</span></label></div>
+            {selectedChild && guardianId && <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-50 p-3 text-sm"><span>{translate(canShare(selectedChild) ? 'Tu permiso de imagen está registrado. Elige quién verá esta publicación.' : 'Puedes decidir aquí el permiso de imagen, sin salir del muro.')}</span><Button type="button" variant="outline" size="sm" onClick={() => setEditingPermission(true)}>{translate('Revisar permiso de imagen')}</Button></div>}
+            {editingPermission && selectedChild && guardianId && <SignatureModal isOpen onClose={() => setEditingPermission(false)} guardianId={guardianId} documentType={GENERAL_DOCUMENT} documentVersion={CONSENT_VERSION} preferencesOnly players={[{ id: selectedChild.id, fullName: selectedChild.full_name, options: permissionOverrides[selectedChild.id] || selectedChild.consent_options }]} onSuccess={choices => { if (choices?.[0]) setPermissionOverrides(old => ({ ...old, [choices[0].childId]: choices[0].options })); setEditingPermission(false); setMessage(null); setIsError(false) }} />}
+
+            <div className="grid gap-3 sm:grid-cols-2"><label className="rounded-2xl border border-gold/45 bg-gold/10 p-3"><span className="flex items-center gap-2 text-sm font-bold text-navy"><input type="radio" name="visibility" value="community" className="accent-gold" />{translate("Comunidad Academy")}</span><span className="mt-1 block pl-6 text-xs text-slate-600">{translate("Lo ven las familias dentro del portal.")}</span></label><label className="rounded-2xl border border-slate-200 bg-white p-3"><span className="flex items-center gap-2 text-sm font-bold text-navy"><input type="radio" name="visibility" value="private" defaultChecked className="accent-gold" /><LockKeyhole className="h-3.5 w-3.5" />{translate("Solo mi familia y Academy")}</span><span className="mt-1 block pl-6 text-xs text-slate-600">{translate("Solo tu familia y Academy.")}</span></label></div>
 
             <div className="flex gap-2 rounded-xl border border-gold/25 bg-gold/5 p-3 text-xs leading-relaxed text-slate-600"><ShieldCheck className="h-4 w-4 shrink-0 text-gold" /><p>{translate("Academy puede retirar publicaciones para cuidar la comunidad. Las fotos y vídeos solo se permiten con la autorización interna activa.")}</p></div>
             {translate(message && <p className={`rounded-xl px-3 py-2 text-sm font-medium ${isError ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-800'}`} role="status">{translate(message)}</p>)}

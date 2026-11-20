@@ -42,12 +42,12 @@ export async function createCommunityPost(formData: FormData) {
             .eq('guardian_id', guardian.id)
             .eq('child_id', parsed.data.childId)
             .eq('document_type', 'Autorización de imagen y vídeo')
-            .order('signed_at', { ascending: false })
+            .order('signed_at', { ascending: false }).order('id', { ascending: false })
             .limit(1)
             .maybeSingle()
             : { data: null }
         if (!consent?.consent_options?.portal_internal) {
-            return { success: false, error: 'Para adjuntar una foto o vídeo necesitas autorizar primero el uso interno en Portal Familias → Autorizaciones.' }
+            return { success: false, error: 'Para adjuntar una foto o vídeo, revisa el permiso de imagen aquí en el muro; no necesitas volver a firmar.' }
         }
         const { data: uploadedFile, error: uploadedFileError } = await supabase.storage.from('community-wall').createSignedUrl(submittedMediaPath, 60)
         if (uploadedFileError || !uploadedFile?.signedUrl) return { success: false, error: 'No hemos encontrado el archivo adjunto. Vuelve a seleccionarlo e inténtalo de nuevo.' }

@@ -1,3 +1,13 @@
+## Una firma inicial y permisos por publicación — 20 noviembre 2026
+
+La bienvenida reúne condiciones y decisiones opcionales de imagen por jugador. Un único dibujo de firma se guarda en un único archivo; una inserción atómica registra condiciones y decisiones por hijo con la misma evidencia. Una negativa no impide entrar. No se convierten las firmas antiguas en permisos de imagen ni se modifican decisiones previas.
+
+Si la familia ya firmó, los nuevos permisos o sus cambios se confirman con su sesión de tutor, sin otro dibujo. Son registros nuevos de tipo `authenticated_choice`, con fecha y versión, y sin reutilizar la imagen de una firma anterior. Documentos distingue firmas de decisiones posteriores. Nuevos hijos reciben sus propias opciones.
+
+El muro permite revisar el permiso en un diálogo sin abandonar texto ni adjunto. Cada publicación elige entre «Solo mi familia y Academy» (por defecto) y «Comunidad Academy», que sigue siendo el portal privado. Uso en web/redes por Academy conserva una opción independiente. El backend revalida al tutor, su relación con el jugador y el permiso actual. Triggers privados comprueban permisos incluso en inserciones directas, ocultan las fotos al retirar permiso y serializan publicaciones/cambios por tutor y jugador. No reescriben publicaciones históricas al desplegar.
+
+Pruebas: acciones con mocks (una sola subida, lote atómico, negativos, tutor ajeno, hijos duplicados/ajenos, cambios sin firma nueva, historial y limpieza ante fallo); SQL local con rollback; transacción remota revertida bajo RLS real (hijo ajeno denegado, retirada oculta foto, pagos intactos). No se firma ni se cambian permisos de ninguna familia real ni de la cuenta de demostración del propietario. Baseline financiero: 21 pagos, digest `13ac2fe6f6d8c3721523c18b62853160`.
+
 # Portal de familias: fotos y evaluaciones
 
 ## Operativa

@@ -3,6 +3,8 @@ import { useT } from '@/lib/i18n/client'
 
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { CONSENT_VERSION, GENERAL_DOCUMENT } from '@/lib/image-consent'
 import { Camera, CheckCircle2, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SignatureModal } from './signature-modal'
@@ -21,12 +23,11 @@ export function ImageConsentManager({ guardianId, players }: { guardianId: strin
 
     const [signingChild, setSigningChild] = useState<ChildConsent | null>(null)
     const [options, setOptions] = useState<ConsentOptions>(EMPTY_OPTIONS)
-    const [showSignature, setShowSignature] = useState(false)
+    const router = useRouter()
 
     function startDecision(child: ChildConsent) {
         setSigningChild(child)
         setOptions(child.consent?.consent_options || EMPTY_OPTIONS)
-        setShowSignature(false)
     }
 
     return <div className="grid gap-5 lg:grid-cols-2">
@@ -45,18 +46,9 @@ export function ImageConsentManager({ guardianId, players }: { guardianId: strin
             </article>
         }))}
 
-        {translate(signingChild && !showSignature && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl">
-                <h2 className="font-heading text-xl font-black text-navy">{translate("Decidir autorizaciones")}</h2>
-                <p className="mt-1 text-sm text-slate-500">{translate("Elige de forma independiente dónde permites usar la imagen de ")}{translate(signingChild.fullName)}{translate(". Ambas opciones parten desactivadas.")}</p>
-                <div className="mt-5 space-y-3">
-                    <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-4"><input type="checkbox" checked={options.portal_internal} onChange={(event) => setOptions((value) => ({ ...value, portal_internal: event.target.checked }))} className="mt-0.5 h-4 w-4 shrink-0 accent-gold" /><span className="text-sm text-slate-700"><strong className="block text-navy">{translate("Uso interno privado")}</strong>{translate("Portal Familias, Videoteca y Muro Academy.")}</span></label>
-                    <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-4"><input type="checkbox" checked={options.public_communications} onChange={(event) => setOptions((value) => ({ ...value, public_communications: event.target.checked }))} className="mt-0.5 h-4 w-4 shrink-0 accent-gold" /><span className="text-sm text-slate-700"><strong className="block text-navy">{translate("Comunicación pública")}</strong>{translate("Web, redes sociales, prensa y materiales promocionales.")}</span></label>
-                </div>
-                <p className="mt-4 text-xs leading-relaxed text-slate-500">{translate("La decisión es opcional. Si no marcas ninguna, quedará registrada como no autorizada. Podrás volver aquí y retirarla cuando quieras.")}</p>
-                <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"><Button variant="ghost" onClick={() => setSigningChild(null)}>{translate("Cancelar")}</Button><Button className="bg-gold font-bold text-navy hover:bg-gold/80" onClick={() => setShowSignature(true)}>{translate("Continuar a la firma")}</Button></div>
-            </div>
-        </div>)}
-        {translate(signingChild && <SignatureModal isOpen={showSignature} onClose={() => { setShowSignature(false); setSigningChild(null) }} guardianId={guardianId} childId={signingChild.id} childName={signingChild.fullName} documentType="Autorización de imagen y vídeo" documentVersion="2026.08" consentOptions={options} onSuccess={() => { setSigningChild(null); window.location.reload() }} />)}
+        {signingChild && <SignatureModal isOpen onClose={() => setSigningChild(null)} guardianId={guardianId}
+            documentType={GENERAL_DOCUMENT} documentVersion={CONSENT_VERSION} preferencesOnly
+            players={[{ id: signingChild.id, fullName: signingChild.fullName, options }]}
+            onSuccess={() => { setSigningChild(null); router.refresh() }} />}
     </div>
 }

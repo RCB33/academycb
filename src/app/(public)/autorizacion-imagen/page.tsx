@@ -25,7 +25,7 @@ export default async function ImageAuthorizationPage() {
                 <li><strong>{translate("Uso interno privado:")}</strong> {translate(" Portal Familias, Videoteca y Muro Academy.")}</li>
                 <li><strong>{translate("Comunicación pública:")}</strong> {translate(" página web, redes sociales, prensa, cartelería y materiales promocionales de la academia.")}</li>
             </ul>
-            <p>{translate("La autorización solo cubre las opciones expresamente marcadas y firmadas por el tutor legal.")}</p>
+            <p>{translate("La autorización solo cubre las opciones expresamente elegidas y confirmadas por el tutor legal. En la bienvenida se registran junto a la firma inicial; después pueden modificarse desde la cuenta del tutor sin dibujar otra firma.")}</p>
         </section>
         <section>
             <h2>{translate("3. Retirada o modificación")}</h2>
@@ -33,7 +33,7 @@ export default async function ImageAuthorizationPage() {
         </section>
         <section>
             <h2>{translate("4. Registro de la decisión")}</h2>
-            <p>{translate("La decisión se conserva con el jugador, tutor, opciones elegidas, fecha, versión del documento y datos técnicos necesarios para acreditar la aceptación. El documento firmado se puede consultar desde Mis documentos.")}</p>
+            <p>{translate("La decisión se conserva con el jugador, tutor, opciones elegidas, fecha, versión del documento y datos técnicos necesarios para acreditar la aceptación. La firma inicial y las decisiones posteriores pueden consultarse en Documentos y autorizaciones.")}</p>
         </section>
     </LegalPage>
 }

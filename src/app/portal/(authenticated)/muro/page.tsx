@@ -16,13 +16,13 @@ export default async function CommunityWallPage() {
     const { data: guardian } = await supabase.from('guardians').select('id').eq('user_id', user?.id || '').maybeSingle()
     const [{ data: childLinks }, { data: imageConsents }] = guardian ? await Promise.all([
         supabase.from('child_guardians').select('child:children(id, full_name)').eq('guardian_id', guardian.id),
-        supabase.from('signatures').select('child_id, consent_options').eq('guardian_id', guardian.id).eq('document_type', 'Autorización de imagen y vídeo').order('signed_at', { ascending: false }),
+        supabase.from('signatures').select('child_id, consent_options').eq('guardian_id', guardian.id).eq('document_type', 'Autorización de imagen y vídeo').order('signed_at', { ascending: false }).order('id', { ascending: false }),
     ]) : [{ data: [] }, { data: [] }]
 
     const children = (childLinks || []).map((link: any) => link.child).filter(Boolean).map((child: any) => {
         const consent = (imageConsents || []).find((item: any) => item.child_id === child.id)
-        return { ...child, can_share_media: Boolean(consent?.consent_options?.portal_internal) }
-    }) as { id: string; full_name: string; can_share_media: boolean }[]
+        return { ...child, can_share_media: Boolean(consent?.consent_options?.portal_internal), consent_options: consent?.consent_options || { portal_internal: false, public_communications: false } }
+    }) as { id: string; full_name: string; can_share_media: boolean; consent_options: { portal_internal: boolean; public_communications: boolean } }[]
     const childNames = new Map(children.map((child) => [child.id, child.full_name]))
     const { data: posts } = await supabase.from('community_posts').select('*').order('published_at', { ascending: false }).order('created_at', { ascending: false }).limit(50)
 
@@ -49,7 +49,7 @@ export default async function CommunityWallPage() {
         </header>
         <div className="flex gap-3 rounded-2xl border border-gold/35 bg-gold/10 p-4 text-sm text-navy"><ShieldCheck className="h-5 w-5 shrink-0 text-gold" /><p>{translate("Un espacio privado para familias Academy. Comparte con respeto; Academy puede retirar contenido para cuidar la comunidad.")}</p></div>
         <CommunityStories stories={stories} />
-        <section id="compartir-logro"><CommunityComposer players={children} /></section>
+        <section id="compartir-logro"><CommunityComposer players={children} guardianId={guardian?.id} /></section>
         <section className="space-y-4" aria-labelledby="feed-title">
             <div className="flex items-center gap-3 px-1"><span className="h-px flex-1 bg-navy/10" /><h2 id="feed-title" className="font-heading text-xl font-black uppercase text-navy">{translate("Publicaciones recientes")}</h2><span className="h-px flex-1 bg-navy/10" /></div>
             {translate(renderedPosts.length === 0 ? <div className="rounded-[1.75rem] border border-dashed border-navy/20 bg-white p-10 text-center shadow-sm"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gold/15 text-gold"><Camera className="h-6 w-6" /></div><p className="mt-4 font-bold text-navy">{translate("Aún no hay publicaciones")}</p><p className="mt-1 text-sm text-slate-500">{translate("Elige un jugador, comparte un logro y estrenad el muro.")}</p></div> : renderedPosts.map((post) => <article key={post.id} className="overflow-hidden rounded-[1.75rem] border border-navy/10 bg-white shadow-lg shadow-navy/5">
