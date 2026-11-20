@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react'
 import Image from 'next/image'
 import * as Dialog from '@radix-ui/react-dialog'
-import { ArrowLeft, ArrowRight, Camera, Play, X } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, Camera, Play, X } from 'lucide-react'
 import { useLocale } from '@/lib/i18n/client'
 import { tournamentGallery } from '@/lib/tournament-gallery'
 
@@ -24,30 +24,40 @@ export function TournamentGallery() {
   const index = items.findIndex(item => item.id === selected)
   const active = items[index]
   const move = (offset: number) => setSelected(items[(index + offset + items.length) % items.length].id)
-  const visible = expanded ? items : items.slice(0, 8)
+  const visible = expanded ? items : items.slice(0, 7)
+  const counts = { all: tournamentGallery.length, photo: tournamentGallery.filter(item => item.type === 'photo').length, video: tournamentGallery.filter(item => item.type === 'video').length }
+  const titleParts = t.title.split('.').filter(Boolean)
 
-  return <section id="galeria" aria-labelledby="tournament-gallery-title" className="scroll-mt-28 border-b border-white/10 bg-gradient-to-b from-navy to-navy-light/40 py-16 md:py-24">
+  return <section id="galeria" aria-labelledby="tournament-gallery-title" className="relative isolate scroll-mt-28 overflow-hidden border-y border-white/10 bg-[#071725] py-16 md:py-24">
+    <div aria-hidden="true" className="pointer-events-none absolute -right-48 -top-64 -z-10 h-[650px] w-[650px] rounded-full bg-[#235780]/20 blur-[110px]" />
     <div className="container">
-      <div className="max-w-3xl">
-        <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-gold"><Camera className="h-5 w-5 shrink-0" aria-hidden="true" />{t.eyebrow}</p>
-        <h2 id="tournament-gallery-title" className="mt-4 font-heading text-4xl font-black uppercase leading-tight text-white md:text-6xl">{t.title}</h2>
-        <p className="mt-5 max-w-2xl leading-relaxed text-slate-300">{t.intro}</p>
-      </div>
-      <div className="my-8 flex flex-wrap items-center justify-between gap-4">
-        <div role="group" aria-label={t.title} className="flex flex-wrap gap-2">
-          {(['all', 'photo', 'video'] as const).map(value => <button key={value} type="button" aria-pressed={filter === value} onClick={() => { setFilter(value); setExpanded(false) }} className={`min-h-11 rounded-full border px-5 py-2 text-sm font-bold transition focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold ${filter === value ? 'border-gold bg-gold text-navy' : 'border-white/20 bg-white/5 text-white hover:border-gold'}`}>{t[value]} <span className="ml-1 opacity-70">{value === 'all' ? 17 : value === 'photo' ? 15 : 2}</span></button>)}
+      <div className="flex flex-col justify-between gap-7 lg:flex-row lg:items-end lg:gap-16">
+        <div>
+          <p className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-[.22em] text-gold sm:text-xs"><span className="h-px w-8 bg-gold" />{t.eyebrow}</p>
+          <h2 id="tournament-gallery-title" className="mt-5 font-heading text-[clamp(2.2rem,5vw,4.6rem)] font-black uppercase leading-[1.02] tracking-tight text-white"><span className="block">{titleParts[0]}.</span><span className="block text-gold">{titleParts[1]?.trim()}.</span></h2>
         </div>
-        <p className="max-w-sm text-xs text-slate-400">{t.hint}</p>
+        <p className="max-w-sm text-sm leading-relaxed text-slate-400 lg:pb-1 lg:text-base">{t.intro}</p>
       </div>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-5 lg:grid-cols-4">
-        {visible.map(item => <button key={item.id} type="button" onClick={event => { opener.current = event.currentTarget; setSelected(item.id) }} aria-label={`${item.type === 'video' ? t.play : t.open}: ${item.title[locale]}`} className="group relative aspect-[4/3] overflow-hidden rounded-2xl border border-white/10 bg-white/5 text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold">
-          <Image src={item.preview} alt={item.title[locale]} fill unoptimized sizes="(max-width: 767px) 50vw, (max-width: 1023px) 33vw, 25vw" className="object-cover transition-transform duration-500 motion-safe:group-hover:scale-105" />
-          <span className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent" />
-          {item.type === 'video' && <><span className="absolute inset-0 flex items-center justify-center"><span className="rounded-full border border-white/40 bg-navy/75 p-3 text-gold backdrop-blur-sm"><Play className="h-6 w-6 fill-current" aria-hidden="true" /></span></span><span className="absolute right-3 top-3 rounded-full bg-black/70 px-2 py-1 text-xs text-white">{item.duration}</span></>}
-          <span className="absolute inset-x-0 bottom-0 p-3 text-xs font-semibold leading-snug text-white md:p-4 md:text-sm">{item.title[locale]}</span>
-        </button>)}
+      <div className="mb-6 mt-9 flex flex-wrap items-center justify-between gap-4 border-t border-white/10 pt-6 md:mb-8 md:mt-12">
+        <div role="group" aria-label={t.title} className="inline-flex gap-1 rounded-full border border-white/10 bg-white/[.03] p-1">
+          {(['all', 'photo', 'video'] as const).map(value => <button key={value} type="button" aria-pressed={filter === value} onClick={() => { setFilter(value); setExpanded(false) }} className={`flex min-h-11 items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold transition sm:px-5 sm:text-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold ${filter === value ? 'bg-gold text-navy shadow-sm' : 'text-slate-300 hover:bg-white/10 hover:text-white'}`}>{t[value]} <span className="text-[10px] tabular-nums opacity-60">{counts[value]}</span></button>)}
+        </div>
+        <span aria-hidden="true" className="hidden items-center gap-2 text-xs text-slate-500 md:flex"><Camera className="h-4 w-4" />Academy Costa Brava <span className="mx-1 text-gold/50">/</span> {counts.all}</span>
       </div>
-      {items.length > 8 && <div className="mt-8 text-center"><button type="button" aria-expanded={expanded} onClick={() => setExpanded(value => !value)} className="min-h-12 rounded-xl border border-gold/60 px-7 py-3 text-sm font-bold text-gold transition hover:bg-gold/10 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold">{expanded ? t.less : t.more}</button></div>}
+      <div className={`grid grid-cols-2 items-stretch gap-3 md:gap-4 ${filter === 'video' ? 'mx-auto max-w-3xl' : 'lg:grid-cols-4'}`}>
+        {visible.map((item, position) => {
+          const featured = position === 0 && item.type === 'photo'
+          return <button key={item.id} type="button" onClick={event => { opener.current = event.currentTarget; setSelected(item.id) }} aria-label={`${item.type === 'video' ? t.play : t.open}: ${item.title[locale]}`} className={`group relative isolate overflow-hidden rounded-xl bg-white/5 text-left ring-1 ring-inset ring-white/10 transition-shadow hover:shadow-[0_12px_45px_-15px_rgba(0,0,0,.7)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold ${featured ? 'col-span-2 aspect-[3/2]' : 'aspect-[3/4]'} md:rounded-2xl`}>
+          <Image src={featured ? item.src : item.preview} alt={item.title[locale]} fill unoptimized sizes={featured ? '(max-width: 1023px) 100vw, 50vw' : '(max-width: 1023px) 50vw, 25vw'} className="object-cover transition-transform duration-700 ease-out motion-safe:group-hover:scale-[1.04]" />
+          <span className={`absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent transition-opacity ${featured || item.type === 'video' ? 'opacity-90' : 'opacity-50 group-hover:opacity-90 group-focus-visible:opacity-90'}`} />
+          {item.type === 'video' ? <><span className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full border border-white/20 bg-black/25 px-2.5 py-1.5 text-[10px] font-medium uppercase tracking-wider text-white backdrop-blur-md md:left-4 md:top-4"><span className="h-1 w-1 rounded-full bg-gold" />{t.video} · {item.duration}</span><span className="absolute inset-0 flex items-center justify-center"><span className="flex h-14 w-14 items-center justify-center rounded-full border border-white/60 bg-white/15 text-white shadow-xl backdrop-blur-md transition group-hover:scale-110 group-hover:bg-gold group-hover:text-navy md:h-16 md:w-16"><Play className="ml-1 h-5 w-5 fill-current" aria-hidden="true" /></span></span></> : <span className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full border border-white/30 bg-black/15 text-white opacity-0 backdrop-blur-md transition group-hover:opacity-100 group-focus-visible:opacity-100"><ArrowUpRight className="h-4 w-4" aria-hidden="true" /></span>}
+          <span className={`absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-3 text-white md:p-5 ${featured ? 'text-lg font-semibold md:p-7 md:text-2xl' : 'text-xs font-medium md:text-sm'}`}><span className={featured || item.type === 'video' ? '' : 'transition-opacity lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-visible:opacity-100'}>{item.title[locale]}</span>{featured && <ArrowUpRight className="mb-1 h-5 w-5 shrink-0" aria-hidden="true" />}</span>
+        </button>})}
+      </div>
+      <div className="mt-7 flex flex-col items-center justify-between gap-5 border-t border-white/10 pt-7 sm:flex-row">
+        <p className="max-w-xs text-center text-xs leading-relaxed text-slate-500 sm:text-left">{t.hint}</p>
+        {items.length > 7 && <button type="button" aria-expanded={expanded} onClick={() => setExpanded(value => !value)} className="group flex min-h-12 items-center gap-4 rounded-full border border-white/20 bg-white/[.03] py-2 pl-6 pr-2 text-sm font-semibold text-white transition hover:border-gold/60 hover:text-gold focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold">{expanded ? t.less : t.more}<span className="flex h-8 w-8 items-center justify-center rounded-full bg-gold text-navy"><ArrowDown className={`h-4 w-4 transition-transform ${expanded ? 'rotate-180' : 'group-hover:translate-y-0.5'}`} /></span></button>}
+      </div>
 
       <Dialog.Root open={Boolean(active)} onOpenChange={open => { if (!open) setSelected(null) }}>
         <Dialog.Portal>
