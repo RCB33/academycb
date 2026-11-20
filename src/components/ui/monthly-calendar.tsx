@@ -132,7 +132,7 @@ export function MonthlyCalendar({ events, onDateClick, onEventClick }: MonthlyCa
                                 >
                                     <div className="font-semibold truncate">{translate(evt.title)}</div>
                                     <div className="flex justify-between mt-0.5 opacity-90 truncate">
-                                        <span className="truncate">{translate(evt.is_all_day ? 'Todo el día' : format(parseISO(evt.start_date), 'HH:mm'))}</span>
+                                        <span className="truncate">{translate(evt.is_all_day ? 'Todo el día' : new Date(evt.start_date).toLocaleTimeString(translate.locale, { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Madrid' }))}</span>
                                         {translate(evt.category_name && <span className="font-mono bg-black/20 px-1 rounded truncate ml-1">{translate(evt.category_name)}</span>)}
                                     </div>
                                 </div>

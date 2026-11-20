@@ -143,7 +143,7 @@ export default async function ChildPage({ params }: { params: Promise<{ childId:
                                         <h3 className="text-xl font-black mb-1">{translate(nextEvent.title)}</h3>
                                         <p className="text-slate-300 text-sm flex items-center gap-1.5 mb-4">
                                             <CalendarDays className="w-4 h-4" />
-                                            {translate(new Date(nextEvent.start_date).toLocaleDateString(translate.locale, { weekday: 'short', day: 'numeric', month: 'short' }))} {translate(" • ")}{translate(new Date(nextEvent.start_date).toLocaleTimeString(translate.locale, { hour: '2-digit', minute: '2-digit' }))}
+                                            {translate(new Date(nextEvent.start_date).toLocaleDateString(translate.locale, { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/Madrid' }))} {translate(" • ")}{translate(new Date(nextEvent.start_date).toLocaleTimeString(translate.locale, { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Madrid' }))}
                                         </p>
                                         <div className="flex gap-2">
                                             <Button asChild size="sm" className="h-9 bg-gold text-navy hover:bg-gold-light font-bold text-xs"><Link href="/portal/calendario">{translate("Ver calendario")}</Link></Button>
