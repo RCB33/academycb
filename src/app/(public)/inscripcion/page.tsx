@@ -1,14 +1,15 @@
-import { getAcademyOffer, getCampusOffer } from '@/lib/offering-server'
+import { getAcademyOffer, getCampusOffers, getTournamentOffer } from '@/lib/offering-server'
 
 import { getT } from '@/lib/i18n/server'
 import { translateMetadata } from '@/lib/i18n/translate'
-import { CalendarDays, ClipboardCheck, Clock3, ExternalLink, FileText, MapPin, ShieldCheck } from 'lucide-react'
+import { CalendarDays, ClipboardCheck, ExternalLink, FileText, ShieldCheck } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
-import EnrollmentForm, { type EnrollmentActivity, type EnrollmentService } from './enrollment-form'
+import { EventAccess } from '@/app/(public)/torneos/inscripcion/access'
+import { getFamilyContext } from '@/lib/family-context'
+import { legacyChristmasTournamentTargets } from '@/lib/christmas-tournaments'
+import EnrollmentForm, { type EnrollmentService } from './enrollment-form'
 
-type SearchParams = Promise<{ service?: string; activity?: string }>
+type SearchParams = Promise<{ service?: string; activity?: string; access?: string; verified?: string }>
 
 function parseService(value: string | undefined): EnrollmentService {
     return value === 'campus' || value === 'tournament' ? value : 'academy'
@@ -25,35 +26,13 @@ export async function generateMetadata() {
 export default async function InscripcionPage({ searchParams }: { searchParams: SearchParams }) {
     const translate = await getT()
 
-    const academyOffer = await getAcademyOffer()
     const params = await searchParams
-    if(params.service==='campus') {
-        const campus=await getCampusOffer(params.activity)
-        if(campus) redirect(`/campus/inscripcion?edition=${campus.id}`)
-        if(!params.activity) redirect('/campus/inscripcion')
-    }
-    if (params.service === 'tournament') redirect('/torneos/inscripcion')
-    const supabase = await createClient()
-    const today = new Date().toISOString().slice(0, 10)
-    const { data: { user } } = await supabase.auth.getUser()
-    const { data: guardian } = user ? await supabase.from('guardians').select('id,full_name,email,phone').eq('user_id',user.id).maybeSingle() : { data: null }
-    const { data: relations } = guardian ? await supabase.from('child_guardians').select('child:children(id,full_name,birth_date,archived_at)').eq('guardian_id',guardian.id) : { data: [] }
-    const familyPlayers = (relations || []).flatMap(r => Array.isArray(r.child) ? r.child : [r.child]).filter(c => c && !c.archived_at)
-    const [{ data: campusRows }, { data: tournamentRows }] = await Promise.all([
-        supabase.from('campuses').select('id, name, start_date, end_date, price').eq('status', 'published').gte('end_date', today).order('start_date'),
-        supabase.from('tournaments_internal').select('id, title, start_date, end_date, price').eq('status', 'open').or(`end_date.is.null,end_date.gte.${today}`).order('start_date'),
-    ])
-
-    const campuses: EnrollmentActivity[] = (campusRows || []).map((campus) => ({
-        id: campus.id,
-        name: campus.name,
-        detail: `${new Date(campus.start_date).toLocaleDateString(translate.locale)} – ${new Date(campus.end_date).toLocaleDateString(translate.locale)}${campus.price !== null ? ` · ${Number(campus.price).toFixed(2)} €` : ''}`,
-    }))
-    const tournaments: EnrollmentActivity[] = (tournamentRows || []).map((tournament) => ({
-        id: tournament.id,
-        name: tournament.title,
-        detail: `${tournament.start_date ? new Date(tournament.start_date).toLocaleDateString(translate.locale) : translate('Fecha por confirmar')}${tournament.end_date ? ` – ${new Date(tournament.end_date).toLocaleDateString(translate.locale)}` : ''}${Number(tournament.price) > 0 ? ` · ${Number(tournament.price).toFixed(2)} €` : ''}`,
-    }))
+    if (params.access === '1') return <main className="min-h-screen bg-slate-50 p-6"><h1 className="text-center text-2xl font-bold">Verifica tu correo para continuar</h1><EventAccess returnTo="/inscripcion?verified=1"/></main>
+    if (params.verified === '1') return <main className="mx-auto max-w-xl p-8"><h1 className="text-2xl font-bold">Vuelve a tu formulario</h1><p className="mt-4">Si has completado el acceso, vuelve a la pestaña donde estabas rellenando la inscripción y pulsa «Ya he verificado mi correo». Así conservarás tus selecciones.</p></main>
+    const [academyOffer, allCampuses, tournaments, family] = await Promise.all([getAcademyOffer(), getCampusOffers(), getTournamentOffer(), getFamilyContext()])
+    const campuses = allCampuses.filter(c => c.end_date >= new Date().toISOString().slice(0, 10))
+    const familyPlayers = family?.children || []
+    const guardian = family ? { full_name: family.guardianName, email: family.email, phone: family.phone } : null
 
     return (
         <div className="min-h-screen overflow-hidden bg-slate-50 text-slate-900">
@@ -84,9 +63,10 @@ export default async function InscripcionPage({ searchParams }: { searchParams: 
                     campuses={campuses}
                     tournaments={tournaments}
                     initialService={parseService(params.service)}
-                    initialActivityId={params.activity || ''}
+                    initialActivityId={legacyChristmasTournamentTargets[params.activity || ''] || params.activity || ''}
                     familyPlayers={familyPlayers}
                     guardian={guardian}
+                    verified={!!family}
                 />
             </div>
         </div>

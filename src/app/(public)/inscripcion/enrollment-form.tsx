@@ -1,12 +1,15 @@
 'use client'
 import { FormDraft, DraftNotice, DraftInput, DraftSelect, DraftTextarea, DraftScope, useDraftState, useFormDraft } from '@/components/forms/form-draft'
-import { EnrollmentPaymentChoice } from './enrollment-payment-choice'
 import { AcademySelection } from './academy-selection'
-import type { AcademyOffer } from '@/lib/offering'
+import type { AcademyOffer, CampusOffer, TournamentOffer } from '@/lib/offering'
+import { BirthDateInput } from '@/components/ui/birth-date-input'
+import { CampusFields, TournamentFields } from './activity-fields'
+import { combinedFormData, combinedQuote } from '@/lib/combined-enrollment'
+import { useRouter } from 'next/navigation'
 import { useT } from '@/lib/i18n/client'
 
 
-import { useMemo, useState, type ComponentProps, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type ComponentProps, type FormEvent } from 'react'
 import Link from 'next/link'
 import { CheckCircle2, Loader2, Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -19,11 +22,24 @@ type FamilyPlayer = { id: string; full_name: string; birth_date: string | null }
 const serviceLabels: Record<EnrollmentService, string> = {
     academy: 'Academia',
     campus: 'Campus',
-    tournament: 'Torneo',
+    tournament: 'Torneos',
 }
 
 export default function EnrollmentForm(props: ComponentProps<typeof EnrollmentFields>) {
-    return <FormDraft storageKey={`academy:draft:enrollment:${props.guardian?.email || "guest"}`}><EnrollmentFields {...props} /></FormDraft>
+    const desiredKey = `academy:draft:combined-enrollment:${props.guardian?.email || 'guest'}`
+    const [draftKey, setDraftKey] = useState(desiredKey)
+    useEffect(() => {
+        if (draftKey === desiredKey) return
+        // Verification refreshes this page's props: move this tab's in-progress
+        // draft before remounting the verified form, without losing any fields.
+        try {
+            const value = sessionStorage.getItem(draftKey)
+            if (value) sessionStorage.setItem(desiredKey, value)
+            sessionStorage.removeItem(draftKey)
+            setDraftKey(desiredKey)
+        } catch { /* Keep the current in-memory form if storage is unavailable. */ }
+    }, [desiredKey, draftKey])
+    return <FormDraft storageKey={draftKey}><EnrollmentFields {...props} /></FormDraft>
 }
 
 function EnrollmentFields({
@@ -34,13 +50,15 @@ function EnrollmentFields({
     initialActivityId,
     familyPlayers = [],
     guardian,
+    verified = false,
 }: {
     academyOffer: AcademyOffer
-    campuses: EnrollmentActivity[]
-    tournaments: EnrollmentActivity[]
+    campuses: CampusOffer[]
+    tournaments: TournamentOffer
     initialService: EnrollmentService
     initialActivityId: string
     familyPlayers?: FamilyPlayer[]
+    verified?: boolean
     guardian?: {full_name: string; email: string | null; phone: string | null} | null
 }) {
     const translate = useT()
@@ -50,22 +68,36 @@ function EnrollmentFields({
     const [players, setPlayers] = useDraftState('players', [0], ids => ids.length > 0 && ids.length <= 6 && new Set(ids).size === ids.length && ids.every(id => Number.isInteger(id) && id >= 0))
     const [nextPlayer, setNextPlayer] = useDraftState<number>('nextPlayer', 1)
     const draft = useFormDraft()
+    const [requestId, setRequestId] = useDraftState<string>('requestId', '')
+    const formRef = useRef<HTMLFormElement>(null)
+    const [summary, setSummary] = useState<ReturnType<typeof combinedQuote> | null>(null)
+    function updateSummary(ids = players) {
+        // Read after React commits checkbox-dependent inputs (packs, extras).
+        setTimeout(() => {
+            if (formRef.current) setSummary(combinedQuote(combinedFormData(new FormData(formRef.current), ids, '').children, academyOffer, campuses, tournaments))
+        }, 0)
+    }
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (formRef.current) setSummary(combinedQuote(combinedFormData(new FormData(formRef.current), players, '').children, academyOffer, campuses, tournaments))
+        }, 0)
+        return () => clearTimeout(timer)
+    }, [players, academyOffer, campuses, tournaments])
 
     async function submitForm(event: FormEvent<HTMLFormElement>) {
         event.preventDefault()
         setPending(true)
         setState({})
-        const formData = new FormData(event.currentTarget)
-        const data = Object.fromEntries(formData)
-        const campusPreferences = players.filter(id => formData.get(`player_${id}_service`) === 'campus').map(id => `${formData.get(`player_${id}_child_name`)}: ${formData.get(`player_${id}_campus_period`) || 'Periodo por confirmar'} · ${formData.get(`player_${id}_campus_role`) || 'Modalidad por confirmar'}`)
-        if (campusPreferences.length) data.notes = [data.notes, ...campusPreferences].filter(Boolean).join('\n')
-        const children = players.map((id) => Object.fromEntries(['service', 'activity_id', 'child_name', 'birth_date', 'linked_child_id', 'plan_id', 'group_id', 'second_group_id', 'start_date', 'plus', 'offer_version', 'payment_choice', 'campus_interest', 'campus_payment_choice', 'tournament_interest', 'tournament_payment_choice'].map((key) => [key, formData.get(`player_${id}_${key}`) || ''])))
+        const id = requestId || crypto.randomUUID()
+        if (!requestId) setRequestId(id)
+        const data = combinedFormData(new FormData(event.currentTarget), players, id)
 
         try {
-            const response = await fetch('/api/enrollment', {
+            const response = await fetch('/api/enrollment/combined', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...data, children }),
+                body: JSON.stringify(data),
             })
             const result = await response.json() as { success?: boolean; error?: string; message?: string }
             if (result.success) draft.clear()
@@ -82,23 +114,32 @@ function EnrollmentFields({
     }
 
     return (
-        <form onSubmit={submitForm} className="mx-auto max-w-3xl space-y-8 rounded-3xl border border-slate-200/90 bg-white p-6 shadow-2xl shadow-navy/15 md:p-10">
+        <form ref={formRef} onChange={() => updateSummary()} onClick={() => updateSummary()} onSubmit={submitForm} className="mx-auto max-w-3xl space-y-8 rounded-3xl border border-slate-200/90 bg-white p-6 shadow-2xl shadow-navy/15 md:p-10">
             <DraftNotice />
             <div className="space-y-6">
                 <h2 className="font-heading text-2xl font-black text-navy">{translate("1. Jugadores y actividades")}</h2>
-                <p className="text-sm text-slate-600">{translate("Añade a tus hijos y elige sus actividades y la forma de pago de cada una. Solo tendrás que rellenar una vez los datos del tutor.")}</p>
+                <p className="text-sm text-slate-600">{translate("Añade a tus hijos y marca una o varias actividades para cada uno. Rellena una sola vez los datos del jugador y del tutor.")}</p>
                 {translate(players.map((id, index) => <fieldset key={id} disabled={pending} className="min-w-0 space-y-5 rounded-2xl border border-slate-200 p-4 sm:p-6">
                     <legend className="px-2 font-bold text-navy">{translate("Jugador ")}{translate(index + 1)}</legend>
-                    <PlayerFields academyOffer={academyOffer} prefix={`player_${id}_`} campuses={campuses} tournaments={tournaments} initialService={initialService} initialActivityId={initialActivityId} familyPlayers={familyPlayers} />
-                    {translate(players.length > 1 && <Button type="button" variant="outline" className="min-h-11" onClick={() => setPlayers(players.filter((value) => value !== id))}>{translate("Quitar jugador ")}{translate(index + 1)}</Button>)}
+                    <PlayerFields academyOffer={academyOffer} prefix={`player_${id}_`} campuses={campuses} tournaments={tournaments} initialService={initialService} initialActivityId={initialActivityId} familyPlayers={familyPlayers} verified={verified} />
+                    {translate(players.length > 1 && <Button type="button" variant="outline" className="min-h-11" onClick={() => { const remaining = players.filter((value) => value !== id); setPlayers(remaining); updateSummary(remaining) }}>{translate("Quitar jugador ")}{translate(index + 1)}</Button>)}
                 </fieldset>))}
-                <Button type="button" variant="outline" disabled={pending || players.length >= 6} className="min-h-12 w-full border-gold text-navy" onClick={() => { setPlayers([...players, nextPlayer]); setNextPlayer(nextPlayer + 1) }}>{translate("Añadir otro hijo/a")}</Button>
+                <Button type="button" variant="outline" disabled={pending || players.length >= 6} className="min-h-12 w-full border-gold text-navy" onClick={() => { setPlayers([...players, nextPlayer]); setNextPlayer(nextPlayer + 1); updateSummary([...players, nextPlayer]) }}>{translate("Añadir otro hijo/a")}</Button>
                 <p className="text-xs text-slate-500">{translate("Hasta 6 jugadores por envío. Secretaría revisará cada plaza por separado.")}</p>
             </div>
 
             <section className="border-t border-slate-200 pt-8">
                 <h2 className="font-heading text-2xl font-black text-navy">{translate("2. Datos del tutor/a")}</h2>
-                <div className="mt-4 grid gap-5 sm:grid-cols-2"><Field label={translate("Nombre completo")} name="guardian_name" defaultValue={guardian?.full_name || ''} required autoComplete="name" /><Field label={translate("Email")} name="email" type="email" defaultValue={guardian?.email || ''} required autoComplete="email" /><Field label={translate("Teléfono")} name="phone" type="tel" defaultValue={guardian?.phone || ''} required autoComplete="tel" placeholder={translate("600 000 000")} /><div><label htmlFor="notes" className="text-sm font-bold text-slate-700">{translate("Observaciones (opcional)")}</label><DraftTextarea styled id="notes" name="notes" maxLength={1000} className="mt-2 min-h-24 border-slate-300" placeholder={translate("Por ejemplo: disponibilidad, dudas o información que debamos conocer.")} /></div></div>
+                <div className="mt-4 grid gap-5 sm:grid-cols-2"><Field label={translate("Nombre completo")} name="guardian_name" defaultValue={guardian?.full_name || ''} required autoComplete="name" /><Field key={verified ? guardian?.email : 'unverified'} label={translate("Email")} name="email" type="email" defaultValue={guardian?.email || ''} required readOnly={verified} autoComplete="email" /><Field label={translate("Teléfono")} name="phone" type="tel" defaultValue={guardian?.phone || ''} required autoComplete="tel" placeholder={translate("600 000 000")} /><div><label htmlFor="notes" className="text-sm font-bold text-slate-700">{translate("Observaciones (opcional)")}</label><DraftTextarea styled id="notes" name="notes" maxLength={1000} className="mt-2 min-h-24 border-slate-300" placeholder={translate("Por ejemplo: disponibilidad, dudas o información que debamos conocer.")} /></div></div>
+            </section>
+
+            <section className="space-y-3 rounded-2xl bg-navy p-5 text-white" aria-live="polite"><h2 className="text-xl font-bold text-gold">Resumen conjunto</h2>
+                {!summary?.complete && <p className="text-sm">Completa las actividades, semanas y planes seleccionados para ver el total previsto.</p>}
+                {summary?.lines.map((line, i) => <p key={i} className="flex justify-between gap-4 text-sm"><span>{line.player} · {line.activity}</span><strong className="whitespace-nowrap">{line.amount.toFixed(2)} €</strong></p>)}
+                {summary?.complete && <p className="flex justify-between gap-4 border-t border-white/30 pt-3 font-bold"><span>Importe inicial previsto</span><span>{summary.initial.toFixed(2)} €</span></p>}
+                {!!summary?.monthly.length && <div className="border-t border-white/30 pt-3"><h3 className="font-bold">Mensualidades posteriores de Academia</h3>{summary.monthly.map((m,i)=><p key={i} className="mt-2 text-sm">{m.player}: {m.count} mensualidades de {m.amount.toFixed(2)} €, hasta {new Date(m.until+'T12:00:00Z').toLocaleDateString('es-ES')}. No incluidas en el importe inicial.</p>)}</div>}
+                <p className="text-xs text-slate-200">Hoy no pagas nada. La matrícula y los descuentos por hermanos se revisan antes de aceptar cada plaza. El resumen incluye la matrícula de nuevo jugador y la tarifa base del campus; no aplica descuentos pendientes de comprobar. No hay descuento adicional por combinar actividades.</p>
+                <p className="text-xs text-slate-200">Recibirás un correo de recepción por actividad. Después, un correo de aceptación con el importe confirmado y las instrucciones de pago de cada plaza.</p>
             </section>
 
             <DraftInput name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
@@ -122,59 +163,22 @@ function Field({ label, ...props }: ComponentProps<typeof Input> & { label: stri
     return <div><label htmlFor={id} className="text-sm font-bold text-slate-700">{translate(label)}</label><DraftInput styled id={id} {...props} className="mt-2 h-11 border-slate-300" /></div>
 }
 
-function PlayerFields({ academyOffer, prefix, campuses, tournaments, initialService, initialActivityId, familyPlayers }: { academyOffer: AcademyOffer; prefix: string; campuses: EnrollmentActivity[]; tournaments: EnrollmentActivity[]; initialService: EnrollmentService; initialActivityId: string; familyPlayers: FamilyPlayer[] }) {
+function PlayerFields({ academyOffer, prefix, campuses, tournaments, initialService, initialActivityId, familyPlayers, verified }: { academyOffer: AcademyOffer; prefix: string; campuses: CampusOffer[]; tournaments: TournamentOffer; initialService: EnrollmentService; initialActivityId: string; familyPlayers: FamilyPlayer[]; verified: boolean }) {
     const translate = useT()
-
-    const [service, setService] = useDraftState<EnrollmentService>(`${prefix}service`, initialService)
-    const [campusInterest, setCampusInterest] = useDraftState<boolean>(`${prefix}campusInterest`, false)
-    const [tournamentInterest, setTournamentInterest] = useDraftState<boolean>(`${prefix}tournamentInterest`, false)
-    const [selectedChild, setSelectedChild] = useDraftState<string>(`${prefix}child`, '', id => !id || familyPlayers.some(child => child.id === id))
+    const router = useRouter()
+    const [services, setServices] = useDraftState<EnrollmentService[]>(`${prefix}services`, [initialService], values => values.every(value => ['academy','campus','tournament'].includes(value)))
+    const [selectedChild, setSelectedChild] = useDraftState<string>(`${prefix}child`, '', id => !id || familyPlayers.some(c => c.id === id))
     const child = familyPlayers.find(c => c.id === selectedChild)
-    const [activityId, setActivityId] = useDraftState(`${prefix}activity`, initialActivityId)
-    const activities = useMemo(() => service === 'campus' ? campuses : service === 'tournament' ? tournaments : [], [campuses, service, tournaments])
     return <div className="space-y-5">
-            <section>
-                <p className="text-xs font-bold tracking-[0.18em] text-gold uppercase">{translate("Tu inscripción")}</p>
-                <h2 className="mt-1 font-heading text-3xl font-black uppercase text-navy">{translate("Actividad")}</h2>
-                <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                    {translate((Object.keys(serviceLabels) as EnrollmentService[]).map((item) => <label key={item} className={`cursor-pointer rounded-xl border p-4 transition ${service === item ? 'border-gold bg-gold/10 ring-1 ring-gold shadow-sm' : 'border-slate-200 hover:border-gold/60 hover:bg-slate-50'}`}><DraftInput className="sr-only" type="radio" name={`${prefix}service`} value={item} checked={service === item} onChange={() => { if(item==='campus'){window.location.assign('/campus/inscripcion');return} if(item==='tournament'){window.location.assign('/torneos/inscripcion');return} setService(item); setActivityId('') }} /><span className="block font-bold text-navy">{translate(serviceLabels[item])}</span><span className="mt-1 block text-xs text-slate-500">{translate(item === 'academy' ? 'Temporada deportiva' : item === 'campus' ? 'Edición intensiva' : 'Competición o evento')}</span></label>))}
-                </div>
-                {translate(service === 'campus' && <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                    <div><label htmlFor={`${prefix}campus_period`} className="text-sm font-bold text-slate-700">{translate("Semana o pack solicitado")}</label><DraftInput id={`${prefix}campus_period`} name={`${prefix}campus_period`} required maxLength={100} placeholder={translate("Ej. Navidad: 22–24 diciembre o pack completo")} className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm" /></div>
-                    <div><label htmlFor={`${prefix}campus_role`} className="text-sm font-bold text-slate-700">{translate("Participación en el campus")}</label><DraftSelect id={`${prefix}campus_role`} name={`${prefix}campus_role`} className="mt-2 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm"><option value="Jugador de campo">{translate("Jugador de campo")}</option><option value="Portero (tecnificación específica dentro del campus)">{translate("Portero · tecnificación específica")}</option></DraftSelect></div>
-                </div>)}
-                {translate(service !== 'academy' && <div className="mt-5"><label htmlFor={`${prefix}activity_id`} className="text-sm font-bold text-slate-700">{translate(service === 'campus' ? 'Campus seleccionado' : 'Torneo seleccionado')}</label><DraftSelect id={`${prefix}activity_id`} name={`${prefix}activity_id`} value={activityId} onChange={(event) => setActivityId(event.target.value)} required className="mt-2 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900"><option value="">{translate("Selecciona una actividad")}</option>{translate(activities.map((activity) => <option key={activity.id} value={activity.id}>{translate(activity.name)} {translate(" · ")}{translate(activity.detail)}</option>))}</DraftSelect>{translate(activities.length === 0 && <p className="mt-2 text-sm text-amber-700">{translate("Ahora mismo no hay convocatorias publicadas. Puedes contactar con la academia para recibir información.")}</p>)}</div>)}
-            </section>
-
-            <section className="border-t border-slate-200 pt-8">
-                <h2 className="font-heading text-2xl font-black text-navy">{translate("Datos del jugador")}</h2>
-                {translate(familyPlayers.length > 0 && <label className="mt-4 block text-sm font-bold">{translate("Usar una ficha existente")}<DraftSelect name={`${prefix}linked_child_id`} value={selectedChild} onChange={e => setSelectedChild(e.target.value)} className="mt-2 block w-full rounded-lg border p-3"><option value="">{translate("Nuevo jugador")}</option>{translate(familyPlayers.map(c => <option key={c.id} value={c.id}>{translate(c.full_name)}</option>))}</DraftSelect></label>)}
-                <DraftScope name={selectedChild}><div key={selectedChild} className="mt-4 grid gap-5 sm:grid-cols-2"><Field label={translate("Nombre completo del jugador")} name={`${prefix}child_name`} required autoComplete="name" defaultValue={child?.full_name || ''} readOnly={!!child} /><Field label={translate("Fecha de nacimiento")} name={`${prefix}birth_date`} type="date" required defaultValue={child?.birth_date || ''} /></div></DraftScope>
-            </section>
-            {service === 'academy' && <>
-                <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-4 text-sm font-semibold text-navy">
-                    <DraftInput type="checkbox" checked={campusInterest} onChange={event => setCampusInterest(event.target.checked)} className="mt-0.5 h-4 w-4 accent-gold" />
-                    <span>{translate('También quiero solicitar Campus para este jugador')}</span>
-                </label>
-                <DraftInput type="hidden" name={`${prefix}campus_interest`} value={campusInterest ? 'yes' : 'no'} />
-                <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-4 text-sm font-semibold text-navy">
-                    <DraftInput type="checkbox" checked={tournamentInterest} onChange={event => setTournamentInterest(event.target.checked)} className="mt-0.5 h-4 w-4 accent-gold" />
-                    <span>{translate('También quiero solicitar Torneos para este jugador')}</span>
-                </label>
-                <DraftInput type="hidden" name={`${prefix}tournament_interest`} value={tournamentInterest ? 'yes' : 'no'} />
-                <AcademySelection prefix={prefix} offer={academyOffer} />
-                {campusInterest && <section className="space-y-4 rounded-2xl border border-gold/40 bg-amber-50/40 p-5">
-                    <h3 className="text-xl font-black text-navy">{translate('Campus')}</h3>
-                    <EnrollmentPaymentChoice prefix={`${prefix}campus_`} service="campus" />
-                    <p className="text-sm text-slate-600">{translate('Secretaría contactará contigo para concretar la edición, las semanas y la plaza de Campus.')}</p>
-                </section>}
-                {tournamentInterest && <section className="space-y-4 rounded-2xl border border-gold/40 bg-amber-50/40 p-5">
-                    <h3 className="text-xl font-black text-navy">{translate('Torneos')}</h3>
-                    <EnrollmentPaymentChoice prefix={`${prefix}tournament_`} service="tournament" />
-                    <p className="text-sm text-slate-600">{translate('Secretaría contactará contigo para concretar el torneo, el equipo y la plaza. No hagas la transferencia hasta recibir la aceptación.')}</p>
-                </section>}
-            </>}
-            {service !== 'academy' && <EnrollmentPaymentChoice prefix={prefix} service={service} />}
-
+        <h3 className="text-xl font-bold">Datos del jugador</h3>
+        {!!familyPlayers.length && <label className="block text-sm font-bold">Usar una ficha existente<DraftSelect name={`${prefix}linked_child_id`} value={selectedChild} onChange={e => setSelectedChild(e.target.value)} className="mt-2 block w-full rounded-lg border p-3"><option value="">Nuevo jugador</option>{familyPlayers.map(c => <option key={c.id} value={c.id}>{c.full_name}</option>)}</DraftSelect></label>}
+        <DraftScope name={selectedChild}><div key={selectedChild} className="grid gap-5 sm:grid-cols-2"><Field label="Nombre completo del jugador" name={`${prefix}child_name`} required defaultValue={child?.full_name || ''} readOnly={!!child}/><BirthDateInput name={`${prefix}birth_date`} defaultValue={child?.birth_date || ''} readOnly={!!child?.birth_date}/></div></DraftScope>
+        <fieldset><legend className="font-bold">¿A qué quieres apuntarlo? Puedes marcar las tres opciones.</legend><div className="mt-3 grid gap-3 sm:grid-cols-3">{(Object.keys(serviceLabels) as EnrollmentService[]).map(item => <label key={item} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-4 ${services.includes(item)?'border-gold bg-gold/10':'border-slate-200'}`}><input name={prefix+item} type="checkbox" checked={services.includes(item)} onChange={e=>setServices(e.target.checked?[...services,item]:services.filter(s=>s!==item))}/><span className="font-bold">{translate(serviceLabels[item])}</span></label>)}</div></fieldset>
+        {services.includes('academy') && <AcademySelection prefix={prefix} offer={academyOffer}/>}
+        {services.includes('campus') && <CampusFields prefix={prefix+'campus_'} campuses={campuses} initialId={initialActivityId}/>}
+        {!verified && (services.includes('tournament') || services.length > 1) && <div className="space-y-3 rounded-xl border border-amber-300 bg-amber-50 p-4"><p>Para combinar actividades o solicitar torneos, verifica primero tu correo. Tus datos de este formulario se mantienen en esta pestaña.</p><a href="/inscripcion?access=1" target="_blank" rel="noopener noreferrer" className="inline-block font-bold underline">Entrar o verificar correo en otra pestaña</a><button type="button" className="block rounded-lg border bg-white p-3 font-bold" onClick={()=>router.refresh()}>Ya he verificado mi correo</button></div>}
+        {services.includes('tournament') && <>
+            <TournamentFields prefix={prefix+'tournament_'} offer={tournaments} initialId={initialActivityId}/>
+        </>}
     </div>
 }

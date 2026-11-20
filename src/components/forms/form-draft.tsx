@@ -87,6 +87,11 @@ export function useDraftState<T extends Value>(name: string, fallback: T | (() =
     return [value, update]
 }
 
+export function useScopedDraftState<T extends Value>(name: string, fallback: T, valid: (value: T) => boolean = () => true) {
+    const scope = useContext(Scope)
+    return useDraftState(`${scope}:${name}`, fallback, valid)
+}
+
 export function DraftNotice() {
     const translate = useT()
     const draft = useFormDraft()

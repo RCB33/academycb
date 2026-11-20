@@ -1518,5 +1518,11 @@
   "Inscribir a mi hijo solo en torneos.": "Register my child for tournaments only.",
   "Entrar y utilizar la ficha de mi hijo.": "Sign in and use my child’s profile.",
   "Primero verifica tu correo. Después podrás añadir al jugador, elegir los torneos y enviar la solicitud. Crear esta cuenta no te matricula en Academia ni genera ningún cobro.": "First verify your email. You can then add the player, choose tournaments and submit your request. Creating this account does not enrol you in the Academy or trigger any payment.",
-  "Verificar correo y apuntarme a torneos": "Verify email and register for tournaments"
+  "Verificar correo y apuntarme a torneos": "Verify email and register for tournaments",
+  "Día": "Day",
+  "Mes": "Month",
+  "Día de nacimiento": "Day of birth",
+  "Mes de nacimiento": "Month of birth",
+  "Año de nacimiento": "Year of birth",
+  "Completa día, mes y año.": "Enter the day, month and year."
 }

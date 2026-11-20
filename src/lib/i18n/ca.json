@@ -1518,5 +1518,11 @@
   "Inscribir a mi hijo solo en torneos.": "Inscriure el meu fill només als tornejos.",
   "Entrar y utilizar la ficha de mi hijo.": "Entrar i utilitzar la fitxa del meu fill.",
   "Primero verifica tu correo. Después podrás añadir al jugador, elegir los torneos y enviar la solicitud. Crear esta cuenta no te matricula en Academia ni genera ningún cobro.": "Primer verifica el teu correu. Després podràs afegir el jugador, triar els tornejos i enviar la sol·licitud. Crear aquest compte no et matricula a l’Acadèmia ni genera cap cobrament.",
-  "Verificar correo y apuntarme a torneos": "Verificar el correu i apuntar-me als tornejos"
+  "Verificar correo y apuntarme a torneos": "Verificar el correu i apuntar-me als tornejos",
+  "Día": "Dia",
+  "Mes": "Mes",
+  "Día de nacimiento": "Dia de naixement",
+  "Mes de nacimiento": "Mes de naixement",
+  "Año de nacimiento": "Any de naixement",
+  "Completa día, mes y año.": "Completa dia, mes i any."
 }

@@ -39,7 +39,13 @@ export async function registrationEmailDetails(source:string,id:string,kind:stri
     const methods = paymentChoicesText(requestedPaymentChoices(r))
     const extra = r.service === 'academy' && (requestedPaymentChoices(r).campus || requestedPaymentChoices(r).tournament) ? '\nCampus y/o Torneos: solicitud adicional pendiente de concretar; su plaza se confirmará por separado.' : ''
     const selection=(a?`${a.plan.name}\n${a.groups.map((g:{name:string;schedule:string;public_offer?:{day:string;location:string}|null})=>[g.name,g.public_offer?.day,g.schedule,g.public_offer?.location].filter(Boolean).join(' · ')).join('\n')}\nIncorporación: ${a.start_date}`:r.activity_name) + (methods ? `\n\nFormas de pago solicitadas:\n${methods}` : '') + extra
-    if(kind==='received') return {subject:`${r.child_name}, hemos recibido tu solicitud`,message:`La solicitud de ${r.child_name} se ha guardado correctamente.\n\n${selection}\n\nEl equipo revisará disponibilidad, edad y grupo. Te comunicaremos la aceptación y los siguientes pasos por correo. Este mensaje no confirma una plaza ni acredita un pago. Todavía no realices ningún pago.${contact}`}
+    if(kind==='received') {
+      let summary=selection
+      if(a?.quote) summary+=`\nPrimer mes: ${Number(a.quote.first_month||0).toFixed(2)} €\nMatrícula nuevos jugadores (pendiente de revisar): ${Number(a.quote.enrollment_fee||0).toFixed(2)} €\nPlus: ${Number(a.quote.plus||0).toFixed(2)} €\nDespués: ${a.quote.remaining?.length||0} mensualidades de ${Number(a.quote.monthly_price).toFixed(2)} €, hasta ${a.quote.season_end}.`
+      const c=r.campus_details
+      if(c?.program_snapshot) summary+=`\n${c.program_snapshot.weeks.filter((w:{id:string})=>c.weeks.includes(w.id)).map((w:{label:string})=>w.label).join(' · ')}\n${c.schedule} · ${c.location}\nImporte previsto: ${Number(c.quoted_amount).toFixed(2)} €${c.sibling?' · Descuento por hermano pendiente de comprobación.':''}`
+      return {subject:`${r.child_name}, hemos recibido tu solicitud`,message:`La solicitud de ${r.child_name} se ha guardado correctamente.\n\n${summary}\n\nEl equipo revisará disponibilidad, edad y grupo. Te comunicaremos la aceptación y los siguientes pasos por correo. Este mensaje no confirma una plaza ni acredita un pago. Todavía no realices ningún pago.${contact}`}
+    }
     if(kind!=='reviewed'||r.status!=='enrolled') return null
     let payment='',detail=selection
     let action:RegistrationEmailDetails['action']
@@ -65,6 +71,12 @@ export async function registrationEmailDetails(source:string,id:string,kind:stri
       if(p) detail+=`\n${r.campus_details.schedule} · ${r.campus_details.location}\n${p.weeks.filter((w:{id:string})=>r.campus_details.weeks.includes(w.id)).map((w:{label:string})=>w.label).join('\n')}\nModalidad: ${r.campus_details.role}`
     } else return null
     return {familyAccess:a?.onboarding?.access||r.campus_details?.onboarding?.access||'pending',action,subject:`¡Enhorabuena, ${r.child_name}! Tu plaza está aceptada`,message:`¡Bienvenidos a la familia Academy Costa Brava! ${r.child_name} ya tiene su plaza aceptada en ${r.service==='academy'?'Academia':r.activity_name}.\n\n${detail}\n\n${payment}\n\n${familyAccessMessage(a?.onboarding?.access||r.campus_details?.onboarding?.access)}\n\nAceptar la plaza no acredita el pago.${contact}`}
+  }
+  if(source==='event'&&kind==='received') {
+    const {data:r,error}=await db.from('event_registrations').select('details,tournaments,quoted_amount').eq('id',id).single()
+    if(error||!r) throw new Error('Registration unavailable')
+    const names=r.details.offer_snapshot?.events?.filter((e:{id:string})=>r.tournaments.includes(e.id)).map((e:{name:string;date:string})=>`${e.name} · ${e.date}`).join('\n')||'Torneos Academy'
+    return {subject:`${r.details.child_name}, hemos recibido tu solicitud de torneos`,message:`Solicitud recibida para ${r.details.child_name}.\n\n${names}\nImporte previsto (equipación incluida cuando corresponde): ${Number(r.quoted_amount).toFixed(2)} €.\n\nAcademy revisará categoría, disponibilidad y compatibilidad de horarios. Recibirás la aceptación y las instrucciones por correo. Este mensaje no confirma la plaza. Todavía no realices ningún pago.${contact}`}
   }
   if(source==='event'&&kind==='awaiting_payment') {
     const {data:r,error}=await db.from('event_registrations').select('status,approved_amount,due_date,details,approved_tournaments').eq('id',id).single()
