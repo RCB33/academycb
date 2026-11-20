@@ -5,6 +5,7 @@ import Image from 'next/image'
 import * as Dialog from '@radix-ui/react-dialog'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { useLocale } from '@/lib/i18n/client'
+import { AcademyVideos } from '@/components/academy-videos'
 
 const messages = {
     es: { photo: 'Foto de Academy Costa Brava', open: 'Ampliar foto', close: 'Cerrar galería', previous: 'Anterior', next: 'Siguiente', more: 'Ver todas las fotos', less: 'Mostrar menos', title: 'Galería de momentos', description: 'Entrenamientos, partidos y momentos compartidos en Academy Costa Brava.' },
@@ -30,6 +31,7 @@ export function AcademyGallery() {
     const move = (offset: number) => setSelected(index => index === null ? null : (index + offset + photos.length) % photos.length)
 
     return <>
+        <AcademyVideos />
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-5 lg:grid-cols-4">
             {(expanded ? photos : photos.slice(0, 8)).map((photo, index) => <button
                 key={photo.src}
