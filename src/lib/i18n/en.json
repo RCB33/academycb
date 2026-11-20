@@ -1506,5 +1506,17 @@
   "Academia + Campus": "Academy + Camp",
   "Solicitud de Academia + Campus recibida. Secretaría contactará contigo para concretar las actividades y la forma de pago. No se ha realizado ningún cobro.": "Academy + Camp request received. Our office will contact you to agree on activities and payment arrangements. You have not been charged.",
   "Elige una forma de pago válida: efectivo, tarjeta con Stripe o transferencia cuando corresponda.": "Choose a valid payment method: cash, card through Stripe, or bank transfer where available.",
-  "Hemos recibido tus {count} solicitudes. Secretaría revisará cada plaza y contactará contigo para confirmar los siguientes pasos.": "We have received your {count} requests. Our office will review each place and contact you to confirm the next steps."
+  "Hemos recibido tus {count} solicitudes. Secretaría revisará cada plaza y contactará contigo para confirmar los siguientes pasos.": "We have received your {count} requests. Our office will review each place and contact you to confirm the next steps.",
+  "Preparando tu formulario…": "Preparing your form…",
+  "Guardamos tu borrador en esta pestaña durante 24 horas. Puedes volver atrás o recargar sin empezar de nuevo.": "We save your draft in this tab for 24 hours. You can go back or reload without starting over.",
+  "Este navegador no permite guardar el borrador. Mantén esta página abierta hasta enviar.": "This browser cannot save your draft. Keep this page open until you submit.",
+  "Borrar borrador": "Clear draft",
+  "Juega los torneos con Academy": "Play tournaments with Academy",
+  "Para jugadores de Academy y de otros clubes, también sin equipo. No necesitas estar matriculado en la academia: solicita tu plaza y nosotros organizamos los equipos.": "For Academy players, players from other clubs and those without a team. You don’t need to be enrolled in the academy: request your place and we’ll organise the teams.",
+  "Soy nuevo / vengo de otro club": "I’m new / from another club",
+  "Ya tengo cuenta Academy": "I already have an Academy account",
+  "Inscribir a mi hijo solo en torneos.": "Register my child for tournaments only.",
+  "Entrar y utilizar la ficha de mi hijo.": "Sign in and use my child’s profile.",
+  "Primero verifica tu correo. Después podrás añadir al jugador, elegir los torneos y enviar la solicitud. Crear esta cuenta no te matricula en Academia ni genera ningún cobro.": "First verify your email. You can then add the player, choose tournaments and submit your request. Creating this account does not enrol you in the Academy or trigger any payment.",
+  "Verificar correo y apuntarme a torneos": "Verify email and register for tournaments"
 }

@@ -1506,5 +1506,17 @@
   "Academia + Campus": "Acadèmia + Campus",
   "Solicitud de Academia + Campus recibida. Secretaría contactará contigo para concretar las actividades y la forma de pago. No se ha realizado ningún cobro.": "Sol·licitud d’Acadèmia + Campus rebuda. Secretaria contactarà amb tu per concretar les activitats i la forma de pagament. No s’ha fet cap cobrament.",
   "Elige una forma de pago válida: efectivo, tarjeta con Stripe o transferencia cuando corresponda.": "Tria una forma de pagament vàlida: efectiu, targeta amb Stripe o transferència quan correspongui.",
-  "Hemos recibido tus {count} solicitudes. Secretaría revisará cada plaza y contactará contigo para confirmar los siguientes pasos.": "Hem rebut les teves {count} sol·licituds. Secretaria revisarà cada plaça i contactarà amb tu per confirmar els passos següents."
+  "Hemos recibido tus {count} solicitudes. Secretaría revisará cada plaza y contactará contigo para confirmar los siguientes pasos.": "Hem rebut les teves {count} sol·licituds. Secretaria revisarà cada plaça i contactarà amb tu per confirmar els passos següents.",
+  "Preparando tu formulario…": "Preparant el teu formulari…",
+  "Guardamos tu borrador en esta pestaña durante 24 horas. Puedes volver atrás o recargar sin empezar de nuevo.": "Desem el teu esborrany en aquesta pestanya durant 24 hores. Pots tornar enrere o recarregar sense començar de nou.",
+  "Este navegador no permite guardar el borrador. Mantén esta página abierta hasta enviar.": "Aquest navegador no permet desar l’esborrany. Mantén aquesta pàgina oberta fins que l’enviïs.",
+  "Borrar borrador": "Esborrar esborrany",
+  "Juega los torneos con Academy": "Juga els tornejos amb Academy",
+  "Para jugadores de Academy y de otros clubes, también sin equipo. No necesitas estar matriculado en la academia: solicita tu plaza y nosotros organizamos los equipos.": "Per a jugadors d’Academy i d’altres clubs, també sense equip. No cal estar matriculat a l’acadèmia: sol·licita la teva plaça i nosaltres organitzem els equips.",
+  "Soy nuevo / vengo de otro club": "Soc nou / vinc d’un altre club",
+  "Ya tengo cuenta Academy": "Ja tinc un compte Academy",
+  "Inscribir a mi hijo solo en torneos.": "Inscriure el meu fill només als tornejos.",
+  "Entrar y utilizar la ficha de mi hijo.": "Entrar i utilitzar la fitxa del meu fill.",
+  "Primero verifica tu correo. Después podrás añadir al jugador, elegir los torneos y enviar la solicitud. Crear esta cuenta no te matricula en Academia ni genera ningún cobro.": "Primer verifica el teu correu. Després podràs afegir el jugador, triar els tornejos i enviar la sol·licitud. Crear aquest compte no et matricula a l’Acadèmia ni genera cap cobrament.",
+  "Verificar correo y apuntarme a torneos": "Verificar el correu i apuntar-me als tornejos"
 }

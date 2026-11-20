@@ -15,11 +15,13 @@ const authDb = {
     },
 }
 function load(file, overrides = {}) {
-    const module = { exports: {} }
+    const compiledModule = { exports: {} }
     const source = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText
     new Function('require', 'module', 'exports', source)(name => {
         if (name in overrides) return overrides[name]
         if (name === 'server-only') return {}
+        // This suite checks payment choices; browser checks cover draft persistence.
+        if (name === '@/components/forms/form-draft') return { DraftSelect: 'select' }
         if (name === '@/lib/enrollment-payment') return load('src/lib/enrollment-payment.ts')
         if (name === '@/lib/i18n/client') return { useT: () => text => text }
         if (name === '@/lib/supabase/admin') return { createAdminClient: () => db }
@@ -31,8 +33,8 @@ function load(file, overrides = {}) {
             return { ...input, plan: { name: 'Fixture plan' }, groups: [], quote: { monthly_price: 75, first_month: 75, percent: 100, enrollment_fee: 30, plus: 0, season_end: '2027-05-31' } }
         } }
         return require(name)
-    }, module, module.exports)
-    return module.exports
+    }, compiledModule, compiledModule.exports)
+    return compiledModule.exports
 }
 const { createEnrollmentRequest } = load('src/lib/enrollment.ts')
 const { academyPaymentMessage } = load('src/lib/enrollment-payment.ts')

@@ -32,6 +32,7 @@ export default async function InscripcionPage({ searchParams }: { searchParams: 
         if(campus) redirect(`/campus/inscripcion?edition=${campus.id}`)
         if(!params.activity) redirect('/campus/inscripcion')
     }
+    if (params.service === 'tournament') redirect('/torneos/inscripcion')
     const supabase = await createClient()
     const today = new Date().toISOString().slice(0, 10)
     const { data: { user } } = await supabase.auth.getUser()
