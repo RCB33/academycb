@@ -25,6 +25,11 @@ const modules={};function load(file){file=path.resolve(file);if(modules[file])re
   process.env.STRIPE_RECURRING_PAYMENTS_ENABLED='true';const sent=await api.POST(post());assert.equal(sent.status,200,await sent.text());assert.equal(sends.length,1);assert.equal(sends[0].html,pv.html);assert.equal(sends[0].text,pv.text);assert.deepEqual(sends[0].to,['qa@example.invalid']);assert.equal(r.email_status,'accepted');
   assert.equal((await api.POST(post())).status,200);assert.equal(sends.length,1,'Reclick must not resend');
  }finally{global.fetch=oldFetch;if(oldEnabled===undefined)delete process.env.STRIPE_RECURRING_PAYMENTS_ENABLED;else process.env.STRIPE_RECURRING_PAYMENTS_ENABLED=oldEnabled;if(oldKey===undefined)delete process.env.RESEND_API_KEY;else process.env.RESEND_API_KEY=oldKey;}
+ r.billing_request_items.unshift({payment_id:'initial',phase:'initial',position:0,amount_cents:11750,due_date:'2090-11-20',snapshot:{type:'academy',description:'Primer mes, matrícula y Plus'}});r.total_cents+=11750
+ const combined=email.paymentRequestEmail(input);assert.match(combined.html,/Pagar alta y activar mensualidades/);assert.match(combined.text,/117,50/);assert.match(combined.text,/75,00/);assert.doesNotMatch(combined.text,/efectivo por separado/);assert.match(combined.text,/una sola vez/)
+ await prepare(r,origin)
+ r.billing_request_items=r.billing_request_items.filter(i=>i.phase==='initial');r.total_cents=11750
+ const last=email.paymentRequestEmail(input);assert.match(last.text,/No quedan mensualidades posteriores/);assert.match(last.html,/Pagar el importe inicial/);assert.doesNotMatch(last.text,/autorizas las mensualidades/)
  if(process.argv.includes('--render'))fs.writeFileSync('/tmp/academy-payment-email-preview.html',content.html);
  console.log('PASS branded monthly email, exact amount/dates, safe content, linked recipient, same preview/send, admin-only, origin check, disabled LIVE send blocked, idempotent provider delivery. Mock only: no emails, cards or database writes.');
 })().catch(e=>{console.error(e);process.exitCode=1});

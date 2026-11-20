@@ -15,7 +15,7 @@ export async function preparePaymentRequestEmail(r: BillingRequest & { recipient
     if (child.error || guardian.error || link.error || !child.data || child.data.archived_at || !guardian.data?.user_id || !link.data || guardian.data.email?.trim().toLowerCase() !== r.recipient_email?.trim().toLowerCase()) throw new Error('Revisa el jugador y la cuenta del tutor antes de enviar el enlace.')
     if (receipts.error || receipts.data?.length !== r.billing_request_items.length || r.billing_request_items.some(i=>{
         const p=receipts.data.find(p=>p.id===i.payment_id)
-        return !p || p.type!=='academy' || p.concept_code!=='monthly' || !['pending','failed'].includes(p.status) || p.manual_receipt_allocations?.length || Math.round(Number(p.amount)*100)!==Number(i.amount_cents) || p.due_date!==i.due_date
+        return !p || p.type!=='academy' || !(i.phase==='initial'?['monthly','registration','plus']:['monthly']).includes(p.concept_code) || !['pending','failed'].includes(p.status) || p.manual_receipt_allocations?.length || Math.round(Number(p.amount)*100)!==Number(i.amount_cents) || p.due_date!==i.due_date
     })) throw new Error('Las cuotas han cambiado. Revisa los recibos antes de enviar el enlace.')
     return paymentRequestEmail({ request:r, childName:child.data.full_name, guardianName:guardian.data.full_name, origin })
 }

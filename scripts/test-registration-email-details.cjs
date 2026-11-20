@@ -33,6 +33,10 @@ function load(file) {
   assert.doesNotMatch(result.message, /solicitud\/test-request/)
   a.onboarding = { billing: 'ready', billing_request_id: 'billing-test' }
   result=await details('enrollment', 'test-request', 'reviewed');assert.match(result.message,/solicitud\/billing-test/);assert.equal(result.action.label,'Activar pago mensual con tarjeta');assert.match(result.action.href,/solicitud\/billing-test$/);assert.doesNotMatch(result.message,/IBAN|transferencia/i)
+  a.onboarding.billing_initial=true
+  result=await details('enrollment','test-request','reviewed');assert.equal(result.action.label,'Pagar alta y activar mensualidades');assert.match(result.message,/Primer pago con tarjeta: 57\.50/);assert.match(result.message,/una sola vez/);assert.doesNotMatch(result.message,/efectivo por separado/)
+  const remaining=a.quote.remaining;a.quote.remaining=[]
+  result=await details('enrollment','test-request','reviewed');assert.equal(result.action.label,'Pagar el importe inicial');assert.match(result.message,/no hay cargos mensuales posteriores/);a.quote.remaining=remaining
   rows.payments.forEach(p => p.status = 'paid')
   assert.match((await details('enrollment', 'test-request', 'reviewed')).message, /primer pago no tiene importes pendientes/)
   rows.enrollment_requests.status = 'rejected'

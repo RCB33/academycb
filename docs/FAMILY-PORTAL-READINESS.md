@@ -1,6 +1,6 @@
 # Portal Familias — revisión del 20/11/2026
 
-Actualización posterior: el propietario autorizó activar las mensualidades generales. Production tiene `STRIPE_RECURRING_PAYMENTS_ENABLED=true`; las nuevas solicitudes de Academia con tarjeta reciben el enlace individual al aceptar su plaza, siempre que la preparación y el vínculo familiar sean correctos. Se ha publicado también la PWA con instalación y pantalla offline. Evidencia y límites de comprobación en la sección inicial de `PAYMENTS-AUDIT.md`; las menciones a mensualidades desactivadas de auditorías anteriores son históricas.
+Actualización posterior: el propietario autorizó activar las mensualidades generales. Production tiene `STRIPE_RECURRING_PAYMENTS_ENABLED=true`; las nuevas solicitudes de Academia con tarjeta reciben el enlace individual al aceptar su plaza, siempre que la preparación y el vínculo familiar sean correctos. El enlace de las nuevas altas con tarjeta reúne primer mes, matrícula aplicable y Plus opcional; después solo se cobra la cuota mensual, sin renovación al finalizar temporada. Se ha publicado también la PWA con instalación y pantalla offline. Evidencia y límites de comprobación en la sección inicial de `PAYMENTS-AUDIT.md`; las menciones a mensualidades desactivadas de auditorías anteriores son históricas.
 
 ## Uso real del portal
 

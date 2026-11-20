@@ -16,9 +16,9 @@ export default async function PaymentResult({ searchParams }: { searchParams: Pr
     const state = result?.state
     const paid = state === 'paid'
     const authorized = state === 'authorized'
-    const polling = authorized || state === 'processing' || unavailable
+    const polling = result?.recurringPending || authorized || state === 'processing' || unavailable
     const copy = paid
-        ? ['Pago realizado correctamente', 'Stripe ha confirmado tu pago. Ya puedes cerrar esta página con tranquilidad.']
+        ? [result?.initialPayment?'Primer pago realizado correctamente':'Pago realizado correctamente', result?.recurringPending?'Stripe ha confirmado el pago inicial. Estamos terminando de preparar las mensualidades. No repitas el pago; puedes consultar el estado desde tu portal.':result?.initialPayment&&result.startsAt?'Tu primer pago está confirmado y las mensualidades están programadas. La matrícula y el Plus no se volverán a cobrar.':'Stripe ha confirmado tu pago. Ya puedes cerrar esta página con tranquilidad.']
         : authorized
         ? ['Tarjeta autorizada correctamente', 'Tu autorización se ha completado. El cargo todavía está pendiente de confirmación; no necesitas introducir la tarjeta otra vez.']
         : state === 'processing'
@@ -45,7 +45,7 @@ export default async function PaymentResult({ searchParams }: { searchParams: Pr
                     <div className={`mb-6 flex h-16 w-16 items-center justify-center rounded-2xl ${paid ? 'bg-emerald-50 text-emerald-700' : 'bg-[#faf3d8] text-[#8c6b10]'}`}><Icon className="h-8 w-8" aria-hidden="true" /></div>
                     <div role="status" aria-live="polite"><h1 id="result-title" className="text-3xl font-bold leading-tight tracking-tight">{copy[0]}</h1><p className="mt-4 text-base leading-7 text-slate-600">{copy[1]}</p></div>
                     {money && <div className="mt-7 rounded-2xl bg-slate-50 p-5"><p className="text-sm text-slate-600">{paid ? 'Importe confirmado' : 'Importe de la cuota'}</p><p className="mt-1 text-4xl font-bold tracking-tight">{money}</p>
-                        {result?.startsAt && authorized && <p className="mt-3 text-sm text-slate-600">Inicio de la suscripción: {date(result.startsAt)}.</p>}
+                        {result?.startsAt && (authorized||result.initialPayment) && <p className="mt-3 text-sm text-slate-600">Inicio de la suscripción: {date(result.startsAt)}.</p>}
                         {result?.finite && result.endsAt && <p className="mt-3 text-sm leading-6 text-slate-600">Finalización: {date(result.endsAt)}. Sin renovación después de esa fecha.</p>}
                     </div>}
                     {(authorized || state === 'processing') && <p className="mt-5 flex gap-2 text-sm leading-6 text-slate-600"><ShieldCheck className="mt-1 h-4 w-4 shrink-0" />No repitas el pago ni hagas una transferencia mientras comprobamos esta operación.</p>}

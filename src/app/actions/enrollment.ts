@@ -79,7 +79,7 @@ export async function convertEnrollmentRequest(id: string) {
         notice=access.error||('error' in billing?billing.error:'')||((billing.status==='pending_activation')?'Plaza aceptada y recibos creados. La activación de las mensualidades Stripe sigue pendiente.':'Plaza aceptada, jugador vinculado y recibos pendientes creados.')
         const db=createAdminClient()
         const {data:latest}=await db.from('enrollment_requests').select('academy_details').eq('id',parsedId.data).single()
-        if(latest?.academy_details) await db.from('enrollment_requests').update({academy_details:{...latest.academy_details,onboarding:{access:access.status||'needs_review',billing:billing.status||'needs_review',billing_request_id:'requestId' in billing?billing.requestId:null}}}).eq('id',parsedId.data)
+        if(latest?.academy_details) await db.from('enrollment_requests').update({academy_details:{...latest.academy_details,onboarding:{access:access.status||'needs_review',billing:billing.status||'needs_review',billing_request_id:'requestId' in billing?billing.requestId:null,billing_initial:latest.academy_details.payment_choice==='monthly_card'}}}).eq('id',parsedId.data)
     }
     await deliverRegistrationEmails('enrollment', parsedId.data)
 

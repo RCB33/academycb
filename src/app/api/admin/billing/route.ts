@@ -39,7 +39,7 @@ export async function POST(request:Request) {
  const db=createAdminClient()
  try {
   if(data.action==='create') {
-   if(data.kind!=='subscription') return reply({error:'Stripe se utiliza únicamente para mensualidades de Academia. Academia: efectivo para otros conceptos. Campus: transferencia bancaria o efectivo. Torneos: solo transferencia bancaria.'},409)
+   if(data.kind!=='subscription') return reply({error:'Desde este formulario solo se preparan mensualidades futuras de Academia. El pago inicial conjunto se prepara al aceptar una nueva inscripción con tarjeta. Campus: transferencia bancaria o efectivo. Torneos: solo transferencia bancaria.'},409)
    const selected=await db.from('payments').select('id,type,concept_code,due_date').in('id',data.paymentIds)
    if(selected.error||selected.data.length!==data.paymentIds.length||selected.data.some(p=>p.type!=='academy'||p.concept_code!=='monthly'||!p.due_date?.endsWith('-01'))) return reply({error:'Selecciona solo mensualidades de Academia con vencimiento el día 1.'},409)
    const {mode}=configuredStripe(true)

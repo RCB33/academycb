@@ -9,6 +9,8 @@ export type CheckoutResult = {
     endsAt?: number
     startsAt?: number
     finite?: boolean
+    recurringPending?: boolean
+    initialPayment?: boolean
     test: boolean
 }
 
@@ -20,17 +22,18 @@ export async function checkoutResult(sessionId: string): Promise<CheckoutResult 
     const db = createAdminClient()
     const { data: contract, error: ce } = await db.from('academy_checkout_contracts').select('id,mode,choice,total_cents,unit_cents,fee_cents,stripe_schedule_id,stripe_subscription_id').eq('stripe_session_id', sessionId).maybeSingle()
     if (ce) throw new Error('Result unavailable')
-    let binding: { purpose: string; key: string; id: string; mode: string; setup: boolean; total: number; unit: number; fee: number; schedule: string | null; subscription: string | null }
+    let binding: { purpose: string; key: string; id: string; mode: string; setup: boolean; initial?: boolean; future?: boolean; total: number; unit: number; fee: number; schedule: string | null; subscription: string | null }
     if (contract) {
         binding = { purpose: 'academy_contract', key: 'academy_contract_id', id: contract.id, mode: contract.mode, setup: contract.choice === 'monthly', total: Number(contract.total_cents), unit: Number(contract.unit_cents), fee: Number(contract.fee_cents), schedule: contract.stripe_schedule_id, subscription: contract.stripe_subscription_id }
     } else {
         const { data: attempt, error } = await db.from('billing_request_attempts').select('id,request_id,schedule_id,subscription_id').eq('session_id', sessionId).maybeSingle()
         if (error) throw new Error('Result unavailable')
         if (!attempt) return null
-        const { data: request, error: re } = await db.from('billing_requests').select('mode,kind,total_cents,billing_request_items(amount_cents,position)').eq('id', attempt.request_id).single()
+        const { data: request, error: re } = await db.from('billing_requests').select('mode,kind,total_cents,billing_request_items(amount_cents,position,phase)').eq('id', attempt.request_id).single()
         if (re || !request) throw new Error('Result unavailable')
         const items = [...request.billing_request_items].sort((a,b) => a.position - b.position)
-        binding = { purpose: 'academy_billing_request', key: 'billing_attempt_id', id: attempt.id, mode: request.mode, setup: request.kind === 'subscription', total: Number(request.total_cents), unit: Number(items[0]?.amount_cents), fee: 0, schedule: attempt.schedule_id, subscription: attempt.subscription_id }
+        const initial=items.filter(i=>i.phase==='initial'), recurring=items.filter(i=>i.phase!=='initial')
+        binding = { purpose: 'academy_billing_request', key: 'billing_attempt_id', id: attempt.id, mode: request.mode, setup: request.kind === 'subscription'&&!initial.length, initial: initial.length>0, future: recurring.length>0, total: initial.length?initial.reduce((n,i)=>n+Number(i.amount_cents),0):Number(request.total_cents), unit: Number(recurring[0]?.amount_cents), fee: 0, schedule: attempt.schedule_id, subscription: attempt.subscription_id }
     }
     const { stripe, mode } = configuredStripe(true)
     if (binding.mode !== mode) return null
@@ -42,7 +45,24 @@ export async function checkoutResult(sessionId: string): Promise<CheckoutResult 
     if (!binding.setup) {
         if (session.payment_status !== 'paid') return { ...base, state: 'processing' }
         if (session.currency !== 'eur' || session.amount_total !== binding.total) return null
-        return { ...base, state: 'paid', amountCents: binding.total }
+        const paid:CheckoutResult={ ...base, state: 'paid', amountCents: binding.total }
+        if(binding.initial) {
+            paid.initialPayment=true
+            if(binding.future) {
+                paid.recurringPending=!binding.schedule
+                if(binding.schedule) {
+                    const schedule=await stripe.subscriptionSchedules.retrieve(binding.schedule)
+                    const customer=typeof session.customer==='string'?session.customer:session.customer?.id
+                    if(schedule.livemode!==session.livemode||schedule.metadata?.purpose!==binding.purpose||schedule.metadata?.[binding.key]!==binding.id||!customer||(typeof schedule.customer==='string'?schedule.customer:schedule.customer.id)!==customer) return null
+                    if(!['canceled','completed','released'].includes(schedule.status)) {
+                        paid.finite=schedule.end_behavior==='cancel'
+                        paid.startsAt=schedule.phases[0]?.start_date
+                        paid.endsAt=schedule.phases.at(-1)?.end_date
+                    }
+                }
+            }
+        }
+        return paid
     }
     const setup = session.setup_intent
     const customer = typeof session.customer === 'string' ? session.customer : session.customer?.id

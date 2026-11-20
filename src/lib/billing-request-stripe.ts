@@ -2,7 +2,7 @@ import 'server-only'
 import type Stripe from 'stripe'
 import { configuredStripe } from './stripe-payments'
 import { createAdminClient } from './supabase/admin'
-import { billingSummary, type BillingRequest, type BillingAttempt } from './billing-request'
+import { billingParts, billingSummary, type BillingRequest, type BillingAttempt } from './billing-request'
 
 const purpose='academy_billing_request'
 export function billingScheduleParams(customer:string,paymentMethod:string,price:string,start:number,months:number,metadata:Record<string,string>):Stripe.SubscriptionScheduleCreateParams {
@@ -28,6 +28,12 @@ export async function createBillingCheckout(r: BillingRequest,a: BillingAttempt,
  if(r.kind==='payment')return stripe.checkout.sessions.create({...common,mode:'payment',customer_email:email,payment_intent_data:{metadata},
   line_items:[{quantity:1,price_data:{currency:'eur',unit_amount:Number(r.total_cents),product_data:{name:r.title}}}]}, {idempotencyKey:`billing-checkout-${a.id}`})
  const customer=await stripe.customers.create({email,metadata},{idempotencyKey:`billing-customer-${a.id}`})
+ const {initial,recurring}=billingParts(r)
+ if(initial.length) return stripe.checkout.sessions.create({...common,mode:'payment',customer:customer.id,
+  payment_intent_data:{metadata,...(recurring.length?{setup_future_usage:'off_session' as const}:{})},
+  custom_text:{submit:{message:billingSummary(r)}},
+  line_items:initial.map(item=>({quantity:1,price_data:{currency:'eur',unit_amount:Number(item.amount_cents),product_data:{name:(item.snapshot.description||'Alta Academia').slice(0,250)}}})),
+ },{idempotencyKey:`billing-checkout-${a.id}`})
  return stripe.checkout.sessions.create({...common,mode:'setup',currency:'eur',customer:customer.id,
   setup_intent_data:{metadata,description:billingSummary(r)},custom_text:{submit:{message:billingSummary(r)}}},{idempotencyKey:`billing-checkout-${a.id}`})
 }
@@ -56,6 +62,22 @@ export async function fulfillBillingCheckout(session: Stripe.Checkout.Session,ev
   if(result.error)throw result.error
   return
  }
+ const {initial,recurring:items,initialCents}=billingParts(r)
+ let customer:string|undefined,pm:string|undefined
+ if(initial.length) {
+  if(session.mode!=='payment'||session.status!=='complete'||session.payment_status!=='paid')return
+  if(session.currency!=='eur'||session.amount_total!==initialCents)throw Error('Initial amount mismatch')
+  const piId=typeof session.payment_intent==='string'?session.payment_intent:session.payment_intent?.id
+  if(!piId)throw Error('Missing initial payment')
+  const payment=await stripe.paymentIntents.retrieve(piId)
+  customer=typeof payment.customer==='string'?payment.customer:payment.customer?.id
+  pm=typeof payment.payment_method==='string'?payment.payment_method:payment.payment_method?.id
+  const sc=typeof session.customer==='string'?session.customer:session.customer?.id
+  if(payment.status!=='succeeded'||payment.livemode!==session.livemode||payment.currency!=='eur'||payment.amount_received!==initialCents||payment.metadata?.billing_attempt_id!==a.id||!customer||customer!==sc||!pm||(items.length&&payment.setup_future_usage!=='off_session'))throw Error('Initial payment not authorized')
+  const collected=await db.rpc('collect_billing_initial',{attempt_input:a.id,session_input:session.id,livemode_input:session.livemode,amount_input:initialCents})
+  if(collected.error)throw collected.error
+  if(!items.length)return
+ }
  if(a.schedule_id) {
   // Recover a previous delivery that bound the schedule but failed while
   // updating the request. Never create a second schedule on a webhook retry.
@@ -66,14 +88,16 @@ export async function fulfillBillingCheckout(session: Stripe.Checkout.Session,ev
   const stopped=await db.from('billing_request_attempts').update({state:'cancelled',billing_status:'ended'}).eq('id',a.id).in('state',['creating','open']);if(stopped.error)throw stopped.error
   return
  }
- const setupId=typeof session.setup_intent==='string'?session.setup_intent:session.setup_intent?.id
- if(!setupId)throw Error('Missing setup')
- const setup=await stripe.setupIntents.retrieve(setupId)
- const customer=typeof setup.customer==='string'?setup.customer:setup.customer?.id
- const pm=typeof setup.payment_method==='string'?setup.payment_method:setup.payment_method?.id
- const sc=typeof session.customer==='string'?session.customer:session.customer?.id
- if(setup.status!=='succeeded'||setup.livemode!==session.livemode||setup.metadata?.billing_attempt_id!==a.id||!pm||!customer||customer!==sc)throw Error('Setup not authorized')
- const items=[...r.billing_request_items].sort((x,y)=>x.position-y.position)
+ if(!initial.length) {
+  const setupId=typeof session.setup_intent==='string'?session.setup_intent:session.setup_intent?.id
+  if(!setupId)throw Error('Missing setup')
+  const setup=await stripe.setupIntents.retrieve(setupId)
+  customer=typeof setup.customer==='string'?setup.customer:setup.customer?.id
+  pm=typeof setup.payment_method==='string'?setup.payment_method:setup.payment_method?.id
+  const sc=typeof session.customer==='string'?session.customer:session.customer?.id
+  if(setup.status!=='succeeded'||setup.livemode!==session.livemode||setup.metadata?.billing_attempt_id!==a.id||!pm||!customer||customer!==sc)throw Error('Setup not authorized')
+ }
+ if(!customer||!pm||!items.length)throw Error('Monthly authorization missing')
  const start=Math.floor(new Date(items[0].due_date+'T12:00:00Z').getTime()/1000)
  if(start<=Math.floor(Date.now()/1000))throw Error('Start date passed: manual review required')
  const price=await stripe.prices.create({currency:'eur',unit_amount:Number(items[0].amount_cents),recurring:{interval:'month'},product_data:{name:r.title},metadata:{billing_attempt_id:a.id}},{idempotencyKey:`billing-price-${a.id}`})

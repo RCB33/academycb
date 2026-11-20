@@ -56,7 +56,13 @@ export async function registrationEmailDetails(source:string,id:string,kind:stri
       const due=first.reduce((n,p)=>n+receiptBalance(p).remaining,0)
       payment=due?academyPayment(due):'El primer pago no tiene importes pendientes.'
       detail+=`\nPrimera cuota: ${Number(a.accepted.first_month).toFixed(2)} € (${a.quote.percent} %)\nMatrícula: ${Number(a.accepted.enrollment_fee).toFixed(2)} € · Plus anual: ${Number(a.accepted.plus).toFixed(2)} €\nMensualidad completa: ${Number(a.quote.monthly_price).toFixed(2)} €, hasta ${a.quote.season_end}.`
-      if(a.payment_choice==='monthly_card'&&a.quote.remaining?.length) {
+      if(a.payment_choice==='monthly_card'&&a.onboarding?.billing_initial===true) {
+        payment=due?`Primer pago con tarjeta: ${due.toFixed(2)} €. Incluye juntos el primer mes, la matrícula que corresponda y el Plus elegido. Matrícula y Plus se cobran una sola vez.`:'El primer pago no tiene importes pendientes.'
+        if(a.onboarding.billing==='ready'&&a.onboarding.billing_request_id) {
+          action={label:a.quote.remaining?.length?'Pagar alta y activar mensualidades':'Pagar el importe inicial',href:`https://www.academycostabrava.com/portal/pagos/solicitud/${a.onboarding.billing_request_id}`}
+          payment+=`\n\nRevisa el desglose y paga de forma segura en Stripe:\n${action.href}\n${a.quote.remaining?.length?`Después se cobrará únicamente la cuota mensual de ${Number(a.quote.monthly_price).toFixed(2)} €, en las fechas indicadas, hasta el final de temporada. Sin renovación automática.`:'Es el último mes de la temporada: no hay cargos mensuales posteriores.'}`
+        } else payment+='\nAcademy está preparando tu enlace de pago y te avisará cuando esté listo.'
+      } else if(a.payment_choice==='monthly_card'&&a.quote.remaining?.length) {
         if(a.onboarding?.billing==='ready'&&a.onboarding.billing_request_id) action={label:'Activar pago mensual con tarjeta',href:`https://www.academycostabrava.com/portal/pagos/solicitud/${a.onboarding.billing_request_id}`} 
         payment+=a.onboarding?.billing==='ready'&&a.onboarding.billing_request_id?`\n\nActiva tu suscripción mensual con tarjeta y olvídate de gestionar cada mensualidad:\nhttps://www.academycostabrava.com/portal/pagos/solicitud/${a.onboarding.billing_request_id}\nEl primer vencimiento será el indicado en el enlace; la suscripción terminará al acabar la temporada.`:'\n\nHas solicitado mensualidades con tarjeta. Academy te enviará el enlace de autorización cuando esté disponible. Todavía no hay ningún cobro automático activado.'
       }
