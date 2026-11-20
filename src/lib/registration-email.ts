@@ -25,7 +25,7 @@ export async function deliverRegistrationEmail(id: string) {
     try {
       if (!process.env.RESEND_API_KEY) { failure = 'missing_api_key'; throw new Error(failure) }
       const details=await registrationEmailDetails(row.source_type,row.source_id,row.event_kind)
-      const content=details?{subject:details.subject,text:details.message,html:renderCommunicationEmail(details.subject,details.message,details.action)}:registrationEmailContent(row.source_type,row.event_kind)
+      const content=details?{subject:details.subject,text:details.message+(details.familyAccess&&details.familyAccess!=='pending'?`\n\nTu email de acceso: ${row.recipient}`:''),html:renderCommunicationEmail(details.subject,details.message,details.action,details.familyAccess?{email:row.recipient,status:details.familyAccess}:undefined)}:registrationEmailContent(row.source_type,row.event_kind)
       const response = await fetch('https://api.resend.com/emails', {
         method: 'POST', signal: AbortSignal.timeout(8000),
         headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json', 'Idempotency-Key': `registration-${row.id}` },

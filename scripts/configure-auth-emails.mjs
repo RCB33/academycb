@@ -20,8 +20,8 @@ function layout({ eyebrow, title, intro, detail, buttonLabel, buttonHref, code, 
 const templates = [
     {
         id: 'invite', subjectKey: 'mailer_subjects_invite', contentKey: 'mailer_templates_invite_content',
-        subject: 'Bienvenido/a a Academy · Activa tu acceso',
-        html: layout({ eyebrow: 'Tu acceso a Academy', title: '¡Bienvenido/a a la familia Academy!', intro: 'Tu cuenta está preparada. Activa tu acceso para entrar en tu espacio privado y consultar las funciones asignadas a tu perfil.', detail: 'El enlace es personal y tiene una duración limitada. No lo compartas con otras personas.', buttonLabel: 'Activar mi acceso', buttonHref: '{{ .ConfirmationURL }}' })
+        subject: 'Tu código de bienvenida · Academy Costa Brava',
+        html: layout({ eyebrow: 'Tu acceso a Academy', title: '¡Bienvenido/a a la familia Academy!', intro: 'Tu cuenta está preparada. Entra con tu email <strong>{{ .Email }}</strong> y este código. A continuación tendrás que crear tu contraseña personal para acceder al portal.', detail: 'Después podrás entrar cuando quieras con tu email y tu contraseña. Este código es de un solo uso y caduca en 30 minutos. Si caduca, solicita uno nuevo desde el portal. No lo compartas.', code: '{{ .Token }}', buttonLabel: 'Introducir código y crear contraseña', buttonHref: `${SITE_URL}/portal/codigo?type=invite` })
     },
     {
         id: 'confirmation', subjectKey: 'mailer_subjects_confirmation', contentKey: 'mailer_templates_confirmation_content',
@@ -30,8 +30,8 @@ const templates = [
     },
     {
         id: 'recovery', subjectKey: 'mailer_subjects_recovery', contentKey: 'mailer_templates_recovery_content',
-        subject: 'Recupera tu contraseña · Academy Costa Brava',
-        html: layout({ eyebrow: 'Recuperación de acceso', title: 'Crea una nueva contraseña', intro: 'Hemos recibido una solicitud para recuperar el acceso a tu cuenta.', detail: 'El enlace caduca por seguridad. Si no has solicitado el cambio, ignora este correo y tu contraseña seguirá siendo la misma.', buttonLabel: 'Cambiar mi contraseña', buttonHref: '{{ .ConfirmationURL }}', security: true })
+        subject: 'Tu código para crear una nueva contraseña · Academy',
+        html: layout({ eyebrow: 'Recuperación de acceso', title: 'Crea una nueva contraseña', intro: 'Introduce tu email <strong>{{ .Email }}</strong> y este código en el portal. Después deberás crear una contraseña nueva para entrar.', detail: 'El código es de un solo uso y caduca en 30 minutos. A partir de entonces accederás con tu email y la nueva contraseña. Si no has solicitado este cambio, ignora el mensaje: tu contraseña no se modifica al recibir el código.', code: '{{ .Token }}', buttonLabel: 'Introducir código y crear contraseña', buttonHref: `${SITE_URL}/portal/codigo?type=recovery` })
     },
     {
         id: 'magic_link', subjectKey: 'mailer_subjects_magic_link', contentKey: 'mailer_templates_magic_link_content',
@@ -85,8 +85,8 @@ const templates = [
     },
 ]
 
-function buildAuthConfig() {
-    const config = templates.reduce((currentConfig, template) => {
+export function buildAuthConfig(codeOnly = false) {
+    const config = (codeOnly ? templates.filter(t => ['invite', 'recovery'].includes(t.id)) : templates).reduce((currentConfig, template) => {
         currentConfig[template.subjectKey] = template.subject
         currentConfig[template.contentKey] = template.html
         if (template.notificationKey) currentConfig[template.notificationKey] = true
@@ -99,7 +99,7 @@ function buildAuthConfig() {
 function renderPreview(html) {
     return html
         .replaceAll('{{ .ConfirmationURL }}', `${SITE_URL}/portal`)
-        .replaceAll('{{ .Token }}', '482731')
+        .replaceAll('{{ .Token }}', '48273106')
         .replaceAll('{{ .NewEmail }}', 'nuevo-correo@ejemplo.com')
         .replaceAll('{{ .OldEmail }}', 'correo-anterior@ejemplo.com')
         .replaceAll('{{ .Email }}', 'nuevo-correo@ejemplo.com')
@@ -116,10 +116,10 @@ async function configureSupabase() {
     const response = await fetch(`https://api.supabase.com/v1/projects/${PROJECT_REF}/config/auth`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(buildAuthConfig()),
+        body: JSON.stringify(buildAuthConfig(process.argv.includes('--codes-only'))),
     })
     if (!response.ok) throw new Error(`Supabase rechazó la configuración (${response.status}): ${await response.text()}`)
-    console.log(`Configuradas ${templates.length} plantillas de Academy en Supabase.`)
+    console.log(`Configuradas ${process.argv.includes('--codes-only') ? 2 : templates.length} plantillas de Academy en Supabase.`)
 }
 
 async function sendPreviews(to, requestedTemplateId = '') {
@@ -138,7 +138,7 @@ async function sendPreviews(to, requestedTemplateId = '') {
             from: FROM,
             to: [to],
             reply_to: REPLY_TO,
-            subject: `[PRUEBA ${index + 1}/${selectedTemplates.length}] ${template.subject.replaceAll('{{ .Token }}', '482731')}`,
+            subject: `[PRUEBA ${index + 1}/${selectedTemplates.length}] ${template.subject.replaceAll('{{ .Token }}', '48273106')}`,
             html: renderPreview(template.html),
             text: `Vista previa de la plantilla: ${template.id}. Esta prueba no realiza ninguna acción en tu cuenta.`,
         }))),
@@ -153,7 +153,12 @@ const previewTo = previewIndex >= 0 ? process.argv[previewIndex + 1] : ''
 const previewTemplateIndex = process.argv.indexOf('--preview-id')
 const previewTemplateId = previewTemplateIndex >= 0 ? process.argv[previewTemplateIndex + 1] : ''
 
-if (!shouldConfigure && !previewTo) {
+const exportIndex = process.argv.indexOf('--export-codes')
+if (exportIndex >= 0) {
+    const fs = await import('node:fs/promises')
+    await fs.writeFile(process.argv[exportIndex + 1], JSON.stringify(buildAuthConfig(true), null, 2))
+}
+if (!shouldConfigure && !previewTo && exportIndex < 0 && process.argv[1]?.endsWith('configure-auth-emails.mjs')) {
     throw new Error('Usa --configure y/o --preview-to correo@ejemplo.com')
 }
 if (shouldConfigure) await configureSupabase()

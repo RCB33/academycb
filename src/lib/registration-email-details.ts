@@ -4,11 +4,11 @@ import { createAdminClient } from '@/lib/supabase/admin'
 
 export function familyAccessMessage(access?:string) {
  const link='Portal familiar: https://www.academycostabrava.com/portal'
- if(access==='invited') return `${link}\nTe hemos enviado un correo separado con un enlace seguro para crear tu contraseña. Si no lo encuentras, revisa también spam.`
- if(access==='existing') return `${link}\nEntra con tu correo y contraseña habituales. Si no la recuerdas, utiliza «Crear o recuperar contraseña».`
+ if(access==='invited') return `${link}\nTe hemos enviado un correo separado con tu código de bienvenida. Entra en https://www.academycostabrava.com/portal/codigo?type=invite con el email de la inscripción y ese código. A continuación tendrás que crear tu contraseña personal. Después podrás entrar cuando quieras con tu email y contraseña. Si no encuentras el código, revisa también spam o solicita uno nuevo desde el portal.`
+ if(access==='existing') return `${link}\nEntra con tu correo y contraseña habituales. Si no la recuerdas, solicita un código de recuperación: lo recibirás en este mismo email y podrás crear una contraseña nueva. No cambiaremos tu contraseña por inscribir a otro hijo/a.`
  return `${link}\nLa plaza está aceptada. El equipo está revisando tu acceso familiar y te avisará cuando esté listo. Puedes contactar por WhatsApp para organizar el pago.`
 }
-export type RegistrationEmailDetails={subject:string;message:string;action?:{label:string;href:string}}
+export type RegistrationEmailDetails={familyAccess?:string;subject:string;message:string;action?:{label:string;href:string}}
 export async function registrationEmailDetails(source:string,id:string,kind:string):Promise<RegistrationEmailDetails|null> {
   const db=createAdminClient()
   const contact='\n\nAcademy Costa Brava · costabravaacademy@gmail.com\nWhatsApp: https://wa.me/34691179600'
@@ -29,7 +29,7 @@ export async function registrationEmailDetails(source:string,id:string,kind:stri
     const due=(receipts||[]).filter(p=>['pending','failed','overdue'].includes(p.status)&&(p.concept_code!=='monthly'||(m.plan_snapshot.frequency==='mensual'?p.covered_month===m.start_date.slice(0,7):p.due_date===firstDue))).reduce((n,p)=>n+receiptBalance(p).remaining,0)
     const p=m.plan_snapshot
     const groups=(p.groups||[]).map((g:{name:string;schedule:string;public_offer?:{day?:string;location?:string}})=>[g.public_offer?.day,g.name,g.schedule,g.public_offer?.location].filter(Boolean).join(' · ')).join('\n')
-    return {subject:`¡Enhorabuena, ${child.full_name}! Tu plaza está aceptada`,message:`${child.full_name} ya tiene su plaza aceptada en Academia.\n\n${p.name}\n${groups}\nIncorporación: ${m.start_date}\nFin: ${m.end_date}\n${p.frequency==='mensual'?`Primera mensualidad: ${p.first_percent} % de la cuota.`:'Pago por periodo según el plan elegido.'}\n\n${due?academyPayment(due):'No consta un primer pago pendiente.'}\n\n${familyAccessMessage(p.onboarding?.access)}\n\nAceptar la plaza no acredita el pago.${contact}`}
+    return {familyAccess:p.onboarding?.access||'pending',subject:`¡Enhorabuena, ${child.full_name}! Tu plaza está aceptada`,message:`¡Bienvenidos a la familia Academy Costa Brava! ${child.full_name} ya tiene su plaza aceptada en Academia.\n\n${p.name}\n${groups}\nIncorporación: ${m.start_date}\nFin: ${m.end_date}\n${p.frequency==='mensual'?`Primera mensualidad: ${p.first_percent} % de la cuota.`:'Pago por periodo según el plan elegido.'}\n\n${due?academyPayment(due):'No consta un primer pago pendiente.'}\n\n${familyAccessMessage(p.onboarding?.access)}\n\nAceptar la plaza no acredita el pago.${contact}`}
   }
   if(source==='enrollment') {
     const {data:r,error}=await db.from('enrollment_requests').select('service,child_name,activity_name,status,academy_details,campus_details').eq('id',id).single()
@@ -61,7 +61,7 @@ export async function registrationEmailDetails(source:string,id:string,kind:stri
       const p=r.campus_details?.program_snapshot
       if(p) detail+=`\n${r.campus_details.schedule} · ${r.campus_details.location}\n${p.weeks.filter((w:{id:string})=>r.campus_details.weeks.includes(w.id)).map((w:{label:string})=>w.label).join('\n')}\nModalidad: ${r.campus_details.role}`
     } else return null
-    return {action,subject:`¡Enhorabuena, ${r.child_name}! Tu plaza está aceptada`,message:`${r.child_name} ya tiene su plaza aceptada en ${r.service==='academy'?'Academia':r.activity_name}.\n\n${detail}\n\n${payment}\n\n${familyAccessMessage(a?.onboarding?.access||r.campus_details?.onboarding?.access)}\n\nAceptar la plaza no acredita el pago.${contact}`}
+    return {familyAccess:a?.onboarding?.access||r.campus_details?.onboarding?.access||'pending',action,subject:`¡Enhorabuena, ${r.child_name}! Tu plaza está aceptada`,message:`¡Bienvenidos a la familia Academy Costa Brava! ${r.child_name} ya tiene su plaza aceptada en ${r.service==='academy'?'Academia':r.activity_name}.\n\n${detail}\n\n${payment}\n\n${familyAccessMessage(a?.onboarding?.access||r.campus_details?.onboarding?.access)}\n\nAceptar la plaza no acredita el pago.${contact}`}
   }
   if(source==='event'&&kind==='awaiting_payment') {
     const {data:r,error}=await db.from('event_registrations').select('status,approved_amount,due_date,details,approved_tournaments').eq('id',id).single()

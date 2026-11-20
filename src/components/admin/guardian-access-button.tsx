@@ -10,11 +10,11 @@ export function GuardianAccessButton({ id, hasAccount, email }: { id: string; ha
     const [busy, setBusy] = useState(false)
     const router = useRouter()
     return <Button variant="outline" disabled={busy || !email} onClick={async () => {
-        if (!confirm(`¿Enviar un enlace seguro a ${email}? El tutor conservará su ficha y todos sus jugadores. Si ya tiene cuenta, recibirá un enlace para establecer o recuperar su contraseña.`)) return
+        if (!confirm(`¿Enviar un código de acceso a ${email}? El tutor conservará su ficha y todos sus jugadores. Introducirá el código y creará su contraseña personal antes de entrar.`)) return
         setBusy(true)
         try {
             const result = await sendGuardianAccess(id)
-            if (result.success) { toast.success('Enlace de acceso enviado'); router.refresh() }
+            if (result.success) { toast.success('Código de acceso enviado'); router.refresh() }
             else toast.error(result.error)
         } catch { toast.error('No se pudo confirmar el envío. Revisa la ficha antes de repetir.') }
         finally { setBusy(false) }

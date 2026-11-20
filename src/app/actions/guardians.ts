@@ -21,9 +21,9 @@ export async function sendGuardianAccess(guardianId: string) {
         const { data, error: lookupError } = await admin.auth.admin.getUserById(guardian.user_id)
         if (lookupError || !data.user) return { success: false, error: 'No se ha encontrado la cuenta vinculada. Contacta con soporte sin borrar la ficha.' }
         if (data.user.email?.toLowerCase() !== email) return { success: false, error: 'El email de la ficha no coincide con el de acceso. Revisa la cuenta antes de enviar.' }
-        if (data.user.banned_until && new Date(data.user.banned_until).getTime() > Date.now()) return { success: false, error: 'La cuenta está bloqueada. No se ha reactivado ni enviado ningún enlace.' }
+        if (data.user.banned_until && new Date(data.user.banned_until).getTime() > Date.now()) return { success: false, error: 'La cuenta está bloqueada. No se ha reactivado ni enviado ningún código.' }
         const { error: sendError } = await admin.auth.resetPasswordForEmail(email, { redirectTo })
-        if (sendError) return { success: false, error: 'No se pudo enviar el enlace. Espera un minuto antes de reintentar.' }
+        if (sendError) return { success: false, error: 'No se pudo enviar el código. Espera un minuto antes de reintentar.' }
     } else {
         const { data, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
             data: { full_name: guardian.full_name, intended_role: 'guardian', password_set: false }, redirectTo,

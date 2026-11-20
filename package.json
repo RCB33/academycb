@@ -11,6 +11,7 @@
     "test:payments": "node scripts/test-finance-collection.cjs && node scripts/test-receipt-balance.cjs && node scripts/test-finance-allocation-totals.cjs",
     "test:events": "node scripts/test-event-registrations.cjs",
     "test:notifications": "node scripts/test-registration-email.cjs && node scripts/test-registration-email-details.cjs",
+    "test:auth": "node scripts/test-email-code.cjs",
     "test:offering": "node scripts/test-offering.cjs",
     "test:karen": "npm run test:payments && node scripts/test-karen-access.cjs && node scripts/test-karen-reminders.cjs && node scripts/test-billing-dates.cjs && node scripts/test-private-images.cjs && node scripts/test-family-plans.cjs",
     "test": "npm run lint && npm run typecheck",

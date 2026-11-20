@@ -1,5 +1,6 @@
 'use client'
-import { useT } from '@/lib/i18n/client'
+import { useT, useLocale } from '@/lib/i18n/client'
+import Link from 'next/link'
 
 
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -18,6 +19,8 @@ import { billingReturnPath } from '@/lib/billing-request'
 
 export function LoginForm() {
     const translate = useT()
+    const locale = useLocale()
+    const codeText = { es: { have: 'Tengo un código de bienvenida', request: 'Enviar código para crear o recuperar contraseña', sent: 'Si el email tiene una cuenta, recibirá un código. Revisa también spam.', failed: 'No se pudo enviar el código. Inténtalo de nuevo en unos minutos.' }, ca: { have: 'Tinc un codi de benvinguda', request: 'Enviar codi per crear o recuperar la contrasenya', sent: 'Si l’email té un compte, rebrà un codi. Revisa també el correu brossa.', failed: 'No s’ha pogut enviar el codi. Torna-ho a provar d’aquí a uns minuts.' }, en: { have: 'I have a welcome code', request: 'Send a code to create or reset my password', sent: 'If the email has an account, it will receive a code. Check your spam folder too.', failed: 'The code could not be sent. Try again in a few minutes.' } }[locale]
 
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
@@ -98,6 +101,7 @@ export function LoginForm() {
     }
 
     const handlePasswordReset = async () => {
+        if (resettingPassword) return
         const normalizedEmail = email.trim()
         if (!normalizedEmail) {
             toast.error(translate('Escribe primero tu correo electrónico.'))
@@ -105,16 +109,21 @@ export function LoginForm() {
         }
 
         setResettingPassword(true)
-        const redirectTo = `${window.location.origin}/portal/establecer-contrasena`
+        try {
+        const redirectTo = `${window.location.origin}/portal/codigo?type=recovery`
         const { error } = await recoveryClient.auth.resetPasswordForEmail(normalizedEmail, { redirectTo })
-        setResettingPassword(false)
 
         if (error) {
-            toast.error(translate('No se pudo enviar el enlace. Inténtalo de nuevo en unos minutos.'))
+            toast.error(codeText.failed)
             return
         }
 
-        toast.success(translate('Te hemos enviado un enlace para crear o recuperar tu contraseña.'))
+        try { sessionStorage.setItem('academy-access-email', normalizedEmail) } catch {}
+        toast.success(codeText.sent)
+        const next = billingReturnPath(new URLSearchParams(window.location.search).get('next'))
+        router.push('/portal/codigo?type=recovery' + (next ? '&next=' + encodeURIComponent(next) : ''))
+        } catch { toast.error(codeText.failed) }
+        finally { setResettingPassword(false) }
     }
 
     if (loading) return <PortalEntryLoading checking={!entering} />
@@ -154,16 +163,17 @@ export function LoginForm() {
                 </form>
             </CardContent>
             <CardFooter className="flex-col gap-2 border-t border-white/10 p-4 text-center">
+                <Link href="/portal/codigo?type=invite" className="mb-2 text-sm font-semibold text-gold underline">{codeText.have}</Link>
                 <p className="text-xs text-gray-300">{translate("¿Primera vez o has olvidado la contraseña?")}</p>
                 <Button
                     type="button"
                     variant="link"
-                    className="h-auto p-0 text-sm font-semibold text-primary"
+                    className="h-auto whitespace-normal p-0 text-sm font-semibold text-primary"
                     onClick={handlePasswordReset}
                     disabled={loading || resettingPassword}
                 >
                     {translate(resettingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />)}
-                    {translate("Crear o recuperar contraseña")}</Button>
+                    {codeText.request}</Button>
             </CardFooter>
         </Card>
     )
