@@ -509,3 +509,9 @@ Las menciones a “pendiente” en las secciones siguientes reflejan su fecha, n
 - Tras guardar la contraseña, excepciones de inicio de sesión automático o consulta del rol devuelven éxito con acceso al login; no invitan a repetir una operación ya completada.
 - Regresión: pruebas de API con fallo posterior al guardado; componente con navegación bloqueada, doble envío y limpieza de contraseña. Reproducción real con cuenta desechable y sesión previa: recuperación y nuevo acceso correctos; cuenta eliminada. Sin modificar la contraseña del propietario durante el diagnóstico.
 - Baseline financiero: 21 pagos; digest `13ac2fe6f6d8c3721523c18b62853160`. Asesores revisados: avisos previos de funciones SECURITY DEFINER, RLS sin políticas y protección de contraseñas filtradas, sin cambios de esquema ni permisos.
+
+## 20/11/2026 — Confirmación visible antes de entrar
+
+- El propietario confirma que el segundo intento completó el acceso. Revisión del recorrido: el estado de éxito anterior navegaba automáticamente tras 700 ms, demasiado rápido para leerlo.
+- Se mantiene ahora una pantalla final hasta pulsar «Entrar en mi portal»: check verde, título «¡Contraseña guardada!», confirmación explícita, email verificado y acceso con la contraseña elegida. Textos coherentes en ES/CA/EN; botón previo «Guardar mi contraseña».
+- Pruebas de API y componente superadas: código obligatorio, contraseña válida, recuperación, errores/reintentos, bloqueo de doble envío y éxito persistente sin temporizador de navegación. TypeScript y lint correctos. No se cambian Auth, plantillas de correo, cuentas ni registros financieros.

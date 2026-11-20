@@ -1,9 +1,9 @@
 const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const ts = require('typescript')
-// Exercise the actual component handlers with delayed/blocked navigation.
+// Exercise the actual component handlers and the persistent success screen.
 // No browser, passwords, emails or Auth services are used.
-let slots = [], cursor = 0, effects = [], posts = 0, navigation
+let slots = [], cursor = 0, effects = [], posts = 0, navigations = 0
 const hooks = {
   useState(initial) { const i = cursor++; if (!(i in slots)) slots[i] = initial; return [slots[i], v => { slots[i] = typeof v === 'function' ? v(slots[i]) : v }] },
   useRef(initial) { const i = cursor++; if (!(i in slots)) slots[i] = { current: initial }; return slots[i] },
@@ -12,7 +12,7 @@ const hooks = {
 }
 global.fetch = async (_url, options) => ({ ok: true, json: async () => { if (options?.method === 'POST') { posts++; return { success: true, next: '/portal/dashboard' } } return { step: 'password', email: 'family@example.invalid' } } })
 global.sessionStorage = { removeItem() {}, getItem() { return null } }
-global.window = { setTimeout(fn) { navigation = fn; return 1 }, clearTimeout() {}, location: { assign() { throw new Error('Mobile navigation blocked') } } }
+global.window = { setTimeout() { navigations++; return 1 }, clearTimeout() {}, location: { assign() { throw new Error('Mobile navigation blocked') } } }
 const moduleUnderTest = { exports: {} }
 new Function('module', 'exports', 'require', ts.transpileModule(fs.readFileSync('src/app/portal/codigo/email-code-form.tsx', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022 } }).outputText)(moduleUnderTest, moduleUnderTest.exports, name => {
   if (name === 'react') return hooks
@@ -34,13 +34,14 @@ function find(node, predicate) { if (!node || typeof node !== 'object') return n
   tree = render()
   assert.equal(posts, 1)
   assert(!find(tree, n => n.type === 'form'), 'Saved passwords cannot be submitted again')
-  assert(find(tree, n => n.type === 'h2' && n.props.children === 'Contraseña guardada'))
+  assert(find(tree, n => n.type === 'h1' && n.props.children === '¡Contraseña guardada!'))
   assert(find(tree, n => n.type === 'a' && n.props.href === '/portal/dashboard'), 'A normal navigation link remains available')
   await submit({ preventDefault() {} })
   assert.equal(posts, 1, 'A stale form handler/double tap cannot repeat the consumed verification')
-  assert.doesNotThrow(() => navigation())
+  assert.equal(navigations, 0, 'Success stays visible until the user chooses to enter')
+  assert(find(tree, n => n.type === 'p' && n.props.children === 'family@example.invalid'), 'Verified email is shown on the success screen')
   tree = render()
-  assert(find(tree, n => n.type === 'h2' && n.props.children === 'Contraseña guardada'), 'Navigation failure cannot become a password error')
+  assert(find(tree, n => n.type === 'h1' && n.props.children === '¡Contraseña guardada!'), 'Success remains visible on subsequent renders')
   assert(!slots.includes('Fixture-password-99'), 'Passwords cleared after completion')
-  console.log('PASS: saved confirmation, cleared password, blocked duplicate submission and usable link after mobile navigation failure. Mock UI only.')
+  console.log('PASS: saved confirmation, cleared password, blocked duplicate submission and persistent success screen with verified email and explicit portal link. Mock UI only.')
 })().catch(error => { console.error(error); process.exitCode = 1 })

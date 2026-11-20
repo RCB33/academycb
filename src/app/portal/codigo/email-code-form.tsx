@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { KeyRound, Loader2, Mail } from 'lucide-react'
+import { CircleCheck, KeyRound, Loader2, Mail } from 'lucide-react'
 import { LanguageSwitcher, useLocale } from '@/lib/i18n/client'
 import { createRecoveryClient } from '@/lib/supabase/recovery-client'
 import { Button } from '@/components/ui/button'
@@ -16,9 +16,9 @@ const messages = {
         email: 'Email de la inscripción', code: 'Código del correo', verify: 'Validar código y continuar',
         passwordIntro: 'Email verificado. Crea tu contraseña para entrar en tu portal. A partir de ahora accederás con tu email y esta contraseña.',
         password: 'Nueva contraseña', confirmation: 'Repite la contraseña', hint: 'Al menos 8 caracteres. Usa una contraseña que no utilices en otras webs.',
-        save: 'Guardar contraseña y entrar', request: 'Enviar un nuevo código a este email', back: 'Volver al inicio de sesión',
+        save: 'Guardar mi contraseña', request: 'Enviar un nuevo código a este email', back: 'Volver al inicio de sesión',
         sending: 'Enviando…', checking: 'Comprobando…', saving: 'Guardando…',
-        saved: 'Contraseña guardada', savedIntro: 'Ya puedes entrar con tu email y tu nueva contraseña. Estamos abriendo tu portal.', enter: 'Entrar en mi portal',
+        saved: '¡Contraseña guardada!', savedIntro: 'Tu contraseña se ha guardado correctamente. A partir de ahora puedes acceder cuando quieras con tu email y esta contraseña.', enter: 'Entrar en mi portal', accessEmail: 'Tu email de acceso',
         sent: 'Si este email tiene una cuenta, recibirá un código. Revisa también spam. Usa el último correo de recuperación que recibas.',
         emailRequired: 'Escribe un email válido para recibir el código.', mismatch: 'Las contraseñas no coinciden.',
         invalid_code: 'El código no es válido, ha caducado o ya se ha usado. Comprueba el email y el último código recibido, o solicita uno nuevo.',
@@ -35,9 +35,9 @@ const messages = {
         email: 'Email de la inscripció', code: 'Codi del correu', verify: 'Validar el codi i continuar',
         passwordIntro: 'Email verificat. Crea la teva contrasenya per entrar al portal. A partir d’ara hi accediràs amb el teu email i aquesta contrasenya.',
         password: 'Nova contrasenya', confirmation: 'Repeteix la contrasenya', hint: 'Com a mínim 8 caràcters. Fes servir una contrasenya que no utilitzis en altres webs.',
-        save: 'Desar la contrasenya i entrar', request: 'Enviar un nou codi a aquest email', back: 'Tornar a l’inici de sessió',
+        save: 'Desar la meva contrasenya', request: 'Enviar un nou codi a aquest email', back: 'Tornar a l’inici de sessió',
         sending: 'Enviant…', checking: 'Comprovant…', saving: 'Desant…',
-        saved: 'Contrasenya desada', savedIntro: 'Ja pots entrar amb el teu email i la nova contrasenya. Estem obrint el teu portal.', enter: 'Entrar al meu portal',
+        saved: 'Contrasenya desada!', savedIntro: 'La teva contrasenya s’ha desat correctament. A partir d’ara pots accedir quan vulguis amb el teu email i aquesta contrasenya.', enter: 'Entrar al meu portal', accessEmail: 'El teu email d’accés',
         sent: 'Si aquest email té un compte, rebrà un codi. Revisa també el correu brossa. Fes servir l’últim correu de recuperació que rebis.',
         emailRequired: 'Escriu un email vàlid per rebre el codi.', mismatch: 'Les contrasenyes no coincideixen.',
         invalid_code: 'El codi no és vàlid, ha caducat o ja s’ha utilitzat. Comprova l’email i l’últim codi rebut, o demana’n un de nou.',
@@ -54,9 +54,9 @@ const messages = {
         email: 'Registration email', code: 'Email code', verify: 'Verify code and continue',
         passwordIntro: 'Email verified. Create your password to enter your portal. From now on, use your email and this password to sign in.',
         password: 'New password', confirmation: 'Repeat your password', hint: 'At least 8 characters. Use a password you do not use on other websites.',
-        save: 'Save password and sign in', request: 'Send a new code to this email', back: 'Back to sign in',
+        save: 'Save my password', request: 'Send a new code to this email', back: 'Back to sign in',
         sending: 'Sending…', checking: 'Checking…', saving: 'Saving…',
-        saved: 'Password saved', savedIntro: 'You can now sign in with your email and new password. We are opening your portal.', enter: 'Enter my portal',
+        saved: 'Password saved!', savedIntro: 'Your password has been saved successfully. From now on, you can sign in whenever you like with your email and this password.', enter: 'Enter my portal', accessEmail: 'Your sign-in email',
         sent: 'If this email has an account, it will receive a code. Check your spam folder too. Use the latest recovery email you receive.',
         emailRequired: 'Enter a valid email to receive the code.', mismatch: 'The passwords do not match.',
         invalid_code: 'The code is invalid, expired or already used. Check your email and the latest code, or request a new one.',
@@ -98,13 +98,6 @@ export function EmailCodeForm({ initialType, next }: { initialType: 'invite' | '
         return () => { active = false }
     }, [])
     useEffect(() => { if (step === 'password') passwordInput.current?.focus() }, [step])
-    useEffect(() => {
-        if (step !== 'complete') return
-        // Keep a normal link available if mobile navigation is delayed or this
-        // page is restored from the browser's back/forward cache.
-        const timer = window.setTimeout(() => { try { window.location.assign(destination) } catch {} }, 700)
-        return () => window.clearTimeout(timer)
-    }, [step, destination])
     useEffect(() => {
         if (cooldown <= 0) return
         const timer = setTimeout(() => setCooldown(value => value - 1), 1000)
@@ -153,11 +146,14 @@ export function EmailCodeForm({ initialType, next }: { initialType: 'invite' | '
         <div className="w-full max-w-md">
             <div className="mb-5 flex justify-end"><LanguageSwitcher /></div>
             <section className="rounded-3xl border border-white/15 bg-white p-6 shadow-2xl sm:p-8" aria-labelledby="code-access-title">
-                <KeyRound aria-hidden="true" className="mb-4 h-9 w-9 text-gold" />
-                <h1 id="code-access-title" className="font-heading text-3xl font-black text-navy">{t.title}</h1>
+                {step === 'complete' ? <CircleCheck aria-hidden="true" className="mb-5 h-16 w-16 rounded-full bg-emerald-50 p-3 text-emerald-600" /> : <KeyRound aria-hidden="true" className="mb-4 h-9 w-9 text-gold" />}
+                <h1 id="code-access-title" aria-live="polite" className="font-heading text-3xl font-black text-navy">{step === 'complete' ? t.saved : t.title}</h1>
                 {step === 'checking' ? <p className="mt-6 flex items-center gap-2"><Loader2 className="h-5 w-5 animate-spin" />{t.checking}</p> : step === 'complete' ? <div className="mt-6" role="status">
-                    <h2 className="text-xl font-bold text-emerald-800">{t.saved}</h2>
                     <p className="mt-3 text-sm leading-relaxed text-slate-600">{t.savedIntro}</p>
+                    <div className="mt-5 rounded-xl border border-emerald-100 bg-emerald-50 p-4">
+                        <p className="text-xs font-semibold text-emerald-800">{t.accessEmail}</p>
+                        <p className="mt-1 break-all text-sm font-semibold text-navy">{email}</p>
+                    </div>
                     <a href={destination} className="mt-6 flex min-h-12 items-center justify-center rounded-md bg-gold px-4 py-3 text-center font-bold text-navy">{t.enter}</a>
                 </div> : <>
                     <p className="mt-5 text-sm font-bold text-navy">{step === 'code' ? t.codeStep : t.passwordStep}</p>
