@@ -1,0 +1,11 @@
+import Link from 'next/link'
+import {Clock3,MapPin,Users,ArrowUpRight} from 'lucide-react'
+import {SPORT_AREAS,sportArea,sessionTime,type CoachSession,type SportArea} from '@/lib/coach-workspace'
+export function SessionCards({events,date}:{events:CoachSession[];date?:string}){
+ if(!events.length)return <div className="rounded-2xl border border-dashed bg-white p-8 text-center"><p className="font-bold text-navy">No hay sesiones programadas</p><p className="mt-2 text-sm text-slate-500">Elige otro día o consulta el calendario.</p></div>
+ return <div className="space-y-7">{(Object.keys(SPORT_AREAS) as SportArea[]).map(area=>{
+  const selected=events.filter(e=>sportArea(e)===area);if(!selected.length)return null
+  const groups=[...new Set(selected.map(e=>e.teams?.name||e.categories?.name||e.title))]
+  return <section key={area} className="space-y-3"><h2 className="flex items-center gap-3 text-lg font-black text-navy"><span className={`rounded-full border px-3 py-1 text-sm ${SPORT_AREAS[area].className}`}>{SPORT_AREAS[area].label}</span><span className="text-xs font-medium text-slate-500">{selected.length} {selected.length===1?'sesión':'sesiones'}</span></h2>{groups.map(group=><div key={group} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"><h3 className="break-words text-base font-bold text-navy">{group}</h3><div className="mt-3 space-y-2">{selected.filter(e=>(e.teams?.name||e.categories?.name||e.title)===group).map(e=><Link key={e.id} href={`/coach/session/${e.id}${date?'?date='+date:''}`} className="flex min-h-24 items-center gap-3 rounded-xl bg-slate-50 p-3 transition hover:bg-blue-50 active:scale-[0.99]"><div className="min-w-0 flex-1"><p className="break-words text-sm font-semibold text-navy">{e.title}</p><p className="mt-2 flex items-center gap-1.5 text-sm text-slate-600"><Clock3 className="h-4 w-4 shrink-0"/>{sessionTime(e)}</p>{e.location&&<p className="mt-1 flex items-start gap-1.5 break-words text-xs text-slate-500"><MapPin className="h-4 w-4 shrink-0"/>{e.location}</p>}<p className="mt-2 flex items-center gap-1.5 text-xs font-bold text-navy"><Users className="h-4 w-4"/>{e.playerCount===undefined?'Ver jugadores y asistencia':`${e.playerCount} jugadores · Abrir grupo`}</p></div><ArrowUpRight className="h-5 w-5 shrink-0 text-navy"/></Link>)}</div></div>)}</section>
+ })}</div>
+}

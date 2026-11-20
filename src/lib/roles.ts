@@ -12,7 +12,7 @@ export const WORKER_ACCESS_ROLES: Array<{
     description: string
 }> = [
     { value: 'admin', label: 'Administrador total', description: 'Acceso completo a gestión, finanzas, ajustes, usuarios y permisos. Asignar solo a personal de máxima confianza.' },
-    { value: 'coach', label: 'Entrenador', description: 'Ve sus sesiones, equipos y controles de asistencia.' },
+    { value: 'coach', label: 'Entrenador', description: 'Acceso deportivo compartido: todos los jugadores, sesiones, asistencia y evaluaciones. Sin finanzas.' },
     { value: 'staff', label: 'Coordinación', description: 'Gestiona el calendario general y la operativa diaria.' },
     { value: 'finance', label: 'Finanzas', description: 'Accede exclusivamente al control económico.' },
     { value: 'marketing', label: 'Marketing', description: 'Gestiona solicitudes web y contactos comerciales.' },

@@ -20,14 +20,12 @@ begin
  if not exists(select 1 from public.child_metrics where id=evaluation and pace=62) then raise exception 'Assigned coach insert failed';end if;
  update public.child_metrics set pace=63,evaluated_by=coach where id=evaluation;
  get diagnostics affected=row_count;if affected<>1 then raise exception 'Assigned coach update failed';end if;
- begin
-  insert into public.child_metrics(child_id,recorded_at,evaluated_by) values(other_child,current_date,coach);
-  raise exception 'Other player insert allowed';
- exception when insufficient_privilege then null;end;
+ insert into public.child_metrics(child_id,recorded_at,evaluated_by) values(other_child,current_date,coach);
+ if not exists(select 1 from public.child_metrics where child_id=other_child) then raise exception 'Shared coach evaluation failed';end if;
  begin
   update public.child_metrics set child_id=other_child where id=evaluation;
-  raise exception 'Reassigning evaluation allowed';
- exception when insufficient_privilege then null;end;
+  raise exception 'FAIL Reassigning evaluation allowed';
+ exception when raise_exception then if sqlerrm like 'FAIL%' then raise;end if;end;
  begin
   update public.child_metrics set pace=100 where id=evaluation;
   raise exception 'Out of range score allowed';
@@ -49,6 +47,6 @@ begin
  update public.child_metrics set pace=99 where id=evaluation;
  get diagnostics affected=row_count;if affected<>0 then raise exception 'Revoked coach changed score';end if;
  execute 'reset role';
- raise notice 'PASS: assigned coach insert/update, other player/reassignment/invalid score denied, draft hidden, published visible, guardian and revoked coach cannot write';
+ raise notice 'PASS: shared coach insert/update, evaluation reassignment/invalid score denied, draft hidden, published visible, guardian and revoked coach cannot write';
 end $$;
 rollback;

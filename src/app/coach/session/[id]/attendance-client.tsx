@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Check, X, UserMinus, Loader2 } from 'lucide-react'
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import {useRouter} from 'next/navigation'
 
 interface Child {
     id: string
@@ -14,6 +15,7 @@ interface Child {
 }
 
 export function AttendanceClient({ childrenData, sessionDate, eventId }: { childrenData: Child[], sessionDate: string, eventId: string }) {
+    const router=useRouter()
     const [kids, setKids] = useState<Child[]>(childrenData)
     const [loadingMap, setLoadingMap] = useState<Record<string, boolean>>({})
 
@@ -27,9 +29,10 @@ export function AttendanceClient({ childrenData, sessionDate, eventId }: { child
         try {
             await markAttendance(eventId, childId, status, sessionDate)
             toast.success("Asistencia guardada")
+            router.refresh()
         } catch {
             // Revert on error
-            setKids(previousKids)
+            setKids(current=>current.map(k=>k.id===childId?{...k,attendance:previousKids.find(p=>p.id===childId)?.attendance||null}:k))
             toast.error("No se pudo guardar la asistencia. Intenta de nuevo.")
         } finally {
             setLoadingMap(prev => ({ ...prev, [childId]: false }))
@@ -42,7 +45,7 @@ export function AttendanceClient({ childrenData, sessionDate, eventId }: { child
                 const isSaving = loadingMap[kid.id]
                 return (
                     <div key={kid.id} className="bg-white p-3 rounded-xl shadow-sm border flex items-center justify-between">
-                        <div className="font-medium text-sm md:text-base text-navy flex-1">
+                        <div className="min-w-0 break-words pr-3 font-medium text-sm md:text-base text-navy flex-1">
                             {kid.full_name}
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0 opacity-100 transition-opacity">
@@ -56,7 +59,7 @@ export function AttendanceClient({ childrenData, sessionDate, eventId }: { child
                                         variant={kid.attendance === 'present' ? 'default' : 'outline'}
                                         size="icon"
                                         className={cn(
-                                            "rounded-full h-10 w-10 border-2",
+                                            "rounded-full h-11 w-11 border-2",
                                             kid.attendance === 'present' && "bg-green-600 hover:bg-green-700 border-green-600",
                                             kid.attendance !== 'present' && "border-green-200 text-green-600 hover:bg-green-50"
                                         )}
@@ -69,7 +72,7 @@ export function AttendanceClient({ childrenData, sessionDate, eventId }: { child
                                         variant={kid.attendance === 'absent' ? 'destructive' : 'outline'}
                                         size="icon"
                                         className={cn(
-                                            "rounded-full h-10 w-10 border-2",
+                                            "rounded-full h-11 w-11 border-2",
                                             kid.attendance === 'absent' && "bg-red-600 hover:bg-red-700 border-red-600",
                                             kid.attendance !== 'absent' && "border-red-200 text-red-600 hover:bg-red-50"
                                         )}
@@ -82,7 +85,7 @@ export function AttendanceClient({ childrenData, sessionDate, eventId }: { child
                                         variant={kid.attendance === 'excused' ? 'secondary' : 'outline'}
                                         size="icon"
                                         className={cn(
-                                            "rounded-full h-10 w-10 border-2",
+                                            "rounded-full h-11 w-11 border-2",
                                             kid.attendance === 'excused' && "bg-amber-500 hover:bg-amber-600 text-white border-amber-500",
                                             kid.attendance !== 'excused' && "border-amber-200 text-amber-600 hover:bg-amber-50"
                                         )}

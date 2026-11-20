@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { CoachNav } from '@/components/coach/coach-nav'
+import { CoachMain } from '@/components/coach/coach-main'
 
 export default async function CoachLayout({
     children,
@@ -20,7 +21,8 @@ export default async function CoachLayout({
         .eq('id', user.id)
         .single()
 
-    if (profile?.role !== 'coach' && profile?.role !== 'admin' && profile?.role !== 'staff') {
+    const {data:active}=await supabase.rpc('has_role',{allowed_roles:['coach','admin']})
+    if (!active || (profile?.role !== 'coach' && profile?.role !== 'admin')) {
         redirect('/portal')
     }
 
@@ -34,9 +36,9 @@ export default async function CoachLayout({
     return (
         <div className="flex h-[100dvh] min-h-[100dvh] flex-col overflow-hidden bg-slate-50">
             <CoachNav signOut={signOut} />
-            <main className="flex-1 overflow-y-auto overscroll-y-contain pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:pb-8">
+            <CoachMain>
                 {children}
-            </main>
+            </CoachMain>
         </div>
     )
 }

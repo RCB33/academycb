@@ -20,7 +20,7 @@ export async function updateStudentMetrics(childId: string, input: unknown) {
             discipline:parsed.data.discipline ?? existing?.discipline ?? 50,
             visible_to_guardian:parsed.data.visible_to_guardian ?? existing?.visible_to_guardian ?? (role==='admin'),
         },{onConflict:'child_id,recorded_at'})
-        if(error)return {success:false,error:'No se pudo guardar la evaluación. Comprueba que el jugador sigue asignado a tu equipo.'}
+        if(error)return {success:false,error:'No se pudo guardar la evaluación. Comprueba que el jugador está activo y tu acceso sigue habilitado.'}
         revalidatePath(`/admin/crm/alumnos/${childId}`);revalidatePath(`/coach/jugadores/${childId}`);revalidatePath(`/portal/${childId}`)
         return {success:true}
     }catch{return {success:false,error:'No tienes permisos para guardar esta evaluación.'}}

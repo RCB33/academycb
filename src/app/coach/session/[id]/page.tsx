@@ -1,107 +1,25 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeft, Calendar as CalendarIcon } from 'lucide-react'
-import { AttendanceClient } from './attendance-client'
-
-export default async function SessionDetailsPage({ params }: { params: Promise<{ id: string }> }) {
-    const { id } = await params
-    const supabase = await createClient()
-
-    // 1. Validate Access
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) redirect('/portal')
-
-    // 2. Fetch Event
-    const { data: event, error: eventError } = await supabase
-        .from('calendar_events')
-        .select('*, categories(name), teams(name)')
-        .eq('id', id)
-        .single()
-
-    if (!event || eventError) {
-        return <div className="p-8 text-center text-red-500 pb-8">Sesión no encontrada.</div>
-    }
-
-    if (!event.category_id && !event.team_id) {
-        return (
-            <div className="p-4 max-w-lg mx-auto mt-10">
-                <Link href="/coach" className="text-navy flex items-center gap-1 font-medium mb-6">
-                    <ChevronLeft className="h-4 w-4" /> Volver
-                </Link>
-                <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded-lg">
-                    Esta sesión no tiene un equipo o categoría asignada, por lo que no se puede pasar lista.
-                    Por favor, contacta con coordinación.
-                </div>
-            </div>
-        )
-    }
-
-    const sessionDateStr = new Date(event.start_date).toLocaleDateString('en-CA',{timeZone:'Europe/Madrid'})
-
-    const {data:children,error:rosterError}=await supabase.rpc('get_session_players',{event_uuid:event.id})
-    if(rosterError) return <div className="p-8">No se pudo cargar la lista de esta sesión.</div>
-
-    // 4. Fetch existing attendance for this date
-    const { data: sessions } = await supabase
-        .from('training_sessions')
-        .select('child_id, attendance')
-        .eq('event_id', event.id)
-
-    // Merge data
-    const kidsData = (children as {id:string;full_name:string}[] || []).map(child => {
-        const sessionRecord = sessions?.find(s => s.child_id === child.id)
-        return {
-            id: child.id,
-            full_name: child.full_name,
-            attendance: sessionRecord?.attendance as 'present' | 'absent' | 'excused' | null || null
-        }
-    })
-
-    return (
-        <div className="p-4 md:p-8 max-w-2xl mx-auto">
-            <Link href="/coach" className="inline-flex items-center gap-1 text-muted-foreground hover:text-navy font-medium mb-4 transition-colors">
-                <ChevronLeft className="h-5 w-5" /> Volver al panel
-            </Link>
-
-            <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 mb-6">
-                <div className="flex gap-2 items-center mb-2">
-                    <span className="bg-navy/10 text-navy font-bold px-2.5 py-1 rounded-md text-xs uppercase tracking-wider">
-                        {event.teams?.name || event.categories?.name}
-                    </span>
-                </div>
-                <h1 className="text-xl md:text-2xl font-bold tracking-tight text-slate-900 leading-tight">
-                    {event.title}
-                </h1>
-
-                <div className="mt-4 flex flex-col gap-2 text-sm text-slate-600">
-                    <div className="flex items-center gap-2">
-                        <CalendarIcon className="h-4 w-4 text-slate-400" />
-                        <span>
-                            {new Date(event.start_date).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
-                            <span className="mx-2">•</span>
-                            {new Date(event.start_date).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            <div className="flex items-center justify-between mb-4 mt-8 px-1">
-                <h2 className="text-lg font-bold text-navy">Asistencia ({kidsData.length})</h2>
-                <div className="flex gap-2 text-xs font-medium text-slate-500">
-                    <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-green-500"></span> P</span>
-                    <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500"></span> F</span>
-                    <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-amber-500"></span> J</span>
-                </div>
-            </div>
-
-            {kidsData.length === 0 ? (
-                <div className="text-center py-10 text-muted-foreground bg-slate-50 rounded-xl border border-dashed">
-                    No hay jugadores registrados en esta categoría.
-                </div>
-            ) : (
-                <AttendanceClient childrenData={kidsData} sessionDate={sessionDateStr} eventId={event.id} />
-            )}
-        </div>
-    )
+import {notFound} from 'next/navigation'
+import {z} from 'zod'
+import {requireCoachAccess} from '@/lib/auth'
+import {getCoachPlayers} from '@/lib/coach-data'
+import {madridDate,validDate,sessionTime,sportArea,SPORT_AREAS,type CoachSession} from '@/lib/coach-workspace'
+import {SessionRosterEditor} from '@/components/coach/session-roster-editor'
+export default async function SessionDetails({params,searchParams}:{params:Promise<{id:string}>;searchParams:Promise<{date?:string}>}){
+ const {id}=await params;if(!z.string().uuid().safeParse(id).success)notFound()
+ const {supabase}=await requireCoachAccess()
+ const {data,error}=await supabase.from('calendar_events').select('id,title,start_date,end_date,location,source_type,event_type,team_id,is_all_day,teams(name),categories(name)').eq('id',id).neq('status','cancelled').maybeSingle()
+ if(error||!data)notFound()
+ const event=data as unknown as CoachSession,area=SPORT_AREAS[sportArea(event)]
+ const first=madridDate(new Date(event.start_date)),last=madridDate(new Date(Date.parse(event.end_date)-1))
+ const requested=validDate((await searchParams).date,first),date=requested>=first&&requested<=last?requested:first
+ const [{data:roster,error:rosterError},{data:attendance,error:attendanceError},available]=await Promise.all([supabase.rpc('get_session_players',{event_uuid:id}),supabase.from('training_sessions').select('child_id,attendance').eq('event_id',id).eq('session_date',date),getCoachPlayers()])
+ if(rosterError||attendanceError)throw new Error('No se pudo cargar la convocatoria de esta sesión.')
+ const players=(roster as Array<{id:string;full_name:string}>||[]).map(p=>({...p,attendance:(attendance?.find(a=>a.child_id===p.id)?.attendance||null) as 'present'|'absent'|'excused'|null}))
+ return <div className="mx-auto max-w-3xl space-y-5 p-4 sm:p-6">
+  <Link href={`/coach?date=${date}`} className="inline-flex min-h-11 items-center text-sm font-bold text-navy">← Volver a la jornada</Link>
+  <header className="rounded-3xl border bg-white p-5 sm:p-6"><span className={`inline-block rounded-full border px-3 py-1 text-xs font-bold ${area.className}`}>{area.label}</span><h1 className="mt-3 break-words text-2xl font-black text-navy">{event.teams?.name||event.categories?.name||event.title}</h1>{(event.teams||event.categories)&&<p className="mt-2 text-sm text-slate-600">{event.title}</p>}<p className="mt-4 text-sm font-semibold">{new Intl.DateTimeFormat('es-ES',{weekday:'long',day:'numeric',month:'long',timeZone:'Europe/Madrid'}).format(new Date(date+'T12:00:00Z'))} · {sessionTime(event)}</p>{event.location&&<p className="mt-2 text-sm text-slate-500">{event.location}</p>}
+  {first!==last&&<form className="mt-4 flex flex-wrap items-end gap-2"><label className="text-sm font-semibold">Día de asistencia<input name="date" type="date" min={first} max={last} defaultValue={date} required className="mt-1 block min-h-11 max-w-full rounded-lg border p-2 text-base"/></label><button className="min-h-11 rounded-lg bg-navy px-4 text-sm font-bold text-white">Ver día</button><p className="w-full text-xs text-slate-500">Actividad del {first} al {last}. La asistencia se guarda por día; la convocatoria es común a esta actividad.</p></form>}
+  </header><SessionRosterEditor key={date} eventId={id} date={date} players={players} available={available.map(p=>({id:p.id,full_name:p.full_name}))}/>
+ </div>
 }
