@@ -11,6 +11,7 @@ import { GlobalSignatureGuard } from "@/components/portal/global-signature-guard
 import { MobilePortalNav, PortalDesktopSidebar } from "@/components/portal/sidebar-nav"
 import { PortalPlayerSwitcher } from "@/components/portal/player-switcher"
 import { getRoleHome, isAppRole } from '@/lib/roles'
+import { PortalVisitRecorder } from '@/components/portal/visit-recorder'
 
 export default async function AuthenticatedLayout({
     children,
@@ -66,6 +67,7 @@ export default async function AuthenticatedLayout({
 
     return (
         <div className="h-[100dvh] min-h-[100dvh] w-full overflow-hidden bg-muted/20 md:h-screen md:min-h-0 flex flex-col md:flex-row">
+            {role === 'guardian' && guardian && <PortalVisitRecorder userId={user.id} />}
             {/* Mobile Header */}
             <div className="shrink-0 border-b border-white/10 bg-navy text-white shadow-md md:hidden">
                 <div className="flex min-h-16 items-center justify-between px-4 pt-[env(safe-area-inset-top)]">

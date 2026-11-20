@@ -43,6 +43,7 @@ export function MobileAdminNav({ isAdmin, isStaff, isFinance, isMarketing }: { i
             ...(isAdmin ? [
                 { href: '/admin/seguimiento', label: 'Seguimiento', icon: <TrendingUp className="h-5 w-5" /> },
                 { href: '/admin/crm/tutores', label: 'Tutores', icon: <UserPlus className="h-5 w-5" /> },
+                { href: '/admin/familias', label: 'Uso del Portal Familias', icon: <Users className="h-5 w-5" /> },
                 { href: '/admin/crm/trabajadores', label: 'Trabajadores', icon: <Briefcase className="h-5 w-5" /> },
             ] : []),
             { href: '/admin/leads', label: 'Solicitudes web', icon: <MessageSquare className="h-5 w-5" /> },

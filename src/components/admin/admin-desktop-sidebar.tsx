@@ -54,6 +54,7 @@ export function AdminDesktopSidebar({
             { href: '/admin/leads', label: 'Solicitudes web', icon: <MessageSquare size={19} /> },
             ...(isAdmin ? [
                 { href: '/admin/crm/tutores', label: 'Tutores', icon: <UserPlus size={19} /> },
+                { href: '/admin/familias', label: 'Uso del Portal Familias', icon: <Users size={19} /> },
                 { href: '/admin/crm/trabajadores', label: 'Trabajadores', icon: <Briefcase size={19} /> },
             ] : []),
         ] }] : []),
