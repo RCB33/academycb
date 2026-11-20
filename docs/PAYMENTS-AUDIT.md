@@ -1,5 +1,7 @@
 ## Formas de pago acordadas y estado mensual — 20 noviembre 2026
 
+Publicación funcional `0103d21`, READY. Navegador real: ficha y listado de jugadores, selector Efectivo/Stripe y cambio de mes (diciembre del piloto muestra Pendiente) verificados. Correo renderizado con CTA y efectivo por WhatsApp; no se envió un correo real. QA sin cambios de acuerdos/pagos: sesiones revocadas y cuenta temporal eliminada. Capturas `auditoria-2026-11-20/ficha-formas-pago.jpg` y `correo-efectivo-stripe.jpg`. Digest histórico final conservado.
+
 Regla actual del propietario: Academia admite efectivo o mensualidades por Stripe; Campus y Torneos, transferencia. Esta sección sustituye las alternativas de transferencia de Academia descritas en entradas anteriores.
 
 - Correos de mensualidades con logo y CTA «Activar pago mensual con tarjeta», alternativa de efectivo por WhatsApp 691 17 96 00, sin IBAN. Correos de aceptación de Academia también corregidos; botón cuando existe solicitud de suscripción lista. Campus y Torneos conservan su IBAN y comprobación del justificante. No se envía un botón de una suscripción aún no preparada.
