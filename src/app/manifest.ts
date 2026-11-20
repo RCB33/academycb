@@ -5,14 +5,19 @@ export default function manifest(): MetadataRoute.Manifest {
         name: 'Academy Costa Brava',
         short_name: 'ACB Academy',
         description: 'Academia de fútbol, campus y portal para familias.',
-        start_url: '/',
+        id: '/',
+        start_url: '/portal',
+        scope: '/',
         display: 'standalone',
-        background_color: '#0c2241',
-        theme_color: '#0c2241',
+        background_color: '#102a4d',
+        theme_color: '#102a4d',
         lang: 'es',
+        categories: ['sports', 'education'],
+        prefer_related_applications: false,
         icons: [
+            { src: '/pwa/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
             { src: '/icon.png', sizes: '512x512', type: 'image/png' },
-            { src: '/apple-icon.png', sizes: '180x180', type: 'image/png' },
+            { src: '/pwa/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
     }
 }

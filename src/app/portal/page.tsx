@@ -2,6 +2,7 @@
 import { LanguageSwitcher } from '@/lib/i18n/client'
 import { getT } from '@/lib/i18n/server'
 import { LoginForm } from "./login-form"
+import { InstallApp } from '@/components/pwa/install-app'
 
 export default async function LoginPage() {
     const translate = await getT()
@@ -25,6 +26,7 @@ export default async function LoginPage() {
                 </div>
 
                 <LoginForm />
+                <InstallApp />
 
                 <div className="text-center text-xs text-white/40">
                     {translate("© ")}{translate(new Date().getFullYear())} {translate(" Academy Costa Brava.")}</div>

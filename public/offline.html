@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#102a4d"><meta name="robots" content="noindex">
+  <title>Academy Costa Brava · Sin conexión</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;min-height:100dvh;display:grid;place-items:center;background:#102a4d;color:#102a4d;font:1rem/1.6 system-ui,sans-serif;padding:calc(1.5rem + env(safe-area-inset-top)) 1.5rem calc(1.5rem + env(safe-area-inset-bottom))}main{width:100%;max-width:29rem;padding:2rem;border-radius:1.5rem;background:white}small{font-weight:800;letter-spacing:.1em}h1{font-size:2rem;line-height:1.2;margin:1.5rem 0 1rem}p{color:#475569}button,a{display:block;width:100%;padding:.85rem 1rem;border-radius:.8rem;font:inherit;font-weight:700;text-align:center}button{border:0;background:#d4af37;color:#102a4d;cursor:pointer}a{margin-top:.5rem;color:#102a4d}button:focus-visible,a:focus-visible{outline:3px solid #102a4d;outline-offset:3px}
+  </style>
+</head>
+<body><main>
+  <small>ACADEMY COSTA BRAVA</small>
+  <h1 id="title">Ahora estás sin conexión</h1>
+  <p id="message">Conéctate a internet para acceder a tu portal. Si estabas enviando un formulario o un pago, comprueba su estado al volver antes de repetirlo.</p>
+  <button id="retry" type="button">Volver a intentar</button>
+  <a id="portal" href="/portal">Ir al portal</a>
+</main>
+<script>
+  const lang = (navigator.language || 'es').slice(0, 2);
+  const copy = {
+    ca: ['Ara estàs sense connexió', 'Connecta’t a internet per accedir al teu portal. Si estaves enviant un formulari o un pagament, comprova’n l’estat en tornar abans de repetir-lo.', 'Tornar a provar', 'Anar al portal'],
+    en: ['You are offline', 'Connect to the internet to access your portal. If you were submitting a form or payment, check its status when you return before trying again.', 'Try again', 'Go to the portal']
+  }[lang];
+  if (copy) { document.documentElement.lang = lang; ['title','message','retry','portal'].forEach((id,i) => document.getElementById(id).textContent = copy[i]); document.title = 'Academy Costa Brava · ' + copy[0]; }
+  document.getElementById('retry').addEventListener('click', () => location.reload());
+</script></body></html>

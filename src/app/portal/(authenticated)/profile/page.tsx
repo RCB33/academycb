@@ -1,4 +1,5 @@
 import { getPortalViewer } from '@/lib/admin-view'
+import { InstallApp } from '@/components/pwa/install-app'
 
 import { getT } from '@/lib/i18n/server'
 import { profileImageUrl } from '@/lib/profile-image'
@@ -43,6 +44,7 @@ export default async function ProfilePage() {
 
     return (
         <div className="mx-auto max-w-2xl space-y-6">
+            <InstallApp />
             <header className="rounded-3xl bg-navy p-6 text-white shadow-lg"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gold text-navy"><CircleUserRound className="h-6 w-6" /></span><h1 className="mt-4 font-heading text-3xl font-black uppercase">{translate("Mi perfil")}</h1><p className="mt-2 text-sm text-slate-300">{translate("Gestiona tus datos de contacto, contraseña y jugadores vinculados.")}</p></header>
 
             <Card className="rounded-2xl border-slate-200 shadow-sm">

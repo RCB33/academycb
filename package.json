@@ -12,6 +12,8 @@
     "test:events": "node scripts/test-event-registrations.cjs",
     "test:notifications": "node scripts/test-registration-email.cjs && node scripts/test-registration-email-details.cjs",
     "test:auth": "node scripts/test-email-code.cjs && node scripts/test-email-code-completion.cjs",
+    "test:pwa": "node scripts/test-pwa.cjs",
+    "test:subscription-activation": "node scripts/test-accepted-subscription.cjs && node scripts/test-registration-email-details.cjs && node scripts/test-billing-request-stripe.cjs && node scripts/test-payment-request-email.cjs",
     "test:offering": "node scripts/test-offering.cjs && node scripts/test-public-offer-drafts.cjs",
     "test:karen": "npm run test:payments && node scripts/test-karen-access.cjs && node scripts/test-karen-reminders.cjs && node scripts/test-billing-dates.cjs && node scripts/test-private-images.cjs && node scripts/test-family-plans.cjs",
     "test": "npm run lint && npm run typecheck",

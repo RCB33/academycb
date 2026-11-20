@@ -4,6 +4,7 @@ import { LocaleProvider } from '@/lib/i18n/client';
 import './globals.css';
 import { Toaster } from 'sonner';
 import { Providers } from '@/app/providers';
+import { PwaProvider } from '@/components/pwa/pwa-provider';
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
@@ -12,6 +13,7 @@ const baseMetadata: Metadata = {
     title: 'Academy Costa Brava',
     description: 'Gestión integral de academia de fútbol, campus y seguimiento de jugadores.',
     applicationName: 'Academy Costa Brava',
+    appleWebApp: { capable: true, title: 'ACB Academy', statusBarStyle: 'default' },
     icons: {
         icon: [
             { url: '/icon.png', type: 'image/png', sizes: '512x512' },
@@ -53,10 +55,10 @@ export default async function RootLayout({
     return (
         <html lang={locale}>
             <body className="font-sans antialiased">
-                <LocaleProvider locale={locale}><Providers>
+                <LocaleProvider locale={locale}><Providers><PwaProvider>
                     {children}
                     <Toaster position="top-center" richColors />
-                </Providers></LocaleProvider>
+                </PwaProvider></Providers></LocaleProvider>
             </body>
         </html>
     );

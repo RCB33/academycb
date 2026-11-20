@@ -2,6 +2,10 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 
 export async function proxy(request: NextRequest) {
+  // Public PWA resources never need a session refresh or database request.
+  if (['/sw.js', '/offline.html', '/manifest.webmanifest'].includes(request.nextUrl.pathname)) {
+    return NextResponse.next()
+  }
   // Camping belongs to the separate Costa Brava Cup site, never to Academy.
   if (request.nextUrl.pathname === '/camping' || request.nextUrl.pathname.startsWith('/camping/')) {
     return new NextResponse(null, { status: 404 })
