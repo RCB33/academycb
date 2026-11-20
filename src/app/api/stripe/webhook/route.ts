@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { fulfillAcademyCheckout, fulfillAcademyInvoice, syncAcademyInvoiceStatus, syncAcademySubscription } from '@/lib/academy-stripe-contract'
 import { recordWebhookProbe, WEBHOOK_PROBE_PURPOSE } from '@/lib/stripe-webhook-probe'
 import { fulfillBillingCheckout, fulfillBillingInvoice, syncBillingSubscription } from '@/lib/billing-request-stripe'
+import { isRetiredOwnerPilotEvent } from '@/lib/retired-owner-pilot'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -35,6 +36,7 @@ export async function POST(request: Request) {
     let event: Stripe.Event
     try { event = verifyPaymentWebhook(raw, signature) }
     catch { return Response.json({ error: 'Invalid signature or environment' }, { status: 400 }) }
+    if (isRetiredOwnerPilotEvent(event)) return Response.json({ received: true, retiredPilot: true })
     if (event.type === 'invoice.paid') {
         try { const invoice=event.data.object as Stripe.Invoice; if(!await fulfillBillingInvoice(invoice))await fulfillAcademyInvoice(invoice); return Response.json({ received: true }) }
         catch { return Response.json({ error: 'Invoice confirmation pending; retry' }, { status: 500 }) }

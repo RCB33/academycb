@@ -73,7 +73,17 @@ Corrección publicada `cdaffed`, Vercel `dpl_A9ga5AUYstVhfzhVcVvFM1wVDuYW`, READ
 - Verificación: tests Stripe existentes, nueva suite de estados/vinculación/importe/privacidad sin escrituras, TypeScript, lint afectado y build correctos. HTTP anónimo 200 sin redirección, cabeceras privadas/no-referrer/noindex verificadas. Cancelación y sesión desconocida no presentan éxito. Navegador real a 390×844: resultado autorizado y botón de actualizar comprobados; captura guardada en el workspace `auditoria-2026-11-20/resultado-stripe-movil.jpg`.
 - Los 11 pagos antiguos conservan `e9b3ce77d682aabd79e1097a68a22b23`. No se activaron mensualidades generales ni se modificó ningún registro financiero.
 
-## Piloto LIVE autorizado por el propietario — 20 noviembre 2026
+## Retirada autorizada del piloto de 1 € — 20 noviembre 2026
+
+- Nueva instrucción del propietario: borrar su jugador demo. Antes de retirarlo se consulta el resultado de producción, que recupera Checkout, schedule y última factura directamente de Stripe: **1,00 € pagado**, fin **20/12/2026**, `end_behavior=cancel`. Academy registró `invoice.paid` a las 09:19:22 UTC (10:19 en España). La espera inicial de autorización ya terminó; no es un pago pendiente.
+- `STRIPE_RECURRING_PAYMENTS_ENABLED=false` en Production. LIVE y tarjeta para recibos puntuales permanecen como estaban; no se activa la venta general de mensualidades.
+- El launcher privado queda cerrado (410 para el propietario; 403 sin autorización/origen válido), sin llamadas a Stripe. La retirada no solicita otro cargo, devolución ni cambia el schedule del proveedor.
+- Borrado revisado en transacción revertida: jugador demo, solicitud privada, matrícula, contrato técnico, asignaciones y plan/grupo privados sin otros usuarios. Se conservan en `payments` el recibo realmente pagado y el original cancelado, con importes, estados, fechas y referencia de factura intactos; solo se desvinculan del jugador y matrícula retirados.
+- Copia privada del contexto de contrato/matrícula/colección/solicitud y recibos: `auditoria-2026-11-20/piloto-1euro-retirado.json`, en el workspace del propietario, fuera de Git. La factura original se conserva en Stripe. Nunca se borra la cuenta administradora de Roque.
+- Webhook: tras validar firma y entorno, reconoce exclusivamente las repeticiones de la factura ya contabilizada (mismo ID, LIVE, EUR, pagada, 100 céntimos), el Checkout exacto ya terminado y el estado/finalización de esa única suscripción retirada. Una factura nueva, otro importe o cualquier otro contrato sigue la conciliación habitual. Así la retirada no provoca reintentos por un contrato demo inexistente ni duplica el euro.
+- Pruebas de retiro, firma real simulada, importe/identidad/entorno, suscripciones finitas, TypeScript y lint correctos. Sin operaciones financieras reales de prueba nuevas. Baseline ajeno al piloto: 19 pagos, digest `d6eb9a036aa29d8fe1a96c3328f85151`; el procedimiento aborta si modifica cualquiera de ellos o los 16 jugadores reales.
+
+## Piloto LIVE autorizado por el propietario — 20 noviembre 2026 (histórico)
 
 Nueva autorización expresa: una única suscripción LIVE de **1 € total, un mes, sin matrícula/extras ni renovación**, para `rokecordoba@gmail.com`. No habilita las mensualidades para el resto de familias. `STRIPE_RECURRING_PAYMENTS_ENABLED=false` se conserva.
 

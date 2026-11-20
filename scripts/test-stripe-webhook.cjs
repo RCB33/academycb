@@ -62,6 +62,19 @@ function request(value, signed = true) {
     assert.equal((await POST(request({...commercial,livemode:true,data:{object:{...commercial.data.object,livemode:true}}}))).status,200,'Stopping new sales must still reconcile existing charges')
     assert.equal(lastRpc,'confirm_event_checkout')
     assert.equal((await POST(request(commercial))).status,400,'Production still rejects TEST events')
+    const retired = { id: 'evt_retired_pilot_unit', livemode: true, type: 'invoice.paid', data: { object: { id: 'in_1Udn2HGk8vSBcmVdioT3OWbl', livemode: true, status: 'paid', currency: 'eur', amount_paid: 100 } } }
+    assert.equal((await POST(request(retired, false))).status, 400, 'Retired events still require a real verified signature')
+    const retiredReply = await POST(request(retired))
+    assert.equal(retiredReply.status, 200)
+    assert.equal((await retiredReply.json()).retiredPilot, true)
+    const { isRetiredOwnerPilotEvent } = load(path.resolve('src/lib/retired-owner-pilot.ts'))
+    for (const changed of [{ id: 'in_another' }, { amount_paid: 200 }, { currency: 'usd' }, { status: 'open' }, { livemode: false }]) {
+        assert.equal(isRetiredOwnerPilotEvent({ ...retired, data: { object: { ...retired.data.object, ...changed } } }), false, 'Never suppress another or changed payment')
+    }
+    assert.equal(isRetiredOwnerPilotEvent({ ...retired, livemode: false }), false)
+    const ended = { ...retired, type: 'customer.subscription.deleted', data: { object: { id: 'sub_1Udn2HGk8vSBcmVdBP1LPICl', livemode: true, metadata: { purpose: 'academy_contract', academy_contract_id: '78b7e771-3b5c-4525-8baa-7dea137bd3e9' } } } }
+    assert.equal(isRetiredOwnerPilotEvent(ended), true)
+    assert.equal(isRetiredOwnerPilotEvent({ ...ended, data: { object: { ...ended.data.object, id: 'sub_other' } } }), false)
     delete process.env.STRIPE_WEBHOOK_SECRET
     assert.equal((await POST(request(event,false))).status,503)
     console.log('PASS: real signature verification, malformed/missing signature, test/live guard, payload limit, ignored unrelated events, retry after DB error, missing configuration. No network or charges.')
