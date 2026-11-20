@@ -1,3 +1,12 @@
+## Revisión mensual y recordatorios de Karen — 20 noviembre 2026
+
+- Efectivo se valida registrando el cobro realmente recibido, con importe y fecha, mediante el ledger existente. El método acordado nunca convierte una cuota en pagada. Pantalla `/admin/finanzas/revision` con filtros de mes/método, saldos, incidencias Stripe, validación de efectivo y recordatorio.
+- Avisos internos deduplicados: día 3 revisión de efectivo, día 7 repaso de pendientes, desde día 8 seguimiento. Comprobación diaria a las 07:15 UTC con fecha de Madrid. Si no hay cuotas vencidas pendientes, no se genera aviso. No envía correos automáticamente ni cambia pagos. Migraciones remotas `20261120092524_academy_payment_followup` y `20261120092751_academy_payment_review_schedule`; cron activo comprobado.
+- Los fallos LIVE de Stripe generan aviso administrativo; se detecta también suscripción activa con última factura abierta e intento fallido. No se alteran calendarios, contratos ni flags: las mensualidades generales siguen desactivadas; piloto privado intacto.
+- Botón de recordatorio con selección del tutor y revisión explícita de efectivo/Stripe. El servidor vuelve a comprobar vínculo, email, vencimiento y saldo. Un aviso por tutor/recibo/día, registro con RLS, reserva transaccional y clave de idempotencia del proveedor. Correo suave con branding y aclaración de no pagar dos veces. Aceptación del proveedor no equivale a entrega en el buzón.
+- Pruebas: suites Karen/pagos, Stripe y correos simulados; SQL local con fixtures revertidas (días 2/3/4/7/8, deduplicación, fallos TEST/LIVE, permisos y saldos obsoletos); TypeScript aislado sin errores. Comprobación remota de función en transacción revertida y permisos RPC. Asesor de seguridad sin nuevos avisos: persisten los ya documentados de funciones SECURITY DEFINER, tablas sin políticas y contraseñas filtradas.
+- Baseline de esta tarea: 19 pagos anteriores, digest `d6eb9a036aa29d8fe1a96c3328f85151`, excluyendo únicamente el piloto privado preexistente. Los 8 registros adicionales respecto de la auditoría anterior ya existían al empezar esta tarea. Digest conservado tras migraciones y comprobación revertida; ningún correo real enviado ni cobro iniciado.
+
 ## Inscripción: efectivo/Stripe y solicitudes conjuntas — 20 noviembre 2026
 
 - Academia sola muestra efectivo y tarjeta con Stripe. El servidor rechaza transferencias (incluidos formularios antiguos) con «Para Academia solo se acepta efectivo o tarjeta con Stripe.», sin exponer el error técnico del enum.

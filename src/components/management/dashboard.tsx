@@ -408,6 +408,7 @@ export function ManagementDashboard({ data }: { data: WorkspaceData }) {
           </Link>
         ))}
       </div>
+      <Link href={`/admin/finanzas/revision?month=${data.month}`} className="block rounded-2xl border border-gold/40 bg-amber-50 p-4 text-sm font-bold text-navy">Revisión de cuotas · validar efectivo, revisar Stripe y enviar recordatorios →</Link>
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
         <PlayersOverview players={data.players} compact />
         <aside className={`${panel} space-y-4 p-5 sm:p-6`}>

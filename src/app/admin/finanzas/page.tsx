@@ -265,6 +265,7 @@ export default function FinancePage() {
                     </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
+                    <Button asChild variant="outline"><Link href="/admin/finanzas/revision">Revisar cuotas y recordatorios</Link></Button>
                     <Button asChild variant="outline"><Link href="/admin/finanzas/solicitudes">Cobros y suscripciones por enlace</Link></Button>
                     <CollectReceiptDialog onSaved={async () => { await Promise.all([fetchAll(), fetchPaymentGrid()]) }} />
                     <Button onClick={() => setManualPaymentOpen(true)} variant="outline">

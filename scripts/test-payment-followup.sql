@@ -1,0 +1,56 @@
+\set ON_ERROR_STOP on
+begin;
+create role anon;create role authenticated;create role service_role bypassrls;
+create schema private;
+create table profiles(id uuid primary key,role text);
+create table workers(id uuid default gen_random_uuid(),user_id uuid,access_enabled boolean default true);
+create function has_role(text[]) returns boolean language sql as $$select true$$;
+create type notification_type as enum ('info','alert','success');
+create table notifications(id uuid default gen_random_uuid(),user_id uuid,title text,message text,type notification_type,link_url text,is_read boolean default false,created_at timestamptz default now());
+create table children(id uuid primary key,full_name text,archived_at timestamptz);
+create table guardians(id uuid primary key,email text);
+create table child_guardians(child_id uuid,guardian_id uuid);
+create table academy_memberships(id uuid primary key,child_id uuid,agreed_payment_method text);
+create table payments(id uuid primary key,child_id uuid,ref_id uuid,type text,concept_code text,covered_month text,due_date date,status text,amount numeric);
+create table manual_receipt_allocations(id uuid default gen_random_uuid(),payment_id uuid,amount numeric,voided_at timestamptz);
+create table academy_checkout_contracts(id uuid primary key,membership_id uuid,mode text,state text,billing_status text);
+create table billing_requests(id uuid primary key,child_id uuid,mode text,state text);
+create table billing_request_items(request_id uuid,payment_id uuid);
+create table billing_request_attempts(id uuid primary key,request_id uuid,state text,billing_status text);
+\ir ../supabase/migrations/20261120092524_academy_payment_followup.sql
+insert into profiles values('00000000-0000-4000-8000-000000000001','admin'),('00000000-0000-4000-8000-000000000002','guardian');
+insert into children values('00000000-0000-4000-8000-000000000003','Fixture',null);
+insert into guardians values('00000000-0000-4000-8000-000000000004','fixture@example.invalid');
+insert into child_guardians values('00000000-0000-4000-8000-000000000003','00000000-0000-4000-8000-000000000004');
+do $$
+declare m uuid:=gen_random_uuid();p uuid:=gen_random_uuid();s uuid:=gen_random_uuid();c uuid:=gen_random_uuid();r uuid;pay_digest text;claim_id uuid:=gen_random_uuid();result public.payment_reminder_deliveries%rowtype;denied boolean;
+begin
+ insert into academy_memberships values(m,'00000000-0000-4000-8000-000000000003','cash');
+ insert into payments values(p,'00000000-0000-4000-8000-000000000003',m,'academy','monthly','2027-01','2027-01-01','pending',75);
+ insert into payments values(s,'00000000-0000-4000-8000-000000000003',null,'academy','monthly','2027-01','2027-01-01','pending',75);
+ select md5(string_agg(to_jsonb(x)::text,'' order by id)) into pay_digest from payments x;
+ perform private.review_academy_monthly_payments('2027-01-02');
+ if exists(select 1 from notifications) then raise exception 'Too early';end if;
+ perform private.review_academy_monthly_payments('2027-01-03');perform private.review_academy_monthly_payments('2027-01-04');
+ if (select count(*) from notifications)<>1 then raise exception 'Cash stage missing/duplicate';end if;
+ perform private.review_academy_monthly_payments('2027-01-07');perform private.review_academy_monthly_payments('2027-01-08');perform private.review_academy_monthly_payments('2027-01-10');
+ if (select count(*) from notifications)<>3 then raise exception 'Stages missing/duplicate';end if;
+ if exists(select 1 from notifications where user_id='00000000-0000-4000-8000-000000000002') then raise exception 'Family notified automatically';end if;
+ if pay_digest<>(select md5(string_agg(to_jsonb(x)::text,'' order by id)) from payments x) then raise exception 'Cron modified payments';end if;
+ insert into academy_checkout_contracts values(c,m,'test','active','active');update academy_checkout_contracts set billing_status='attention' where id=c;
+ if (select count(*) from notifications)<>3 then raise exception 'Test Stripe alert leaked';end if;
+ update academy_checkout_contracts set billing_status='active',mode='live' where id=c;
+ update academy_checkout_contracts set billing_status='attention' where id=c;update academy_checkout_contracts set billing_status='attention' where id=c;
+ if (select count(*) from notifications)<>4 then raise exception 'Stripe missing or duplicate';end if;
+ insert into payments values(gen_random_uuid(),'00000000-0000-4000-8000-000000000003',m,'academy','monthly',to_char(current_date,'YYYY-MM'),current_date,'pending',50) returning id into r;
+ select * into result from claim_payment_reminder(claim_id,'00000000-0000-4000-8000-000000000001',r,'00000000-0000-4000-8000-000000000004','fixture@example.invalid',5000);
+ if result.id<>claim_id then raise exception 'Missing claim';end if;
+ select * into result from claim_payment_reminder(gen_random_uuid(),'00000000-0000-4000-8000-000000000001',r,'00000000-0000-4000-8000-000000000004','fixture@example.invalid',5000);
+ if result.id<>claim_id or (select count(*) from payment_reminder_deliveries)<>1 then raise exception 'Duplicate reminder';end if;
+ denied:=false;begin perform claim_payment_reminder(gen_random_uuid(),'00000000-0000-4000-8000-000000000002',r,'00000000-0000-4000-8000-000000000004','fixture@example.invalid',5000);exception when others then denied:=true;end;if not denied then raise exception 'Guardian allowed';end if;
+ insert into manual_receipt_allocations(payment_id,amount) values(r,25);
+ denied:=false;begin perform claim_payment_reminder(gen_random_uuid(),'00000000-0000-4000-8000-000000000001',r,'00000000-0000-4000-8000-000000000004','fixture@example.invalid',5000);exception when others then denied:=true;end;if not denied then raise exception 'Stale balance allowed';end if;
+ if has_function_privilege('authenticated','claim_payment_reminder(uuid,uuid,uuid,uuid,text,bigint)','execute') or has_function_privilege('anon','claim_payment_reminder(uuid,uuid,uuid,uuid,text,bigint)','execute') then raise exception 'Public claim exposed';end if;
+end $$;
+rollback;
+select 'PASS review dates, deduplication, no family automation, no money mutation, live/test Stripe alerts, stale balances, recipient-bound claims, permissions' result;

@@ -97,10 +97,12 @@ async function bindSubscription(subscription: Stripe.Subscription) {
 }
 export async function syncBillingSubscription(subscriptionId: string) {
  const {stripe}=configuredStripe(true)
- const sub=await stripe.subscriptions.retrieve(subscriptionId)
+ const sub=await stripe.subscriptions.retrieve(subscriptionId,{expand:['latest_invoice']})
  if(sub.metadata.purpose!==purpose)return false
  const {db,a}=await bindSubscription(sub)
- const billing_status=sub.status==='canceled'?'ended':['past_due','unpaid','incomplete','incomplete_expired','paused'].includes(sub.status)?'attention':'active'
+ const latest=typeof sub.latest_invoice==='object'?sub.latest_invoice:null
+ const attention=['past_due','unpaid','incomplete','incomplete_expired','paused'].includes(sub.status)||(latest?.status==='open'&&latest.attempt_count>0)
+ const billing_status=sub.status==='canceled'?'ended':attention?'attention':'active'
  const res=await db.from('billing_request_attempts').update({billing_status}).eq('id',a.id);if(res.error)throw res.error
  return true
 }

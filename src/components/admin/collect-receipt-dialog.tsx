@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 
-export function CollectReceiptDialog({ paymentId, childId, onSaved }: { paymentId?: string; childId?: string; onSaved: () => Promise<void> }) {
+export function CollectReceiptDialog({ paymentId, childId, onSaved, cashOnly=false }: { cashOnly?:boolean; paymentId?: string; childId?: string; onSaved: () => Promise<void> }) {
     const [open, setOpen] = useState(false)
     const [receipts, setReceipts] = useState<Awaited<ReturnType<typeof getReceiptsToCollect>>>([])
     const [selected, setSelected] = useState('')
@@ -22,7 +22,7 @@ export function CollectReceiptDialog({ paymentId, childId, onSaved }: { paymentI
         setOpen(true); setLoading(true); setSearch(''); setSelected(''); setReceipts([]); setLines({}); setTotal(''); setRequestId(crypto.randomUUID())
         try {
             const all = await getReceiptsToCollect()
-            const rows = childId ? all.filter(p => p.child_id === childId) : all
+            const rows = all.filter(p=>(!childId||p.child_id===childId)&&(!cashOnly||p.type==='academy'))
             setReceipts(rows)
             const initial = rows.find(p => p.id === paymentId)
             if (initial) { setLines({ [initial.id]: String(initial.remaining) }); setTotal(String(initial.remaining)) }
@@ -44,7 +44,7 @@ export function CollectReceiptDialog({ paymentId, childId, onSaved }: { paymentI
         finally { setBusy(false) }
     }
     return <>
-        <Button size="sm" onClick={show}>Registrar pago</Button>
+        <Button size="sm" onClick={show}>{cashOnly?'Validar efectivo recibido':'Registrar pago'}</Button>
         <Dialog open={open} onOpenChange={value => { if (!busy) setOpen(value) }}>
             <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-xl">
                 <DialogTitle>Registrar pago</DialogTitle>
@@ -65,7 +65,7 @@ export function CollectReceiptDialog({ paymentId, childId, onSaved }: { paymentI
                         <label className="block text-sm">Importe total recibido (€)<Input type="number" min="0.01" max="1000000" step="0.01" required value={total} onChange={e => setTotal(e.target.value)} /></label>
                         <p className={sumCents === Math.round(Number(total) * 100) ? 'text-green-700 text-sm' : 'text-amber-800 text-sm'}>Repartido: {(sumCents / 100).toFixed(2)} € · Debe coincidir con el importe recibido.</p>
                         <label className="block text-sm">Fecha real de recepción<Input name="date" type="date" required max={new Date().toLocaleDateString('en-CA')} defaultValue={new Date().toLocaleDateString('en-CA')} /></label>
-                        <label className="block text-sm">Método utilizado<select name="method" required className="mt-1 w-full rounded border p-2"><option value="transfer">Transferencia</option><option value="cash">Efectivo</option><option value="bizum">Bizum</option><option value="external_card">Tarjeta / TPV externo (ya recibido)</option></select></label>
+                        <label className="block text-sm">Método utilizado<select name="method" required className="mt-1 w-full rounded border p-2">{cashOnly?<option value="cash">Efectivo</option>:<><option value="transfer">Transferencia</option><option value="cash">Efectivo</option><option value="bizum">Bizum</option><option value="external_card">Tarjeta / TPV externo (ya recibido)</option></>}</select></label>
                         <p className="text-xs text-slate-500">Este formulario registra un importe ya recibido. No carga ninguna tarjeta ni crea una suscripción en Stripe.</p>
                         <label className="block text-sm">Referencia u observaciones (opcional)<Input name="note" maxLength={500} placeholder="Ej. Transferencia del tutor, septiembre" /></label>
                         <label className="flex gap-2 text-sm"><input type="checkbox" required />Confirmo que hemos recibido este importe y que el reparto es correcto.</label>

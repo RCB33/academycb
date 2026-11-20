@@ -35,6 +35,10 @@ export function NotificationBell() {
 
     useEffect(() => {
         fetchNotifications()
+        const timer=setInterval(()=>{if(document.visibilityState==='visible')void fetchNotifications()},60000)
+        const onFocus=()=>{void fetchNotifications()}
+        window.addEventListener('focus',onFocus)
+        return ()=>{clearInterval(timer);window.removeEventListener('focus',onFocus)}
     }, [])
 
     const handleMarkAsRead = async (id: string) => {
