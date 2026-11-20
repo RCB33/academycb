@@ -30,6 +30,10 @@ async function main() {
   assert.ok(component.includes('preload="none"'))
   assert.ok(!component.includes('autoPlay'))
   assert.ok(component.includes('object-contain'))
+  // Do not rely on intrinsic aspect-ratio sizing of all-absolute grid buttons.
+  assert.ok(component.includes('data-gallery-card'))
+  assert.ok(component.includes("paddingTop: featured ? '66.666667%' : '133.333333%'"))
+  assert.ok(!component.includes('aspect-[3/4]'))
   assert.ok(fs.readFileSync('src/app/(public)/torneos/page.tsx', 'utf8').includes('<TournamentGallery />'))
   console.log(`Gallery OK: 15 photos, 2 H264 videos, previews, no public EXIF, ${(total / 1024 / 1024).toFixed(1)} MB total.`)
 }
