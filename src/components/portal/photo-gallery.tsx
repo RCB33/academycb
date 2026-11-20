@@ -1,4 +1,5 @@
 'use client'
+import { useViewOnly } from '@/components/admin/view-only'
 import { useEffect, useState, useTransition } from 'react'
 import { useT } from '@/lib/i18n/client'
 import { uploadImage, deleteImage, getPlayerGallery } from '@/app/actions/gallery'
@@ -9,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 
 type GalleryImage = { id: string; url: string; title?: string; canDelete?: boolean }
 export function PhotoGallery({ childId, initialImages, canEdit }: { childId: string; initialImages: GalleryImage[]; canEdit: boolean }) {
+    const viewOnly = useViewOnly()
     const t = useT()
     const [images,setImages] = useState(initialImages)
     const [pending,start] = useTransition()
@@ -22,7 +24,7 @@ export function PhotoGallery({ childId, initialImages, canEdit }: { childId: str
     return <Card className="overflow-hidden border-none bg-white shadow-xl">
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 bg-slate-900 pb-8">
             <CardTitle className="flex items-center gap-2 text-lg font-black uppercase text-white"><ImageIcon className="h-5 w-5 text-gold" />{t('Galería de Fotos')}</CardTitle>
-            {canEdit && <Button onClick={()=>{setError('');setUploadOpen(true)}} className="bg-gold font-bold text-navy hover:bg-gold-light"><Plus className="mr-2 h-4 w-4" />{t('Subir Foto')}</Button>}
+            {canEdit && !viewOnly && <Button onClick={()=>{setError('');setUploadOpen(true)}} className="bg-gold font-bold text-navy hover:bg-gold-light"><Plus className="mr-2 h-4 w-4" />{t('Subir Foto')}</Button>}
         </CardHeader>
         <CardContent className="relative -mt-4 min-h-48 rounded-t-2xl bg-white pt-6">
             <p className="mb-4 text-xs text-slate-500">{t('Fotos privadas del jugador. Toca una imagen para verla completa.')}</p>
@@ -32,7 +34,7 @@ export function PhotoGallery({ childId, initialImages, canEdit }: { childId: str
                     <button type="button" className="block aspect-square w-full focus-visible:outline-4 focus-visible:outline-gold" aria-label={`${t('Ampliar foto')} ${i+1}`} onClick={()=>setSelected(img.id)}>
                         <img src={img.url} alt={img.title || `${t('Foto del jugador')} ${i+1}`} loading="lazy" className="h-full w-full object-cover" />
                     </button>
-                    {canEdit && img.canDelete && <button type="button" disabled={pending} aria-label={`${t('Eliminar foto')} ${i+1}`} className="absolute right-1 top-1 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-red-700 shadow" onClick={()=>{
+                    {canEdit && !viewOnly && img.canDelete && <button type="button" disabled={pending} aria-label={`${t('Eliminar foto')} ${i+1}`} className="absolute right-1 top-1 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-red-700 shadow" onClick={()=>{
                         if(!confirm(t('¿Estás seguro de eliminar esta imagen?')))return
                         setError('');start(async()=>{try{const result=await deleteImage(img.id,childId);if(result.error)setError(result.error);else await reload()}catch{setError('No se pudo eliminar la foto.')}})
                     }}><Trash2 className="h-4 w-4" /></button>}

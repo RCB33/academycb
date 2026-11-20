@@ -2,13 +2,16 @@ begin;
 \ir ../supabase/migrations/20261120102151_family_gallery_media_scope.sql
 do $$
 declare
- gu uuid; g uuid; cat uuid=gen_random_uuid(); team uuid=gen_random_uuid(); other_team uuid=gen_random_uuid();
+ gu uuid=gen_random_uuid(); g uuid=gen_random_uuid(); cat uuid=gen_random_uuid(); team uuid=gen_random_uuid(); other_team uuid=gen_random_uuid();
  child uuid=gen_random_uuid(); other_child uuid=gen_random_uuid();
  own_clip uuid=gen_random_uuid(); foreign_clip uuid=gen_random_uuid(); team_clip uuid=gen_random_uuid(); category_clip uuid=gen_random_uuid(); foreign_team_clip uuid=gen_random_uuid();
  before_digest text; after_digest text;
 begin
  select md5(string_agg(to_jsonb(p)::text,'' order by id)) into before_digest from public.payments p;
- select user_id,id into strict gu,g from public.guardians where user_id='e4ec6913-43b6-48e0-b287-e88801c95df6';
+ -- Self-contained rollback fixture: the persistent demo accounts have been retired.
+ insert into auth.users(id,email,raw_user_meta_data) values(gu,'qa-gallery-'||gu||'@example.invalid','{}');
+ update public.profiles set role='guardian' where id=gu;
+ insert into public.guardians(id,user_id,full_name,email,phone) values(g,gu,'QA GALLERY ROLLBACK','qa-gallery-'||gu||'@example.invalid','600000000');
  insert into public.categories(id,name)values(cat,'QA gallery category');
  insert into public.teams(id,name,category_id,status)values(team,'QA gallery own team',cat,'active'),(other_team,'QA gallery other team',cat,'active');
  insert into public.children(id,full_name,birth_year,category_id,team_id)values(child,'QA own gallery child',2015,cat,team),(other_child,'QA other gallery child',2015,cat,other_team);

@@ -71,6 +71,16 @@ export async function updateSession(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname
 
+  // Previewing another area never turns an administrator into its account owner.
+  // Keep mutations on the admin surface; view selection is a separately checked endpoint.
+  const referrer = request.headers.get('referer')
+  let fromView = false
+  try { const ref = new URL(referrer || ''); fromView = ref.host === request.headers.get('host') && /^\/(portal|coach)(\/|$)/.test(ref.pathname) } catch {}
+  if (user && !['GET', 'HEAD', 'OPTIONS'].includes(request.method) && pathname !== '/api/admin/view' && (/^\/(portal|coach)(\/|$)/.test(pathname) || (pathname.startsWith('/api/') && fromView))) {
+    const { data: actor } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
+    if (actor?.role === 'admin') return NextResponse.json({error:'Vista de consulta. Vuelve a administración para realizar cambios.'}, {status:403})
+  }
+
   // --- Check if route is public ---
   const isPublicRoute = PUBLIC_ROUTES.includes(pathname)
   const isPublicPrefix = PUBLIC_PREFIXES.some((prefix) =>
@@ -152,7 +162,7 @@ export async function updateSession(request: NextRequest) {
       .maybeSingle()
 
     const role = isAppRole(profile?.role) ? profile.role : null
-    if (role && role !== 'guardian') {
+    if (role && role !== 'guardian' && role !== 'admin') {
       const url = request.nextUrl.clone()
       url.pathname = getRoleHome(role)
       return NextResponse.redirect(url)

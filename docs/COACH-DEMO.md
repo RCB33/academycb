@@ -1,5 +1,7 @@
 # Demo de entrenador — 20 noviembre 2026
 
+**Estado actual: retirada.** El propietario pidió eliminar las pruebas creadas por el agente y conservar los jugadores de Karen. Se retiraron esta cuenta, trabajador, equipo, sesión, aviso y los dos jugadores ficticios el 20/11/2026. Mocere y los administradores reales permanecen intactos. Las secciones siguientes conservan la evidencia histórica; las credenciales demo ya no funcionan. Ver `FAMILY-PORTAL-READINESS.md`.
+
 ## Alcance vigente: acceso deportivo compartido
 
 Publicación verificada: `6215c77`, Vercel `dpl_9gPpePx5L1kNaRjev6WCeqCBGdBj` READY en `www.academycostabrava.com`. Seis rutas nuevas del entrenador responden 200 con contenido actualizado; dashboard/finanzas/pagos familiares redirigen y las tablas financieras no exponen filas. La demo no tiene ya ningún equipo asignado, pero ve los 21 jugadores activos al finalizar la prueba. Sesión técnica de verificación cerrada; cuenta demo conservada. Los 21 pagos mantienen exactamente `13ac2fe6f6d8c3721523c18b62853160`.

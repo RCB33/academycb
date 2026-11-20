@@ -1,4 +1,5 @@
 'use client'
+import { useViewOnly } from '@/components/admin/view-only'
 import { useState,useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Pencil } from 'lucide-react'
@@ -10,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription } from '@/components/ui/dialog'
 
 export function PlayerProfileDetails({player,editable=false,compact=false,onSaved}:{player:PlayerProfile;editable?:boolean;compact?:boolean;onSaved?:()=>void}) {
+    const viewOnly = useViewOnly()
     const t=useT(),router=useRouter(),[open,setOpen]=useState(false),[pending,start]=useTransition(),[error,setError]=useState('')
     const facts=[
         ['Fecha de nacimiento',playerBirthLabel(player,t.locale)],['Club',player.club_name],
@@ -19,7 +21,7 @@ export function PlayerProfileDetails({player,editable=false,compact=false,onSave
         <dl className={`grid gap-x-5 gap-y-4 ${compact?'grid-cols-2':'grid-cols-2 lg:grid-cols-4'}`}>
             {facts.map(([label,value])=><div key={label} className="min-w-0"><dt className="text-xs font-semibold text-slate-500">{t(label!)}</dt><dd className="mt-1 break-words text-sm font-bold text-navy">{value || t('Pendiente de completar')}</dd>{label==='Fecha de nacimiento' && !player.birth_date && player.birth_year && <p className="mt-1 text-xs text-slate-500">{t('Fecha completa pendiente')}</p>}</div>)}
         </dl>
-        {editable && <Button type="button" variant="outline" size="sm" aria-label={`${t('Editar perfil de')} ${player.full_name}`} onClick={()=>{setError('');setOpen(true)}}><Pencil className="mr-2 h-4 w-4" />{t('Editar perfil')}</Button>}
+        {editable && !viewOnly && <Button type="button" variant="outline" size="sm" aria-label={`${t('Editar perfil de')} ${player.full_name}`} onClick={()=>{setError('');setOpen(true)}}><Pencil className="mr-2 h-4 w-4" />{t('Editar perfil')}</Button>}
         <Dialog open={open} onOpenChange={setOpen}><DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-xl"><DialogHeader><DialogTitle>{t('Perfil de')} {player.full_name}</DialogTitle><DialogDescription>{t('Indica la categoría y la división en las que juega en su club. Estos datos no cambian su grupo de Academy.')}</DialogDescription></DialogHeader>
             <form className="space-y-5" action={form=>{setError('');start(async()=>{try{
                 const result=await updatePlayerProfile(player.id,Object.fromEntries(['birth_date','club_name','club_category','club_division'].map(key=>[key,String(form.get(key)||'')])))

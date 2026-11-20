@@ -40,7 +40,7 @@ export default async function FamilyActivities({
   searchParams: Promise<{ child?: string }>;
 }) {
   const translate=await getT();
-  const family = await getFamilyContext();
+  const family = await getFamilyContext(true);
   if (!family) redirect("/portal");
   const selected = (await searchParams).child,
     ids = family.children

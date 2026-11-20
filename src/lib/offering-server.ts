@@ -18,16 +18,18 @@ export async function getAcademyOffer(includeUnpublished=false):Promise<AcademyO
     db.from('membership_plans').select(planColumns).not('sessions_per_week','is',null).order('sort_order').order('id'),
   ])
   if(groups.error||plans.error) throw new Error('No se pudo cargar la oferta de Academia. Inténtalo de nuevo.')
+  // Private/inactive drafts need not satisfy the published offer schema. Filter
+  // them before parsing so an incomplete internal plan cannot break registration.
   const result={
-    groups:(groups.data||[]).map(g=>({...groupSchema.parse(g),id:g.id,updated_at:g.updated_at})).filter(g=>includeUnpublished||(g.status==='active'&&g.public_offer.published)).sort((a,b)=>a.public_offer.order-b.public_offer.order),
-    plans:(plans.data||[]).map(p=>({...planSchema.parse({...p,description:p.description||''}),id:p.id,updated_at:p.updated_at})).filter(p=>includeUnpublished||p.is_active),
+    groups:(groups.data||[]).filter(g=>includeUnpublished||(g.status==='active'&&g.public_offer?.published===true)).map(g=>({...groupSchema.parse(g),id:g.id,updated_at:g.updated_at})).sort((a,b)=>a.public_offer.order-b.public_offer.order),
+    plans:(plans.data||[]).filter(p=>includeUnpublished||p.is_active===true).map(p=>({...planSchema.parse({...p,description:p.description||''}),id:p.id,updated_at:p.updated_at})),
   }
   return {...result,version:offeringVersion(result),recurring_available:process.env.STRIPE_RECURRING_PAYMENTS_ENABLED==='true'&&!!(await stripeCheckoutMode())}
 }
 export async function getCampusOffers(includeUnpublished=false):Promise<CampusOffer[]> {
   const {data,error}=await createAdminClient().from('campuses').select(campusColumns).not('public_program','is',null).order('start_date')
   if(error) throw new Error('No se pudo cargar la oferta de Campus.')
-  return (data||[]).map(c=>({...campusOfferSchema.parse(c),id:c.id,updated_at:c.updated_at})).filter(c=>includeUnpublished||c.status==='published')
+  return (data||[]).filter(c=>includeUnpublished||c.status==='published').map(c=>({...campusOfferSchema.parse(c),id:c.id,updated_at:c.updated_at}))
 }
 export async function getCampusOffer(id?:string) {
   const campuses=await getCampusOffers()

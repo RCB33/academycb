@@ -9,8 +9,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { adminReadAll } from '@/lib/admin-read-all'
 import { FAMILY_VIDEO_LIMIT, FAMILY_VIDEO_TYPES, videoFileIsValid, type FamilyMediaItem } from '@/lib/family-media'
 
-export async function getFamilyMedia():Promise<FamilyMediaItem[]> {
-    const family=await getFamilyContext()
+export async function getFamilyMedia(preview = false):Promise<FamilyMediaItem[]> {
+    const family=await getFamilyContext(preview)
     if(!family?.children.length) return []
     const db=await createClient(), ids=family.children.map(c=>c.id)
     const [{data:children,error:childError},{data:groups},{data:assets}]=await Promise.all([

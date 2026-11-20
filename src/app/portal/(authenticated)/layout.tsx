@@ -1,3 +1,7 @@
+import { PortalVisitRecorder } from '@/components/portal/visit-recorder'
+import { getPortalViewer } from '@/lib/admin-view'
+import { AdminViewBar } from '@/components/admin/admin-view-bar'
+import { ViewOnly } from '@/components/admin/view-only'
 
 import { LanguageSwitcher } from '@/lib/i18n/client'
 import { getT } from '@/lib/i18n/server'
@@ -11,7 +15,6 @@ import { GlobalSignatureGuard } from "@/components/portal/global-signature-guard
 import { MobilePortalNav, PortalDesktopSidebar } from "@/components/portal/sidebar-nav"
 import { PortalPlayerSwitcher } from "@/components/portal/player-switcher"
 import { getRoleHome, isAppRole } from '@/lib/roles'
-import { PortalVisitRecorder } from '@/components/portal/visit-recorder'
 
 export default async function AuthenticatedLayout({
     children,
@@ -20,24 +23,17 @@ export default async function AuthenticatedLayout({
 }) {
     const translate = await getT()
 
-    const supabase = await createClient()
-
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-        redirect('/portal')
-    }
+    const { supabase, user, actualUser, view } = await getPortalViewer()
+    if (!actualUser || !user) redirect('/portal')
 
     const { data: profile } = await supabase
         .from('profiles')
         .select('role')
-        .eq('id', user.id)
+        .eq('id', actualUser.id)
         .maybeSingle()
 
     const role = isAppRole(profile?.role) ? profile.role : null
-    if (role && role !== 'guardian') {
+    if (role && role !== 'guardian' && !view) {
         redirect(getRoleHome(role))
     }
 
@@ -66,7 +62,10 @@ export default async function AuthenticatedLayout({
     }
 
     return (
-        <div className="h-[100dvh] min-h-[100dvh] w-full overflow-hidden bg-muted/20 md:h-screen md:min-h-0 flex flex-col md:flex-row">
+        <div className="flex h-[100dvh] flex-col overflow-hidden">
+            {view && <AdminViewBar view={view}/>}
+            <ViewOnly enabled={Boolean(view)}>
+        <div className="min-h-0 flex-1 w-full overflow-hidden bg-muted/20 md:min-h-0 flex flex-col md:flex-row">
             {role === 'guardian' && guardian && <PortalVisitRecorder userId={user.id} />}
             {/* Mobile Header */}
             <div className="shrink-0 border-b border-white/10 bg-navy text-white shadow-md md:hidden">
@@ -77,10 +76,10 @@ export default async function AuthenticatedLayout({
                     </Link>
                     <div className="flex items-center gap-2">
                         <LanguageSwitcher />
-                        <NotificationBell />
-                        <form action={signOut}>
+                        {!view && <NotificationBell />}
+                        {!view && <form action={signOut}>
                             <Button variant="ghost" size="icon" aria-label={translate("Cerrar sesión")} className="text-white hover:bg-white/10 hover:text-white"><LogOut className="h-5 w-5" /></Button>
-                        </form>
+                        </form>}
                     </div>
                 </div>
                 <PortalPlayerSwitcher players={familyPlayers} variant="mobile" />
@@ -88,9 +87,9 @@ export default async function AuthenticatedLayout({
             <MobilePortalNav />
 
             {/* Desktop Sidebar */}
-            <PortalDesktopSidebar players={familyPlayers} userEmail={user.email || 'Familia'} signOut={signOut} />
+            <PortalDesktopSidebar players={familyPlayers} userEmail={user.email || 'Familia'} signOut={signOut} viewOnly={Boolean(view)} />
 
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:h-screen">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                 <main className="relative h-full flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] [-webkit-overflow-scrolling:touch] md:p-6 xl:p-8">
                     <div className="mx-auto w-full max-w-7xl">
                         {translate(children)}
@@ -100,7 +99,8 @@ export default async function AuthenticatedLayout({
             </div>
 
             {/* Global Signature Check */}
-            <GlobalSignatureGuard userId={user.id} />
+            {!view && <GlobalSignatureGuard userId={user.id} />}
         </div>
+        </ViewOnly></div>
     )
 }

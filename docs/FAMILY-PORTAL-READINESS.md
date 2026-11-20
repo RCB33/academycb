@@ -17,7 +17,7 @@ Administración → Más herramientas (o Más en móvil) → Uso del Portal Fami
 - 24 fichas de tutor; 12 tienen cuenta guardian, dos están vinculadas a administradores y diez no tienen cuenta vinculada. Cinco direcciones aparecen en dos fichas. Algunas fichas repetidas tienen vínculos distintos: requieren comprobación humana, no una fusión por email.
 - Cuatro fichas no tienen jugador activo vinculado. Un jugador real tiene solo un contacto sin cuenta con el email de otra cuenta familiar: revisar la titularidad antes de enlazarlo.
 - Equipo real: Karen, Roque y Manu como administradores (Manu tiene dos cuentas); Mocere Coulibaly como entrenador. Hay además cuentas demo. No se cambian sus roles ni se eliminan familias reales.
-- Se han solicitado los nombres de los dos jugadores que deben conservarse. No borrar hasta identificarlos. Uno de los demos tiene dos pagos: su borrado físico cambiaría `payments.child_id` por ON DELETE SET NULL, por lo que debe preservarse/archivarse bajo la restricción vigente de no cambiar pagos.
+- El propietario aclaró después: retirar solo pruebas creadas por el agente y conservar todos los jugadores creados por Karen. Uno de los demos tiene dos pagos: su borrado físico cambiaría `payments.child_id` por ON DELETE SET NULL, por lo que se archiva bajo la restricción vigente de no cambiar pagos.
 
 ## Inscripción, aceptación y acceso
 
@@ -37,4 +37,23 @@ Administración → Más herramientas (o Más en móvil) → Uso del Portal Fami
 
 ## Antes de una invitación masiva
 
-Confirmar los dos jugadores protegidos, limpiar solo demos revisados y resolver fichas duplicadas o sin acceso, especialmente cuando el email podría pertenecer a otro tutor. No cambiar roles de administradores para hacerlos pasar por familias. Comprobar recepción real con una familia piloto y después consultar la nueva sección de uso.
+Resolver fichas duplicadas o sin acceso, especialmente cuando el email podría pertenecer a otro tutor. El propietario pidió dejar intactos los datos creados por Karen: estas incidencias quedan visibles, no se fusionan ni reasignan automáticamente. No cambiar roles de administradores para hacerlos pasar por familias. Comprobar recepción real con una familia piloto y después consultar la nueva sección de uso.
+
+## Publicación y limpieza completadas
+
+- Código `4e476ac`, Vercel `dpl_7W4cjdJ3XCC43NYfKbmQXbEM5vpw` READY. Build de producción correcto; TypeScript, lint del código nuevo y pruebas superadas.
+- Repetida la prueba real de Auth en producción: ocho verificaciones de código incorrecto/usado, ausencia de sesión antes de contraseña, contraseña propia, login, recuperación y rechazo de contraseña anterior. Cuenta desechable eliminada; ningún correo enviado.
+- Prueba HTTP adicional: SSR del portal responde 200 y no registra una visita; seguimiento anónimo o de otro origen recibe 403; una familia no puede abrir el informe administrativo.
+- Prueba visual real: inicio de sesión familiar en Chrome registra la visita; administrador ve «Ha entrado», primera/última actividad y filtro con un clic. Revisión en escritorio y emulación de 390 px, incluida la ficha completa y su scroll. No se firmó ningún documento. Las dos cuentas temporales y su visita se eliminaron al terminar; contraseñas no guardadas en navegador.
+- Borrados cuatro jugadores ficticios: Álex de prueba, Álex Demo, DEMO Alex y DEMO Dani, junto con sus dependencias exclusivamente de demostración. Retirados los dos tutores demo, las tres cuentas Auth demo y el trabajador/equipo/sesión/aviso ficticios. El avatar del jugador de prueba eliminado se retiró del almacenamiento.
+- Jugador Demo Roque queda archivado, conservando sus dos pagos y referencias. Los planes privados de prueba ya estaban inactivos/no publicables; no se activaron ni alteraron importes.
+- Antes de aplicar se ejecutó el borrado exacto en una transacción revertida. La aplicación definitiva verificó digests de todos los jugadores y tutores ajenos al alcance y de todos los pagos; cualquier cambio no previsto abortaba la transacción. Copia privada de los fixtures bajo `tmp/demo-cleanup/backup-20261120.json`, fuera del repositorio.
+- Verificación final: 16 jugadores activos, sin niños QA; 22 fichas de tutor y 10 cuentas familiares. Equipo real conservado: Karen, Manu (dos emails), Roque y Mocere. Cero cuentas demo retiradas residuales. 21 pagos, mismo digest `13ac2fe6f6d8c3721523c18b62853160`.
+
+## Fallo de inscripción detectado y resuelto en la revisión final
+
+- La comprobación HTTP anónima detectó `/inscripcion` con 500. Los logs de Vercel identificaron una validación Zod de precio y fechas: `getAcademyOffer` validaba todos los planes antes de excluir los inactivos. El plan privado «Academia · Demo sin cobros», con precio cero y sin temporada, bloqueaba así la página pública aunque no estuviera publicado.
+- Se retiró únicamente ese plan demo ya sin matrículas, comprobando que los pagos y los otros planes no cambiaban. `/inscripcion` volvió a 200 inmediatamente.
+- El código filtra ahora planes inactivos, grupos no publicados y campus no publicados antes de validar la oferta pública. No relaja la validación de precios o fechas de la oferta publicada. Los borradores privados tampoco alteran la versión que valida una inscripción en curso.
+- Regresión `scripts/test-public-offer-drafts.cjs`, incluida en `npm run test:offering`, reproduce el plan privado incompleto y verifica que la oferta pública sigue intacta; una oferta activa inválida continúa fallando. TypeScript y lint correctos.
+- La prueba SQL de galería usa ahora una familia sintética creada y revertida dentro de su transacción, sin depender de las cuentas demo eliminadas. Repetida con RLS real y digest financiero intacto.

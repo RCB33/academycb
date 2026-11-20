@@ -35,7 +35,7 @@ function getMediaDetails(file: File): MediaDetails | null {
     return mediaByExtension[extension] || null
 }
 
-export function CommunityComposer({ players, guardianId }: { players: Child[]; guardianId?: string }) {
+export function CommunityComposer({ viewOnly = false, players, guardianId }: { viewOnly?: boolean; players: Child[]; guardianId?: string }) {
     const translate = useT()
 
     const formRef = useRef<HTMLFormElement>(null)
@@ -163,7 +163,7 @@ export function CommunityComposer({ players, guardianId }: { players: Child[]; g
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 shadow-inner">
                 <Textarea name="body" required minLength={2} maxLength={1500} className="min-h-24 resize-none border-0 bg-transparent px-2 py-1 text-base shadow-none focus-visible:ring-0" placeholder={translate("¿Qué logro quieres celebrar hoy? Por ejemplo: gran torneo, primera convocatoria, esfuerzo en los entrenos…")} />
                 <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-slate-200 pt-3">
-                    <input id="community-media-input" ref={fileInputRef} type="file" accept="image/*,video/*" className="sr-only" disabled={isBusy} onChange={(event) => selectFile(event.target.files?.[0] || null)} />
+                    <input id="community-media-input" ref={fileInputRef} type="file" accept="image/*,video/*" className="sr-only" disabled={viewOnly || isBusy} onChange={(event) => selectFile(event.target.files?.[0] || null)} />
                     <label htmlFor="community-media-input" className={`inline-flex min-h-11 cursor-pointer items-center rounded-xl px-3 text-sm font-medium text-navy transition hover:bg-gold/15 ${isBusy ? 'pointer-events-none opacity-50' : ''}`}><ImagePlus className="mr-2 h-4 w-4 text-gold" />{translate("Añadir foto o vídeo")}</label>
                     <span className="text-xs text-slate-500">{translate("JPG, PNG, WEBP, MP4, WEBM o MOV · máx. 20 MB")}</span>
                 </div>
@@ -201,7 +201,7 @@ export function CommunityComposer({ players, guardianId }: { players: Child[]; g
 
             <div className="flex gap-2 rounded-xl border border-gold/25 bg-gold/5 p-3 text-xs leading-relaxed text-slate-600"><ShieldCheck className="h-4 w-4 shrink-0 text-gold" /><p>{translate("Academy puede retirar publicaciones para cuidar la comunidad. Las fotos y vídeos solo se permiten con la autorización interna activa.")}</p></div>
             {translate(message && <p className={`rounded-xl px-3 py-2 text-sm font-medium ${isError ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-800'}`} role="status">{translate(message)}</p>)}
-            <Button disabled={isBusy} className="h-12 w-full rounded-xl bg-gold font-black text-navy shadow-lg shadow-gold/25 hover:bg-gold-light">{translate(isBusy ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{translate(uploading ? 'Subiendo archivo…' : 'Publicando…')}</> : <><Send className="mr-2 h-4 w-4" />{translate("Compartir en el muro")}</>)}</Button>
+            <Button disabled={viewOnly || isBusy} className="h-12 w-full rounded-xl bg-gold font-black text-navy shadow-lg shadow-gold/25 hover:bg-gold-light">{translate(isBusy ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{translate(uploading ? 'Subiendo archivo…' : 'Publicando…')}</> : <><Send className="mr-2 h-4 w-4" />{translate("Compartir en el muro")}</>)}</Button>
         </div>
     </form>
 }

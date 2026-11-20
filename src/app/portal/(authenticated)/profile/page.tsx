@@ -1,6 +1,6 @@
+import { getPortalViewer } from '@/lib/admin-view'
 
 import { getT } from '@/lib/i18n/server'
-import { createClient } from '@/lib/supabase/server'
 import { profileImageUrl } from '@/lib/profile-image'
 import { updateProfile } from '@/app/actions/profiles'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
@@ -16,8 +16,7 @@ import { CircleUserRound } from 'lucide-react'
 export default async function ProfilePage() {
     const translate = await getT()
 
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const { supabase, user, view } = await getPortalViewer()
 
     if (!user) return null
 
@@ -99,7 +98,7 @@ export default async function ProfilePage() {
                             <p className="text-xs text-muted-foreground">
                                 {translate("El correo electrónico no se puede cambiar desde aquí.")}</p>
                         </div>
-                        <Button type="submit" className="w-full bg-gold font-bold text-navy hover:bg-gold-light">
+                        <Button disabled={Boolean(view)} type="submit" className="w-full bg-gold font-bold text-navy hover:bg-gold-light">
                             {translate("Guardar Cambios")}</Button>
                     </form>
                 </CardContent>
@@ -129,7 +128,7 @@ export default async function ProfilePage() {
                 </CardContent>
             </Card>
 
-            <PasswordForm />
+            {!view && <PasswordForm />}
 
             <Card className="rounded-2xl border-slate-200 shadow-sm">
                 <CardHeader>

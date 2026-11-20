@@ -1,3 +1,4 @@
+import { ViewSwitcher } from '@/components/admin/view-switcher'
 import { LocaleProvider } from '@/lib/i18n/client'
 import Link from 'next/link'
 import { LogOut } from "lucide-react"
@@ -59,7 +60,8 @@ export default async function AdminLayout({
                         </div>
                         <div className="hidden md:block">{isAdmin && <SearchCommand />}</div>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 md:gap-4">
+                        {isAdmin && <ViewSwitcher />}
                         <NotificationBell />
                         <Link href="/cuenta" className="hidden flex-col items-end rounded-lg px-2 py-1 transition hover:bg-slate-100 sm:flex" title="Mi cuenta">
                             <span className="text-sm font-semibold text-slate-900 leading-none">{user.email?.split('@')[0]}</span>

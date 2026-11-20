@@ -1,4 +1,5 @@
 'use client'
+import {useViewOnly} from '@/components/admin/view-only'
 
 import { useState } from 'react'
 import { markAttendance } from '@/app/actions/coach'
@@ -15,6 +16,7 @@ interface Child {
 }
 
 export function AttendanceClient({ childrenData, sessionDate, eventId }: { childrenData: Child[], sessionDate: string, eventId: string }) {
+ const viewOnly=useViewOnly()
     const router=useRouter()
     const [kids, setKids] = useState<Child[]>(childrenData)
     const [loadingMap, setLoadingMap] = useState<Record<string, boolean>>({})
@@ -55,7 +57,7 @@ export function AttendanceClient({ childrenData, sessionDate, eventId }: { child
                                 </div>
                             ) : (
                                 <>
-                                    <Button
+                                    <Button disabled={viewOnly}
                                         variant={kid.attendance === 'present' ? 'default' : 'outline'}
                                         size="icon"
                                         className={cn(
@@ -68,7 +70,7 @@ export function AttendanceClient({ childrenData, sessionDate, eventId }: { child
                                     >
                                         <Check className="h-5 w-5" />
                                     </Button>
-                                    <Button
+                                    <Button disabled={viewOnly}
                                         variant={kid.attendance === 'absent' ? 'destructive' : 'outline'}
                                         size="icon"
                                         className={cn(
@@ -81,7 +83,7 @@ export function AttendanceClient({ childrenData, sessionDate, eventId }: { child
                                     >
                                         <X className="h-5 w-5" />
                                     </Button>
-                                    <Button
+                                    <Button disabled={viewOnly}
                                         variant={kid.attendance === 'excused' ? 'secondary' : 'outline'}
                                         size="icon"
                                         className={cn(

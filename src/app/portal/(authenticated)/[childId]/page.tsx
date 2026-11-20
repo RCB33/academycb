@@ -1,3 +1,5 @@
+import { getPortalViewer, getFamilyViewScope, familyViewEventVisible } from '@/lib/admin-view'
+import { notFound } from 'next/navigation'
 
 import { getT } from '@/lib/i18n/server'
 import { createClient } from '@/lib/supabase/server'
@@ -19,7 +21,9 @@ export default async function ChildPage({ params }: { params: Promise<{ childId:
     const translate = await getT()
 
     const { childId } = await params
-    const supabase = await createClient()
+    const { supabase, view } = await getPortalViewer()
+    const scope = view ? await getFamilyViewScope() : null
+    if (scope && !scope.children.some(c => c.id === childId)) notFound()
 
     // Verify access (guardian of child) - RLS handles query results, but better to check existence
     const { data: child } = await supabase
@@ -37,6 +41,7 @@ export default async function ChildPage({ params }: { params: Promise<{ childId:
     const { data: metrics } = await supabase
         .from('child_metrics')
         .select('*')
+        .eq('visible_to_guardian',true)
         .eq('child_id', childId)
         .order('recorded_at', { ascending: false })
         .limit(10) // Get last 10 for history
@@ -86,6 +91,7 @@ export default async function ChildPage({ params }: { params: Promise<{ childId:
     const tournamentIds = new Set((tournamentEnrollments || []).map((row) => row.tournament_id))
     const teamIds=new Set([child.team_id,...(groupAssignments||[]).map(g=>g.team_id)].filter(Boolean))
     const nextEvent = upcomingEvents?.find((event) => {
+        if (scope && !familyViewEventVisible(event,scope)) return false
         if(event.status==='cancelled')return false
         if (event.source_type === 'campus') return campusIds.has(event.source_id)
         if (event.source_type === 'tournament') return tournamentIds.has(event.source_id)
@@ -111,7 +117,7 @@ export default async function ChildPage({ params }: { params: Promise<{ childId:
                         attendanceStats={{ total: attendanceTotal, present: attendancePresent, percentage: String(attendancePercentage) }}
                         coachNotes={notes && notes.length > 0 ? notes[0].content : "Sin observaciones recientes."}
                     /> : <span className="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-500">{translate("Informe disponible tras la primera evaluación")}</span>)}
-                    {translate(child.public_share_token && (
+                    {translate(!view && child.public_share_token && (
                         <ShareProfile token={child.public_share_token} childId={child.id} childName={child.full_name} />
                     ))}
                 </div>

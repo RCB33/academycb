@@ -9,7 +9,7 @@ export default async function CampusEnrollment({
   searchParams: Promise<{ edition?: string; child?: string }>;
 }) {
   const params = await searchParams,
-    family = await getFamilyContext();
+    family = await getFamilyContext(true);
   if (!family) redirect("/portal");
   const campus = await getCampusOffer(params.edition);
   if (!campus || campus.end_date < new Date().toISOString().slice(0, 10))

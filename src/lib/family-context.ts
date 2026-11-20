@@ -8,11 +8,10 @@ export type FamilyContext = {
   phone: string;
   children: { id: string; full_name: string; birth_date: string | null }[];
 };
-export async function getFamilyContext(): Promise<FamilyContext | null> {
-  const db = await createClient(),
-    {
-      data: { user },
-    } = await db.auth.getUser();
+export async function getFamilyContext(preview = false): Promise<FamilyContext | null> {
+  const db = await createClient();
+  const { data: { user: authenticatedUser } } = await db.auth.getUser();
+  const user = preview ? (await (await import('@/lib/admin-view')).getPortalViewer()).user : authenticatedUser;
   if (!user?.email || !user.email_confirmed_at) return null;
   const { data: guardians, error } = await db
     .from("guardians")

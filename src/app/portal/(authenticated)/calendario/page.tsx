@@ -1,6 +1,6 @@
+import { getPortalViewer, getFamilyViewScope, familyViewEventVisible, familyViewCalendarFilter } from '@/lib/admin-view'
 
 import { getT } from '@/lib/i18n/server'
-import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { MonthlyCalendar, CalendarEvent } from '@/components/ui/monthly-calendar'
 import { CalendarDays } from 'lucide-react'
@@ -11,8 +11,7 @@ export const dynamic = 'force-dynamic'
 export default async function FamilyCalendarPage() {
     const translate = await getT()
 
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const { supabase, user, view } = await getPortalViewer()
 
     if (!user) {
         redirect('/')
@@ -41,7 +40,8 @@ export default async function FamilyCalendarPage() {
         rangeStart.setMonth(rangeStart.getMonth() - 6)
         const rangeEnd = new Date()
         rangeEnd.setMonth(rangeEnd.getMonth() + 18)
-        const { data: rawEvents } = await supabase
+        const scope = view ? await getFamilyViewScope() : null
+        let eventsQuery = supabase
             .from('calendar_events')
             .select('*, categories(name), teams(name)')
             .eq('visibility', 'families')
@@ -50,7 +50,9 @@ export default async function FamilyCalendarPage() {
             .gt('end_date', rangeStart.toISOString())
             .order('start_date', { ascending: true })
 
-        events = (rawEvents || []).map((event) => ({
+        if (scope) eventsQuery = eventsQuery.or(familyViewCalendarFilter(scope))
+        const { data: rawEvents } = await eventsQuery
+        events = (rawEvents || []).filter(event => !scope || familyViewEventVisible(event,scope)).map((event) => ({
             id: event.id,
             title: event.title,
             start_date: event.start_date,
