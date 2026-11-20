@@ -2,6 +2,10 @@
 
 ## Alcance vigente: acceso deportivo compartido
 
+Publicación verificada: `6215c77`, Vercel `dpl_9gPpePx5L1kNaRjev6WCeqCBGdBj` READY en `www.academycostabrava.com`. Seis rutas nuevas del entrenador responden 200 con contenido actualizado; dashboard/finanzas/pagos familiares redirigen y las tablas financieras no exponen filas. La demo no tiene ya ningún equipo asignado, pero ve los 21 jugadores activos al finalizar la prueba. Sesión técnica de verificación cerrada; cuenta demo conservada. Los 21 pagos mantienen exactamente `13ac2fe6f6d8c3721523c18b62853160`.
+
+El build de Vercel, TypeScript, lint y suites específicas han pasado. El asesor conserva los avisos previos de Auth y funciones privilegiadas; no añade avisos para la nueva tabla. La revisión visual se hizo en el entorno local con código equivalente, 360/390 px, y la versión publicada se comprobó mediante sesión HTTP autenticada. La URL alternativa de Vercel requiere SSO y no se deshabilitó esa protección.
+
 Por nueva petición explícita del propietario, los entrenadores activos ya no necesitan grupo asignado: pueden consultar todos los jugadores activos y todo el calendario, registrar notas/evaluaciones y asistencia. Los avisos son de todos los equipos. Las restricciones a un equipo descritas en la prueba inicial de abajo quedan sustituidas por este alcance. Los pagos siguen excluidos.
 
 `coach_session_roster` añade/quita jugadores solo de una sesión, sin cambiar inscripciones ni grupos habituales. Protege asistencia existente y evita trasladar registros a otro jugador/evento. Campus y torneos obtienen su lista de sus inscripciones no canceladas, sin exponer sus detalles financieros. Familias no pueden acceder a esta lista operativa ni editarla. No se amplían permisos de documentos, imágenes, compras, finanzas ni administración.
