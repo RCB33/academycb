@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { finishManualAssignment } from '@/lib/enrollment-onboarding'
 
 const assignment = z.object({
+    paymentMethod: z.enum(['cash','stripe']).default('cash'),
     requestId: z.string().uuid(), childId: z.string().uuid(), planId: z.string().uuid(),
     planVersion: z.string().datetime({ offset: true }),
     startDate: z.string().date(),
@@ -29,8 +30,8 @@ export async function assignFamilyPlan(input: z.input<typeof assignment>) {
         if (legacy?.some(p=>!p.concept_code || p.concept_code==='monthly')) {
             return { success:false, error:'Este alumno tiene pagos antiguos sin concepto o mes cubierto. Karen debe revisar a qué meses corresponden antes de generar el plan. No se ha modificado ningún pago.' }
         }
-        const { data:membershipId,error } = await supabase.rpc('assign_family_plan_v2', {
-            p_request_id: data.requestId, p_child_id: data.childId, p_plan_id: data.planId,
+        const { data:membershipId,error } = await supabase.rpc('assign_family_plan_v3', {
+            p_payment_method: data.paymentMethod, p_request_id: data.requestId, p_child_id: data.childId, p_plan_id: data.planId,
             p_plan_version: data.planVersion, p_start: data.startDate,
             p_due_day: data.dueDay, p_discount: data.discount, p_promotion: data.promotion,
             p_enrollment: data.enrollment, p_plus: data.plus, p_team_id: data.teamId,p_second_team_id:data.secondTeamId,

@@ -17,6 +17,7 @@ export function FamilyPlanAssignment({ childId, childName, plans, teams, default
 }) {
     const router = useRouter()
     const [open,setOpen] = useState(false)
+    const [paymentMethod,setPaymentMethod]=useState<'cash'|'stripe'>('cash')
     const [planId,setPlanId] = useState('')
     const [startDate,setStartDate] = useState(new Date().toLocaleDateString('en-CA',{timeZone:'Europe/Madrid'}))
     const [due,setDue] = useState(1)
@@ -40,7 +41,7 @@ export function FamilyPlanAssignment({ childId, childName, plans, teams, default
         if (!plan || !preview || busy) return
         setBusy(true)
         try {
-            const result = await assignFamilyPlan({requestId,childId,planId,planVersion:plan.updated_at,startDate,dueDay:plan.frequency==='mensual'?1:due,discount,promotion,enrollment,plus,teamId:team||null,secondTeamId:needsTwo?secondTeam||null:null})
+            const result = await assignFamilyPlan({paymentMethod,requestId,childId,planId,planVersion:plan.updated_at,startDate,dueDay:plan.frequency==='mensual'?1:due,discount,promotion,enrollment,plus,teamId:team||null,secondTeamId:needsTwo?secondTeam||null:null})
             if (!result.success) { toast.error(result.error); return }
             toast.success(result.notice||'Plan asignado y cuotas pendientes creadas.')
             setOpen(false); router.refresh(); onComplete?.()
@@ -52,7 +53,7 @@ export function FamilyPlanAssignment({ childId, childName, plans, teams, default
         <Dialog open={open} onOpenChange={value=>{if(!busy)setOpen(value)}}>
             <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-xl">
                 <DialogHeader><DialogTitle>{review?'Revisar asignación':'Asignar plan'} · {childName}</DialogTitle></DialogHeader>
-                <p className="text-sm text-slate-600">El plan pertenece a este hijo, no a toda la familia. Genera cuotas pendientes; no cobra tarjetas automáticamente. El pago inicial se realiza por transferencia. Solo las mensualidades de Academia podrán usar suscripción cuando esté habilitada.</p>
+                <p className="text-sm text-slate-600">El plan pertenece a este hijo, no a toda la familia. Genera cuotas pendientes; no cobra tarjetas automáticamente. El pago inicial, matrícula y extras se gestionan en efectivo. Solo las mensualidades de Academia podrán usar suscripción cuando esté habilitada.</p>
                 {!plans.length ? <p className="rounded-lg bg-amber-50 p-4 text-sm">Primero crea las tarifas en <Link className="font-bold underline" href="/admin/ajustes">Ajustes → Planes</Link>. Define actividad, precio, frecuencia y duración. No hay precios inventados.</p> : !review ? <div className="space-y-4">
                     <label className="block text-sm font-medium">1. Actividad y tarifa
                         <select className={field} value={planId} onChange={e=>{setPlanId(e.target.value);setDiscount(0);setEnrollment(false);setTeam('');setSecondTeam('');if(plans.find(p=>p.id===e.target.value)?.frequency!=='mensual')setStartDate(startDate.slice(0,7)+'-01')}}>
@@ -62,6 +63,7 @@ export function FamilyPlanAssignment({ childId, childName, plans, teams, default
                     </label>
                     {plan && <p className="text-sm text-slate-600">{plan.description || 'La duración y el precio se guardarán con esta asignación, aunque después cambie la tarifa.'}</p>}
                     {plan?.season_end && <p className="rounded-lg bg-blue-50 p-3 text-sm text-blue-900">Temporada {plan.season_start} → {plan.season_end}. Solo se generan las mensualidades restantes, nunca meses posteriores al final del curso.</p>}
+                    <label className="block text-sm font-medium">Forma de pago acordada<select className={field} value={paymentMethod} onChange={e=>setPaymentMethod(e.target.value as 'cash'|'stripe')}><option value="cash">Efectivo</option><option value="stripe">Tarjeta · suscripción mensual con Stripe</option></select></label>
                     <label className="block text-sm font-medium">2. Fecha de incorporación<input type="date" className={field} min={plan?.season_start||undefined} max={plan?.season_end||undefined} value={startDate} onChange={e=>setStartDate(e.target.value)} /></label>
                     {plan?.frequency==='mensual'?<p className="rounded-lg bg-blue-50 p-3 text-sm">Primera cuota: 1–7, 100 % · 8–15, 75 % · 16–22, 50 % · 23–fin, 25 %. Después, día 1 de cada mes; seguimiento desde el día 5.</p>:<label className="block text-sm">Día de vencimiento<input type="number" min="1" max="28" className={field} value={due} onChange={e=>setDue(Number(e.target.value))}/></label>}
                     <label className="block text-sm font-medium">3. Grupo {plan?.sessions_per_week?'y horario':'(opcional)'}
@@ -82,7 +84,7 @@ export function FamilyPlanAssignment({ childId, childName, plans, teams, default
                     <Button className="w-full" disabled={!preview || missingGroup || (discount>0&&!promotion.trim())} onClick={()=>setReview(true)}>Ver calendario e importes</Button>
                 </div> : preview && plan && <div className="space-y-4">
                     <div className="rounded-lg bg-slate-50 p-4 text-sm">
-                        <p className="font-bold">{plan.name}</p>
+                        <p className="font-bold">{plan.name}</p><p>Forma de pago: {paymentMethod==='cash'?'Efectivo':'Tarjeta · Stripe (requiere autorización de la familia)'}</p>
                         <p>{startDate} → {preview.endDate} · {preview.durationMonths} meses</p>
                         <p>Primera cuota: {preview.percent} % · {euro(preview.rows[0].amount)}</p><p>Primer pago con extras: {euro(preview.firstTotal)}</p><p>{[team,needsTwo?secondTeam:null].filter(Boolean).map(id=>teams.find(t=>t.id===id)).filter((t):t is AssignmentTeam=>!!t).map(groupLabel).join(" / ")}</p><p>Precio por periodo: {euro(plan.price)} · Descuento: {euro(discount)}</p>
                         <p>Matrícula: {euro(preview.enrollmentFee)} · Plus: {euro(plus)}</p>

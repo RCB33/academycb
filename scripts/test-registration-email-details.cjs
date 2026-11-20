@@ -24,12 +24,12 @@ function load(file) {
   assert.match(result.message, /Todavía no realices ningún pago/)
   assert.doesNotMatch(result.message, /MOCK-ONLY/)
   result = await details('enrollment', 'test-request', 'reviewed')
-  assert.match(result.message, /Importe pendiente: 57\.50 €/)
+  assert.match(result.message, /Importe inicial pendiente: 57\.50 €/)
   assert.match(result.message, /Primera cuota: 37\.50 € \(50 %\)/)
   assert.match(result.message, /Todavía no hay ningún cobro automático activado/)
   assert.doesNotMatch(result.message, /solicitud\/test-request/)
   a.onboarding = { billing: 'ready', billing_request_id: 'billing-test' }
-  assert.match((await details('enrollment', 'test-request', 'reviewed')).message, /solicitud\/billing-test/)
+  result=await details('enrollment', 'test-request', 'reviewed');assert.match(result.message,/solicitud\/billing-test/);assert.equal(result.action.label,'Activar pago mensual con tarjeta');assert.match(result.action.href,/solicitud\/billing-test$/);assert.doesNotMatch(result.message,/IBAN|transferencia/i)
   rows.payments.forEach(p => p.status = 'paid')
   assert.match((await details('enrollment', 'test-request', 'reviewed')).message, /primer pago no tiene importes pendientes/)
   rows.enrollment_requests.status = 'rejected'
@@ -45,11 +45,11 @@ function load(file) {
   rows.children={full_name:'Jugador QA'}
   rows.payments=[{amount:35,status:'pending',concept_code:'monthly',covered_month:'2027-01'},{amount:30,status:'pending',concept_code:'registration'},{amount:140,status:'pending',concept_code:'monthly',covered_month:'2027-02'}]
   result=await details('membership','qa','reviewed')
-  assert.match(result.message,/Importe pendiente: 65\.00 €/)
+  assert.match(result.message,/Importe inicial pendiente: 65\.00 €/)
   assert.match(result.message,/25 %/)
   assert.match(result.message,/Domingo/)
   assert.match(result.message,/correo separado/)
-  assert.doesNotMatch(result.message,/stripe|checkout/i)
+  assert.match(result.message,/efectivo/);assert.doesNotMatch(result.message,/IBAN|transferencia/i)
   rows.event_registrations = { status: 'paid' }
   assert.equal(await details('event', 'test-request', 'awaiting_payment'), null)
   console.log('PASS: personalized acceptance, partial/overdue balances, future installments excluded, card activation honest, stale notices guarded. No emails or network.')

@@ -199,7 +199,7 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
                                                 {translate("Volver a Tienda")}</a>
                                         ))}
                                         {tx.paymentId && ['pending', 'overdue', 'failed'].includes(tx.status) && Number(tx.balance?.remaining ?? tx.amount) > 0 && !billingRequests?.some(r => ['processing', 'active', 'cancelling'].includes(r.state) && r.billing_request_items.some((i: { payment_id: string }) => i.payment_id === tx.paymentId)) && !contracts?.some(c => c.membership_id === tx.membershipId && ['creating', 'open', 'active'].includes(c.state)) && (
-                                            <p className="mt-3 text-sm text-amber-800">Pago por transferencia. Consulta las instrucciones de tu inscripción.</p>
+                                            <p className="mt-3 text-sm text-amber-800">{tx.type === 'academy' ? 'Academia: mensualidades con Stripe o efectivo. Para efectivo, contacta por WhatsApp al 691 17 96 00.' : 'Pago por transferencia. Consulta las instrucciones de tu inscripción.'}</p>
                                         )}
                                         {translate(attempts?.filter(a=>a.payment_id===tx.paymentId && a.mode===checkoutMode && a.state==='open').map(a=><CancelCheckout key={a.id} kind="receipt" id={a.id} />))}
                                     </div>

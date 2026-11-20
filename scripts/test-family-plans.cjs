@@ -37,7 +37,7 @@ for(const [month,count] of [['2026-10',8],['2026-11',7],['2027-01',5],['2027-05'
 for(const month of ['2026-08','2026-09','2027-06']) assert.throws(()=>previewFamilyPlan(season,month+'-01',1,0,false,0),/temporada/)
 assert.throws(()=>previewFamilyPlan({...season,season_end:'2027-05-15'},'2026-11-01',1,0,false,0),/último día/)
 const action = fs.readFileSync('src/app/actions/family-plans.ts','utf8')
-assert.ok(action.indexOf("legacy?.some") < action.indexOf("supabase.rpc('assign_family_plan_v2'"))
+assert.ok(action.indexOf("legacy?.some") < action.indexOf("supabase.rpc('assign_family_plan_v3'"))
 assert.ok(action.includes(".is('covered_month',null)"))
 for(const day of [1,7,8,15,16,22,23,30]) {const date='2027-04-'+String(day).padStart(2,'0');const pct=day<=7?100:day<=15?75:day<=22?50:25;const v=previewFamilyPlan(season,date,1,5,true,50,'2026-11-19');assert.equal(v.rows[0].amount,Math.round(70*pct)/100);assert.equal(v.rows[0].due_date,date);assert.equal(v.rows[1].amount,70);assert.equal(v.endDate,'2027-05-31');assert.equal(v.firstTotal,v.rows[0].amount+80)}
 const sept=previewFamilyPlan(season,'2026-09-15',1,0,false,0,'2026-09-01');assert.equal(sept.rows[0].amount,56.25);assert.equal(sept.rows.length,9);

@@ -1,4 +1,5 @@
 import "server-only";
+import { agreedAcademyMethod, monthlyPaymentStatus } from './monthly-payment-status';
 import { isCurrentTournamentRegistration } from "@/lib/christmas-tournaments";
 import { requireAdmin } from "@/lib/auth";
 import { adminReadAll } from "@/lib/admin-read-all";
@@ -45,7 +46,7 @@ export async function getAdminWorkspace(
     adminReadAll((f, t) =>
       supabase
         .from("academy_memberships")
-        .select("id,child_id,status,end_date")
+        .select("id,child_id,status,end_date,agreed_payment_method,payment_method")
         .order("id")
         .range(f, t),
     ),
@@ -67,7 +68,7 @@ export async function getAdminWorkspace(
       supabase
         .from("payments")
         .select(
-          "id,child_id,amount,status,due_date,covered_month,paid_at,manual_receipt_allocations(amount,paid_date,method,voided_at)",
+          "id,child_id,amount,status,type,concept_code,due_date,covered_month,paid_at,manual_receipt_allocations(amount,paid_date,method,voided_at)",
         )
         .order("id")
         .range(f, t),
@@ -182,6 +183,9 @@ export async function getAdminWorkspace(
     players: children.data.map((c) => ({
       id: c.id,
       name: c.full_name,
+      month,
+      monthlyStatus: monthlyPaymentStatus(payments.data.filter(p=>p.child_id===c.id),month),
+      academyMethods: [...new Set(members.data.filter(m=>m.child_id===c.id&&isCurrentPlace(m.status,m.end_date,today)).map(m=>agreedAcademyMethod(m.agreed_payment_method,m.payment_method)))],
       category: one(c.category)?.name || "Por asignar",
       guardians: c.guardians.flatMap((g) => one(g.guardian)?.full_name || []),
       branches: [...(branches.get(c.id) || [])],

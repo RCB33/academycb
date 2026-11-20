@@ -37,6 +37,7 @@ import { FifaCard } from "@/components/fifa-card"
 import { EditStudentDialog } from "@/components/admin/edit-student-dialog"
 import {FamilyPlanAssignment} from '@/components/admin/family-plan-assignment'
 import { PaymentsList } from "@/components/admin/payments-list"
+import { PlayerPaymentMethods } from '@/components/admin/player-payment-methods'
 import { getStudentPayments } from "@/app/actions/payments"
 import { ManageAchievementsDialog } from "@/components/admin/manage-achievements-dialog"
 import { LinkGuardianDialog } from "@/components/admin/link-guardian-dialog"
@@ -296,6 +297,11 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
                 <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-widest text-amber-800">Ficha única del jugador</p><h2 className="mt-2 text-lg font-bold text-navy">Familia, actividades y pagos</h2><p className="mt-2 text-sm text-slate-600">Revisa el tutor y elige la actividad. La inscripción y el ingreso se gestionan por separado.</p></div><Link href="/admin/solicitudes" className="rounded-xl border bg-white px-4 py-2 text-xs font-bold">Solicitudes de familias →</Link></div>
                 <div className="mt-4 flex flex-wrap gap-2"><FamilyPlanAssignment childId={childId} childName={student.full_name} plans={plans} teams={assignmentTeams} defaultTeamId={student.team_id||''} onComplete={fetchStudentData}/><Link href={`/admin/finanzas/solicitudes?child_id=${childId}`} className="inline-flex items-center gap-2 rounded-xl bg-gold px-4 py-3 text-sm font-bold text-navy"><Mail className="h-4 w-4" />Enviar enlace de pago</Link><button onClick={()=>{setActiveTab('finance');document.getElementById('player-tabs')?.scrollIntoView({behavior:'smooth'})}} className="rounded-xl bg-navy px-4 py-3 text-sm font-bold text-white">Ver pagos</button><Link href={`/admin/campus?child=${childId}`} className="rounded-xl border bg-white px-4 py-3 text-sm font-bold text-navy">Campus · inscribir</Link><Link href="/admin/torneos" className="rounded-xl border bg-white px-4 py-3 text-sm font-bold text-navy">Torneos · equipos</Link></div>
             </section>
+            <PlayerPaymentMethods childId={childId} memberships={paymentsData.memberships} payments={paymentsData.payments} onSaved={()=>void fetchStudentData()} activities={[
+                ...(student.campus_enrollments||[]).filter((a:any)=>!['cancelled','rejected'].includes(a.status)).map((a:any)=>({id:a.id,name:a.campus?.name||'Campus',branch:'Campus',status:a.status})),
+                ...(student.tournament_players||[]).filter((a:any)=>!['cancelled','rejected'].includes(a.status)).map((a:any)=>({id:a.id,name:a.tournament?.title||'Torneo',branch:'Torneo',status:a.status})),
+                ...(student.event_registrations||[]).filter((a:any)=>!['cancelled','rejected','requested'].includes(a.status)).map((a:any)=>({id:a.id,name:a.campaign,branch:'Torneos',status:a.status})),
+            ]}/>
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">

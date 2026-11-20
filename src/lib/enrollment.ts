@@ -10,7 +10,7 @@ const serviceSchema = z.enum(['academy', 'campus', 'tournament'])
 
 export const enrollmentSchema = z.object({
     plan_id: z.string().optional(), group_id: z.string().optional(), second_group_id: z.string().optional(),
-    start_date: z.string().optional(), plus: z.enum(['yes','no','']).optional(), offer_version: z.string().optional(), payment_choice: z.enum(['monthly_card','transfer','']).optional(),
+    start_date: z.string().optional(), plus: z.enum(['yes','no','']).optional(), offer_version: z.string().optional(), payment_choice: z.enum(['monthly_card','cash','']).optional(),
     service: serviceSchema,
     activity_id: z.string().uuid().optional().or(z.literal('')),
     child_name: z.string().trim().min(2, 'Indica el nombre completo del jugador.').max(120),
@@ -117,7 +117,7 @@ export async function createEnrollmentRequest(payload: unknown): Promise<Enrollm
             guardian_name: parsed.data.guardian_name,
             email: parsed.data.email.toLowerCase(),
             phone: parsed.data.phone,
-            notes: [parsed.data.notes, academyDetails ? `Plan: ${academyDetails.plan.name} · ${academyDetails.quote.monthly_price} €/mes\nGrupos: ${academyDetails.groups.map(g=>g.public_offer.day+' '+g.schedule+' '+g.name).join('; ')}\nIncorporación: ${academyDetails.start_date} · Primera cuota: ${academyDetails.quote.first_month} € (${academyDetails.quote.percent} %)\nMatrícula nuevos jugadores: ${academyDetails.quote.enrollment_fee} € · Plus: ${academyDetails.quote.plus} €\nPago solicitado: ${academyDetails.payment_choice==='monthly_card'?'Mensualidades con tarjeta':'Transferencia'} · Fin: ${academyDetails.quote.season_end}` : ''].filter(Boolean).join('\n') || null,
+            notes: [parsed.data.notes, academyDetails ? `Plan: ${academyDetails.plan.name} · ${academyDetails.quote.monthly_price} €/mes\nGrupos: ${academyDetails.groups.map(g=>g.public_offer.day+' '+g.schedule+' '+g.name).join('; ')}\nIncorporación: ${academyDetails.start_date} · Primera cuota: ${academyDetails.quote.first_month} € (${academyDetails.quote.percent} %)\nMatrícula nuevos jugadores: ${academyDetails.quote.enrollment_fee} € · Plus: ${academyDetails.quote.plus} €\nPago solicitado: ${academyDetails.payment_choice==='monthly_card'?'Mensualidades con tarjeta':'Efectivo'} · Fin: ${academyDetails.quote.season_end}` : ''].filter(Boolean).join('\n') || null,
             status: 'new',
         })
     }

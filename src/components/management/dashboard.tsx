@@ -1,4 +1,5 @@
 "use client";
+import { MonthlyPaymentDot } from '@/components/admin/monthly-payment-dot';
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -173,7 +174,7 @@ export function PlayersOverview({
             <tr>
               <th className="px-6 py-3">Jugador / tutor</th>
               <th className="px-4 py-3">Actividades vigentes</th>
-              <th className="px-4 py-3">Saldo vencido</th>
+              <th className="px-4 py-3">Cuota de Academia</th><th className="px-4 py-3">Saldo vencido</th>
               <th className="px-5 py-3">
                 <span className="sr-only">Ficha</span>
               </th>
@@ -217,7 +218,7 @@ export function PlayersOverview({
                 <td className="px-4 py-4">
                   <div className="flex flex-wrap gap-1.5">
                     {p.branches.map((b) => (
-                      <BranchBadge key={b} branch={b} />
+                      <div key={b}><BranchBadge branch={b}/><p className="mt-1 text-[11px] text-slate-500">{b==='academy'?(p.academyMethods||[]).join(' · '):'Transferencia bancaria'}</p></div>
                     ))}
                     {!p.branches.length && (
                       <span className="text-xs text-slate-400">
@@ -226,6 +227,7 @@ export function PlayersOverview({
                     )}
                   </div>
                 </td>
+                <td className="px-4 py-4"><p className="mb-1 text-[11px] text-slate-500">{p.month}</p><MonthlyPaymentDot status={p.monthlyStatus||'missing'}/></td>
                 <td className="px-4 py-4">
                   {p.pending > 0 ? (
                     <span className="whitespace-nowrap rounded-full bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-900">
@@ -236,7 +238,7 @@ export function PlayersOverview({
                       Fechas por revisar
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
+                    <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600">
                       <Check size={12} />
                       Sin vencidos
                     </span>

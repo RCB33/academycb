@@ -26,7 +26,7 @@ export async function cancelCheckout(kind: 'receipt' | 'academy' | 'event', id: 
 // New card authorizations use the finite billing request generated from receipts.
 export async function payAcademy(membershipId: string, choice: 'full' | 'monthly', accepted: boolean, quote: { unitCents: number; feeCents: number; months: number }):Promise<{error?:string;url?:string}> {
     void membershipId; void choice; void accepted; void quote
-    return {error:'Autoriza las mensualidades desde el enlace de tu plaza aceptada en Pagos. Si no aparece, contacta con Academy. Matrícula y otros conceptos se pagan por transferencia.'}
+    return {error:'Autoriza las mensualidades desde el enlace de tu plaza aceptada en Pagos. Si no aparece, contacta con Academy. Matrícula y otros conceptos de Academia se pagan en efectivo. Contacta por WhatsApp al 691 17 96 00.'}
 }
 
 export async function payReceipt(paymentId: string):Promise<{error?:string;url?:string}> {

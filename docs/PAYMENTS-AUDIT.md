@@ -1,3 +1,14 @@
+## Formas de pago acordadas y estado mensual — 20 noviembre 2026
+
+Regla actual del propietario: Academia admite efectivo o mensualidades por Stripe; Campus y Torneos, transferencia. Esta sección sustituye las alternativas de transferencia de Academia descritas en entradas anteriores.
+
+- Correos de mensualidades con logo y CTA «Activar pago mensual con tarjeta», alternativa de efectivo por WhatsApp 691 17 96 00, sin IBAN. Correos de aceptación de Academia también corregidos; botón cuando existe solicitud de suscripción lista. Campus y Torneos conservan su IBAN y comprobación del justificante. No se envía un botón de una suscripción aún no preparada.
+- Elección en inscripción y alta manual. Campo nullable `agreed_payment_method` separado del método histórico del recibo; sin backfill de datos antiguos. Guardado administrativo validado y atómico. Cash bloqueado mientras haya enlace/contrato LIVE abierto o suscripción pendiente de cerrar. La preferencia no activa Stripe ni acredita dinero.
+- Ficha: tarjetas por actividad, selector Efectivo/Stripe para Academia, transferencia en Campus/Torneos y estado del mes seleccionable. Listado y dashboard: método acordado, mes y punto con texto. Verde solo para cuota íntegramente cobrada; parcial, pendiente, bonificado y sin cuota diferenciados. Sin vencidos no se presenta como prueba de mes pagado.
+- Migración remota `20261120090827_academy_payment_preferences`, sin actualizar filas históricas. Nuevos recibos de Academia nacen pendientes y sin atribuir un método de cobro efectivo. Plan manual v3 conserva prorrateo, idempotencia y cola de avisos.
+- Verificado: SQL local con fixtures revertidas (aceptación, límites prorrateo, alta manual, cambio de método, permisos, rechazo transferencia y suscripción abierta, recibos inalterados); transacción remota revertida con RLS real, alta ficticia, cambios efectivo/Stripe y digest de pagos conservado. 11 pagos históricos: `e9b3ce77d682aabd79e1097a68a22b23`.
+- Tests de estados mensuales, correos/preview-envío simulado, notificaciones, gestión, prorrateo, pagos y Stripe; TypeScript, lint sin errores y build. No se han enviado correos reales ni iniciado cobros. No se modifican flags de Stripe; mensualidades LIVE generales siguen desactivadas, piloto privado preexistente intacto.
+
 ## Enlace de pago desde ficha y correo de marca — 20 noviembre 2026
 
 Publicado `797ff9e` + `a2ba63c`; versión funcional Vercel `dpl_Dqp3xmMVuuoUPsCDs6rfF3honSqy`, READY. Base comprobada con fetch explícito `b1882d3`. Sin migración ni cambios de flags/pagos.

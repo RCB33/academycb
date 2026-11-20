@@ -42,7 +42,7 @@ export async function prepareAcceptedSubscription(requestId:string,actorId:strin
   const db=createAdminClient()
   const {data:request}=await db.from('enrollment_requests').select('academy_details').eq('id',requestId).single()
   const details=request?.academy_details
-  if(details?.payment_choice!=='monthly_card') return {status:'transfer'}
+  if(details?.payment_choice!=='monthly_card') return {status:details?.payment_choice==='cash'?'cash':'needs_review'}
   const {data:receipts,error}=await db.from('payments').select('id').eq('ref_id',details.accepted.membership_id).eq('concept_code','monthly').gt('covered_month',details.start_date.slice(0,7)).in('status',['pending','failed']).order('due_date')
   if(error) return {error:'Falta preparar las mensualidades desde Finanzas.'}
   if(!receipts?.length) return {status:'last_month'}

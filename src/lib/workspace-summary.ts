@@ -6,6 +6,9 @@ export const branchNames: Record<Branch, string> = {
   tournament: "Torneos",
 };
 export type WorkspacePlayer = {
+  month?: string;
+  monthlyStatus?: import('./monthly-payment-status').MonthlyStatus;
+  academyMethods?: string[];
   id: string;
   name: string;
   category: string;
