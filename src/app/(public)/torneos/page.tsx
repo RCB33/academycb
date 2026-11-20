@@ -9,6 +9,7 @@ import { getPublicSettings } from '@/lib/public-settings'
 import { Button } from '@/components/ui/button'
 import { ChristmasTournaments } from '@/components/christmas-tournaments'
 import { legacyChristmasTournamentTargets } from '@/lib/christmas-tournaments'
+import { TournamentGallery } from '@/components/tournament-gallery'
 
 export async function generateMetadata() {
     const translate = await getT()
@@ -76,6 +77,7 @@ export default async function TorneosPage() {
                         <p className="mt-7 max-w-2xl text-lg leading-relaxed text-slate-200 md:text-2xl">{translate("Cada torneo es una oportunidad para crecer, compartir y sentirnos parte de un mismo equipo.")}</p>
                         <p className="mt-4 max-w-2xl text-lg leading-relaxed text-slate-200 md:text-2xl"><strong className="font-bold text-gold">{translate("Defiende nuestro escudo. Vive nuestros colores.")}</strong> {translate(" Representa a Academy Costa Brava con orgullo, respeto y compañerismo, dentro y fuera del campo.")}</p>
                         <Button asChild size="lg" className="mt-9 h-auto min-h-14 max-w-full whitespace-normal bg-gold px-5 py-4 text-center font-bold uppercase text-navy hover:bg-gold-light"><Link href="#navidad">{translate("Ver torneos de Navidad ")}<ArrowRight className="ml-2 h-5 w-5 shrink-0" /></Link></Button>
+                        <p className="mt-5"><Link href="#galeria" className="inline-flex min-h-11 items-center gap-2 font-semibold text-white underline decoration-gold underline-offset-4 hover:text-gold">{translate('Fotos y vídeos de nuestros torneos')}<ArrowRight className="h-4 w-4" /></Link></p>
                     </div>
                 </div>
             </section>
@@ -111,6 +113,7 @@ export default async function TorneosPage() {
                 </div>
             </section>
 
+            <TournamentGallery />
             <section className="container py-20 text-center md:py-28"><p className="font-heading text-4xl font-black uppercase text-white md:text-6xl">{translate("Los resultados pasan.")}<br /><span className="text-gold">{translate("Los recuerdos permanecen.")}</span></p><p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-slate-300 md:text-lg">{translate("Está en los compañeros, los lugares, los rivales y las dificultades que aprendemos a superar juntos.")}</p><Button asChild size="lg" className="mt-8 bg-gold px-7 font-bold uppercase text-navy hover:bg-gold-light"><Link href="/contacto">{translate("Quiero vivir la experiencia")}</Link></Button></section>
         </div>
     )
