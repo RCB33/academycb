@@ -4,7 +4,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { configuredStripe } from '@/lib/stripe-payments'
 import { stripeCheckoutMode } from '@/lib/stripe-availability'
 import { stripePaymentOrigin } from '@/lib/stripe-return-origin'
-import { billingSummary, type BillingRequest, type BillingAttempt } from '@/lib/billing-request'
+import { type BillingRequest, type BillingAttempt } from '@/lib/billing-request'
+import { preparePaymentRequestEmail } from '@/lib/payment-request-email-server'
 
 export const dynamic='force-dynamic'
 export const maxDuration=60
@@ -58,10 +59,11 @@ export async function POST(request:Request) {
    if(!z.string().email().safeParse(r.recipient_email).success)return reply({error:'El tutor no tiene un email válido'},400)
    if(!process.env.RESEND_API_KEY)return reply({error:'Falta configurar el envío de correo. Puedes copiar el enlace.'},503)
    if(r.email_status==='accepted')return reply({message:'El proveedor ya aceptó este correo. Esto no confirma su lectura.'})
+   const content=await preparePaymentRequestEmail(r,linkOrigin)
    const claim=await db.from('billing_requests').update({email_status:'sending'}).eq('id',r.id).in('email_status',['not_sent','failed']).select('id')
    if(claim.error||!claim.data?.length)return reply({error:'El correo ya se está enviando. Actualiza antes de repetir.'},409)
    try {
-    const response=await fetch('https://api.resend.com/emails',{method:'POST',signal:AbortSignal.timeout(10000),headers:{Authorization:`Bearer ${process.env.RESEND_API_KEY}`,'Content-Type':'application/json','Idempotency-Key':`billing-request-${r.id}`},body:JSON.stringify({from:process.env.RESEND_FROM_EMAIL||'Academy Costa Brava <info@academycostabrava.com>',to:[r.recipient_email],reply_to:'costabravaacademy@gmail.com',subject:`Academy Costa Brava · ${r.title}`,text:`${r.mode==='test'?'PRUEBA SIN COBRO REAL\n\n':''}${r.title}\n\n${billingSummary(r)}\n\nRevisa los recibos y acepta desde tu cuenta de tutor:\n${linkOrigin}/portal/pagos/solicitud/${r.id}\n\nEnlace válido hasta ${r.expires_at.slice(0,10)}. Si no reconoces esta solicitud, contacta con Academy. No envíes datos de tarjeta por correo.`})})
+    const response=await fetch('https://api.resend.com/emails',{method:'POST',signal:AbortSignal.timeout(10000),headers:{Authorization:`Bearer ${process.env.RESEND_API_KEY}`,'Content-Type':'application/json','Idempotency-Key':`billing-request-${r.id}`},body:JSON.stringify({from:process.env.RESEND_FROM_EMAIL||'Academy Costa Brava <info@academycostabrava.com>',to:[r.recipient_email],reply_to:'costabravaacademy@gmail.com',...content})})
     if(!response.ok)throw Error('Provider rejected')
     const provider=await response.json();if(typeof provider.id!=='string')throw Error('Invalid provider response')
     const saved=await db.from('billing_requests').update({email_status:'accepted',email_provider_id:provider.id,email_sent_at:new Date().toISOString()}).eq('id',r.id)
