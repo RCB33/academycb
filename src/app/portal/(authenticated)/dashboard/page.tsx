@@ -1,12 +1,13 @@
 
+import { PlayerProfileDetails } from '@/components/portal/player-profile-details'
 import { PlayerPhotoEditor } from '@/components/portal/player-photo-editor'
 import { getT } from '@/lib/i18n/server'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card"
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ArrowRight, UserCircle, UsersRound } from "lucide-react"
+import { ArrowRight, UsersRound } from "lucide-react"
 
 export default async function DashboardPage() {
     const translate = await getT()
@@ -33,7 +34,7 @@ export default async function DashboardPage() {
     // Get Children
     const { data: relations } = await supabase
         .from('child_guardians')
-        .select('child:children(id, full_name, birth_year, avatar_url, archived_at, category:categories(name))')
+        .select('child:children(id, full_name, birth_year, birth_date, club_name, club_category, club_division, avatar_url, archived_at)')
         .eq('guardian_id', guardian.id)
 
     const children = (relations?.map(r => r.child) || []).filter((child: any) => child && !child.archived_at)
@@ -59,10 +60,11 @@ export default async function DashboardPage() {
                             <PlayerPhotoEditor childId={child.id} name={child.full_name} avatarUrl={child.avatar_url} />
                             <div>
                                 <CardTitle className="text-xl">{translate(child.full_name)}</CardTitle>
-                                <CardDescription>{translate("Año ")}{translate(child.birth_year)} {translate(" • ")}{translate(child.category?.name || 'Sin Categoría')}</CardDescription>
+
                             </div>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="space-y-5">
+                            <PlayerProfileDetails player={child} editable compact />
                             <div className="flex justify-between items-center text-sm text-muted-foreground">
                                 <span>{translate("Progreso, calendario y documentos")}</span>
                                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />

@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Activity, AlertCircle, CalendarDays, Medal, Trophy } from 'lucide-react'
+import { PlayerProfileDetails } from '@/components/portal/player-profile-details'
 import { PlayerPhotoEditor } from '@/components/portal/player-photo-editor'
 import { getPlayerGallery } from '@/app/actions/gallery'
 import { PhotoGallery } from '@/components/portal/photo-gallery'
@@ -100,11 +101,7 @@ export default async function ChildPage({ params }: { params: Promise<{ childId:
                 <div className="flex items-center gap-4">
                     <PlayerPhotoEditor key={child.id} childId={child.id} name={child.full_name} avatarUrl={child.avatar_url} />
                     <div><h1 className="text-3xl font-bold tracking-tight text-slate-900">{translate(child.full_name)}</h1>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                        <span className="rounded border border-gold/20 bg-gold/10 px-2 py-1 text-[10px] font-black uppercase tracking-wider text-gold">{translate(child.category?.name || 'Academia')}</span>
-                        <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
-                        <span className="text-xs font-bold uppercase tracking-widest opacity-60">{translate("Gen. ")}{translate(child.birth_year)}</span>
-                    </div>
+                    <p className="mt-1 text-sm text-slate-500">{translate("Perfil del jugador")}</p>
                     </div>
                 </div>
                 <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
@@ -119,6 +116,8 @@ export default async function ChildPage({ params }: { params: Promise<{ childId:
                     ))}
                 </div>
             </div>
+
+            <PlayerProfileDetails key={childId} player={child} editable />
 
             {/* Gamification / Upcoming Dashboard */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

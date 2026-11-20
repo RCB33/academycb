@@ -2,6 +2,7 @@
 
 import { isAcceptedTournamentRegistration } from '@/lib/christmas-tournaments'
 
+import { PlayerProfileDetails } from '@/components/portal/player-profile-details'
 import { ManagedPlayerGallery } from '@/components/portal/photo-gallery'
 import { useState, useEffect, use } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -338,6 +339,8 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
                     />
                 </div>
             </div>
+
+            <PlayerProfileDetails key={childId} player={student} editable onSaved={()=>void fetchStudentData()} />
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 {/* Left Sidebar - Key Stats */}
