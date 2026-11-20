@@ -139,7 +139,7 @@ export default async function ChildPage({ params }: { params: Promise<{ childId:
                                         </p>
                                         <div className="flex gap-2">
                                             <Button asChild size="sm" className="h-9 bg-gold text-navy hover:bg-gold-light font-bold text-xs"><Link href="/portal/calendario">{translate("Ver calendario")}</Link></Button>
-                                            <Button asChild size="sm" variant="outline" className="h-9 border-slate-600 text-white hover:bg-slate-700 hover:text-white font-bold text-xs"><Link href="/portal/comunicados">{translate("Ver avisos")}</Link></Button>
+                                            <Button asChild size="sm" variant="outline" className="h-9 border-slate-600 bg-transparent text-white hover:bg-slate-700 hover:text-white font-bold text-xs"><Link href="/portal/comunicados">{translate("Ver avisos")}</Link></Button>
                                         </div>
                                     </>
                                 ) : (
