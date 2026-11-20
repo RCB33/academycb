@@ -521,3 +521,10 @@ Las menciones a “pendiente” en las secciones siguientes reflejan su fecha, n
 - El propietario confirma que el segundo intento completó el acceso. Revisión del recorrido: el estado de éxito anterior navegaba automáticamente tras 700 ms, demasiado rápido para leerlo.
 - Se mantiene ahora una pantalla final hasta pulsar «Entrar en mi portal»: check verde, título «¡Contraseña guardada!», confirmación explícita, email verificado y acceso con la contraseña elegida. Textos coherentes en ES/CA/EN; botón previo «Guardar mi contraseña».
 - Pruebas de API y componente superadas: código obligatorio, contraseña válida, recuperación, errores/reintentos, bloqueo de doble envío y éxito persistente sin temporizador de navegación. TypeScript y lint correctos. No se cambian Auth, plantillas de correo, cuentas ni registros financieros.
+
+## 20/11/2026 — Bienvenida animada aprobada
+
+- Tras aprobar el propietario la muestra enviada a su correo, se incorpora el mismo GIF a los correos personalizados de aceptación: Academia (solicitud y asignación manual), Campus y participación aceptada de torneos. Los avisos iniciales, cancelaciones y comunicaciones generales conservan su presentación habitual.
+- Archivo público versionado `/email/bienvenida-academy-v1.gif`; SHA-256 `e1c935c49e338755e6556a242b47d2b93d0e953033434124ff9c6459fcdddeb7`, idéntico a la muestra aprobada. Logo original, sobre y pelota; 6 segundos, texto alternativo y tamaño adaptable.
+- La bienvenida mantiene el destinatario real, instrucciones del portal según estado de acceso, datos de plaza, importes, vencimientos y acciones de pago existentes. No cambia cuentas, pagos, activación Stripe ni envía de nuevo mensajes históricos.
+- Pruebas simuladas verifican el GIF en el payload de aceptación, ausencia en recepción y fallback, escape HTML, datos de acceso y de pago, exclusión de etiquetas de muestra e idempotencia del envío. TypeScript, lint y suites de notificaciones, acceso y correo de cobro correctos. Sin nuevos envíos a familias durante las pruebas.

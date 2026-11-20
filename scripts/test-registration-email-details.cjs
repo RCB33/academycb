@@ -23,8 +23,10 @@ function load(file) {
   ] }
   let result = await details('enrollment', 'test-request', 'received')
   assert.match(result.message, /Todavía no realices ningún pago/)
+  assert.equal(result.welcome, undefined, 'Received requests are not welcomed as accepted')
   assert.doesNotMatch(result.message, /MOCK-ONLY/)
   result = await details('enrollment', 'test-request', 'reviewed')
+  assert.equal(result.welcome, true)
   assert.match(result.message, /Importe inicial pendiente: 57\.50 €/)
   assert.match(result.message, /Primera cuota: 37\.50 € \(50 %\)/)
   assert.match(result.message, /Todavía no hay ningún cobro automático activado/)
@@ -58,6 +60,7 @@ function load(file) {
   rows.children={full_name:'Jugador QA'}
   rows.payments=[{amount:35,status:'pending',concept_code:'monthly',covered_month:'2027-01'},{amount:30,status:'pending',concept_code:'registration'},{amount:140,status:'pending',concept_code:'monthly',covered_month:'2027-02'}]
   result=await details('membership','qa','reviewed')
+  assert.equal(result.welcome,true)
   assert.match(result.message,/Importe inicial pendiente: 65\.00 €/)
   assert.match(result.message,/25 %/)
   assert.match(result.message,/Domingo/)
