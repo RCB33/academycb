@@ -3,6 +3,7 @@ import { useT } from '@/lib/i18n/client'
 
 
 import { motion } from "framer-motion"
+import { PlayerPhotoEditor } from '@/components/portal/player-photo-editor'
 import { profileImageUrl } from '@/lib/profile-image'
 
 type Stats = {
@@ -20,9 +21,10 @@ type FifaCardProps = {
     child: any
     ovr?: number
     className?: string
+    editablePhoto?: boolean
 }
 
-export function FifaCard({ stats, child, ovr, className }: FifaCardProps) {
+export function FifaCard({ stats, child, ovr, className, editablePhoto = false }: FifaCardProps) {
     const translate = useT()
 
     // Calculate OVR if not provided
@@ -64,8 +66,8 @@ export function FifaCard({ stats, child, ovr, className }: FifaCardProps) {
 
                     {/* Player Image Area */}
                     <div className="relative flex-1 min-h-[160px] mx-auto w-full max-w-[200px] my-2">
-                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent z-20"></div>
-                        {translate(child?.avatar_url ? (
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent z-20 pointer-events-none"></div>
+                        {editablePhoto ? <PlayerPhotoEditor key={child.id} childId={child.id} name={child.full_name} avatarUrl={child.avatar_url} variant="card"/> : translate(child?.avatar_url ? (
                             <img src={profileImageUrl(child.avatar_url)} className="w-full h-full object-cover object-top rounded-t-xl mask-image-gradient" alt={translate(child.full_name)} />
                         ) : (
                             <UserCircleIcon className="w-full h-full text-slate-600" />

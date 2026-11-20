@@ -6,19 +6,20 @@ import { useT } from '@/lib/i18n/client'
 import { profileImageUrl } from '@/lib/profile-image'
 import { savePlayerPhoto } from '@/app/actions/player-photo'
 
-export function PlayerPhotoEditor({ childId, name, avatarUrl }: { childId: string; name: string; avatarUrl?: string | null }) {
+export function PlayerPhotoEditor({ childId, name, avatarUrl, variant = 'avatar' }: { variant?: 'avatar' | 'card'; childId: string; name: string; avatarUrl?: string | null }) {
     const t = useT(), router = useRouter()
     const [pending, start] = useTransition()
     const [error, setError] = useState('')
     const [savedUrl, setSavedUrl] = useState<string>()
     const src = profileImageUrl(savedUrl || avatarUrl)
-    return <div className="flex shrink-0 flex-col items-center gap-2">
-        <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border border-gold/30 bg-gold/10 text-gold">
+    return <label className={`group/photo relative flex cursor-pointer flex-col items-center gap-2 ${variant==='card'?'h-full w-full':'shrink-0'} ${pending?'pointer-events-none opacity-60':''}`}>
+        <span className="sr-only">{t('Foto de')} {name}</span>
+        <div className={variant==='card'?'flex h-full min-h-40 w-full items-center justify-center overflow-hidden rounded-xl text-gold':'flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border border-gold/30 bg-gold/10 text-gold'}>
             {src ? <img src={src} alt={name} className="h-full w-full object-cover" /> : <UserCircle className="h-12 w-12" />}
         </div>
-        <label className={`relative inline-flex min-h-10 cursor-pointer items-center gap-1 rounded-lg border bg-white px-2 text-xs font-semibold text-navy ${pending ? 'pointer-events-none opacity-60' : ''}`}>
+        <span className={`inline-flex min-h-10 items-center gap-1 rounded-lg border bg-white px-2 text-xs font-semibold text-navy ${variant==='card'?'absolute bottom-2 z-30 shadow-lg':''}`}>
             {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}{t(src ? 'Cambiar foto' : 'Añadir foto')}
-            <input type="file" accept="image/jpeg,image/png,image/webp" aria-label={`${t('Foto de')} ${name}`} disabled={pending} className="absolute inset-0 w-full cursor-pointer opacity-0" onChange={event => {
+            <input type="file" accept="image/jpeg,image/png,image/webp" aria-label={`${t('Foto de')} ${name}`} disabled={pending} className="absolute inset-0 z-40 h-full w-full cursor-pointer opacity-0" onChange={event => {
                 const file = event.target.files?.[0]; event.target.value = ''; if (!file) return
                 setError('')
                 if (file.size > 3 * 1024 * 1024) { setError(t('La foto supera los 3 MB. Reduce su tamaño antes de subirla.')); return }
@@ -31,7 +32,7 @@ export function PlayerPhotoEditor({ childId, name, avatarUrl }: { childId: strin
                     } catch { setError(t('No se pudo guardar la foto.')) }
                 })
             }} />
-        </label>
+        </span>
         {error && <p role="alert" className="max-w-48 text-xs text-red-700">{error}</p>}
-    </div>
+    </label>
 }

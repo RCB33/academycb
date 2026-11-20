@@ -1,3 +1,4 @@
+import { getT } from '@/lib/i18n/server';
 import { ActivityPaymentSummary } from '@/components/activity-payment-summary';
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -8,6 +9,8 @@ import {
   ArrowRight,
   CalendarDays,
   ClipboardCheck,
+  Clock3,
+  CheckCircle2,
 } from "lucide-react";
 import { getFamilyContext } from "@/lib/family-context";
 import { createClient } from "@/lib/supabase/server";
@@ -36,6 +39,7 @@ export default async function FamilyActivities({
 }: {
   searchParams: Promise<{ child?: string }>;
 }) {
+  const translate=await getT();
   const family = await getFamilyContext();
   if (!family) redirect("/portal");
   const selected = (await searchParams).child,
@@ -45,7 +49,7 @@ export default async function FamilyActivities({
   if (selected && !ids.length) redirect("/portal/actividades");
   const db = await createClient(),
     admin = createAdminClient();
-  const [campuses, members, campusLinks, eventRows, requests] =
+  const [campuses, members, campusLinks, eventRows, requests, assignments] =
     await Promise.all([
       getCampusOffers(),
       ids.length
@@ -95,6 +99,7 @@ export default async function FamilyActivities({
           .order("id")
           .range(f, t),
       ),
+      ids.length ? adminReadAll((f,t) => db.from('academy_group_assignments').select('membership_id,team:teams(name,schedule)').in('child_id',ids).order('membership_id').order('team_id').range(f,t)) : Promise.resolve({data: []}),
     ]);
   const one = <T,>(v: T | T[] | null) => (Array.isArray(v) ? v[0] : v);
   const name = (id: string) =>
@@ -102,13 +107,16 @@ export default async function FamilyActivities({
   const today = new Date().toLocaleDateString("en-CA", {
     timeZone: "Europe/Madrid",
   });
+  const date = (value: string | null | undefined) => value ? new Date(`${value.slice(0,10)}T12:00:00Z`).toLocaleDateString(translate.locale,{day:'numeric',month:'short',year:'numeric',timeZone:'Europe/Madrid'}) : 'Fin por confirmar';
   const activities = [
     ...members.data.map((m) => ({
       id: m.id,
       name: name(m.child_id),
       title: one(m.plan)?.name || "Academia",
       status: m.status,
-      detail: `${m.start_date} — ${m.end_date || "Fin por confirmar"}`,
+      detail: `${date(m.start_date)} — ${date(m.end_date)}`,
+      kind: 'Academia',
+      groups: assignments.data.filter(g=>g.membership_id===m.id).map(g=>one(g.team)).filter(Boolean).map(g=>`${g!.name} · ${g!.schedule}`),
       href: "/portal/pagos",
     })),
     ...campusLinks.data.map((c) => ({
@@ -116,7 +124,8 @@ export default async function FamilyActivities({
       name: name(c.child_id),
       title: one(c.campus)?.name || "Campus",
       status: c.status,
-      detail: `${one(c.campus)?.start_date || ""} — ${one(c.campus)?.end_date || ""}`,
+      detail: `${date(one(c.campus)?.start_date)} — ${date(one(c.campus)?.end_date)}`,
+      kind: 'Campus', groups: [],
       href: "/portal/pagos",
     })),
     ...eventRows.data
@@ -125,6 +134,7 @@ export default async function FamilyActivities({
         id: e.id,
         name: String(e.details.child_name || name(e.child_id)),
         title: "Torneos · Navidad 2026–2027",
+        kind: "Torneos", groups: [],
         status: e.status,
         detail: `Importe ${e.approved_amount !== null ? "validado" : "solicitado"}: ${Number(e.approved_amount ?? e.quoted_amount).toFixed(2)} €`,
         href: "/torneos/inscripcion",
@@ -135,7 +145,7 @@ export default async function FamilyActivities({
       !["enrolled", "lost"].includes(r.status) &&
       (!selected || r.linked_child_id === selected),
   );
-  return (
+  return translate(
     <div className="mx-auto max-w-5xl space-y-6">
       <header className="rounded-3xl bg-navy p-7 text-white">
         <p className="text-xs font-bold uppercase tracking-widest text-gold">
@@ -143,7 +153,7 @@ export default async function FamilyActivities({
         </p>
         <h1 className="mt-3 text-3xl font-bold">Mis actividades</h1>
         <p className="mt-3 text-sm text-slate-300">
-          Elige una nueva experiencia o consulta cómo va tu inscripción.
+          Suscripciones, horarios y nuevas experiencias. Todo para seguir disfrutando del fútbol.
         </p>
       </header>
       <nav
@@ -166,28 +176,40 @@ export default async function FamilyActivities({
           </Link>
         ))}
       </nav>
+      <section aria-labelledby="subscriptions-heading" className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-widest text-amber-700">Ya formas parte</p><h2 id="subscriptions-heading" className="mt-1 text-2xl font-black text-navy">Tus suscripciones e inscripciones</h2></div><Link href="/portal/pagos" className="rounded-full border bg-white px-4 py-2 text-sm font-semibold text-navy">Consultar pagos →</Link></div>
+        <div className="grid gap-4 lg:grid-cols-2">{activities.map(a=><article key={a.id} className="relative overflow-hidden rounded-3xl border border-gold/30 bg-white p-6 shadow-sm">
+          <div className="absolute inset-y-0 left-0 w-1.5 bg-gold" />
+          <div className="flex flex-wrap items-center justify-between gap-2"><span className="rounded-full bg-navy/5 px-3 py-1 text-xs font-bold text-navy">{a.kind}</span><span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${['active','confirmed','paid'].includes(a.status)?'bg-emerald-50 text-emerald-800':'bg-amber-50 text-amber-800'}`}><CheckCircle2 size={14}/>{state[a.status]||a.status}</span></div>
+          <p className="mt-5 text-sm font-semibold text-amber-700">{a.name}</p><h3 className="mt-1 text-xl font-bold text-navy">{a.title}</h3>
+          <div className="mt-4 space-y-2">{a.groups.map(g=><p key={g} className="flex items-start gap-2 rounded-xl bg-slate-50 p-3 text-sm font-semibold text-navy"><Clock3 size={18} className="mt-0.5 shrink-0 text-amber-700"/>{g}</p>)}<p className="flex items-center gap-2 text-sm text-slate-500"><CalendarDays size={16}/>{a.detail}</p></div>
+          <div className="mt-5 flex flex-wrap gap-3"><Link href="/portal/calendario" className="rounded-xl bg-navy px-4 py-2.5 text-sm font-bold text-white">Ver calendario</Link><Link href={a.href} className="rounded-xl border px-4 py-2.5 text-sm font-bold text-navy">Ver detalle →</Link></div>
+        </article>)}</div>
+        {!activities.length&&<p className="rounded-3xl border border-dashed bg-white p-8 text-center text-sm text-slate-500">Tu próxima experiencia empieza aquí. Elige una actividad y solicita tu plaza.</p>}
+      </section>
+      <div className="pt-3"><p className="text-xs font-bold uppercase tracking-widest text-amber-700">Sigue sumando experiencias</p><h2 className="mt-1 text-2xl font-black text-navy">Más fútbol, más momentos juntos</h2><p className="mt-2 text-sm text-slate-500">Utiliza la ficha de tu hijo para solicitar una nueva plaza. El equipo revisará la disponibilidad.</p></div>
       <section className="grid gap-4 sm:grid-cols-3">
         {[
           {
-            title: "Academia",
+            title: "Más sesiones de Academia",
             icon: GraduationCap,
-            description: "Tu plan, grupo y horario de entrenamiento.",
+            description: "Sigue creciendo con nuevos días y grupos de entrenamiento.",
             href: "/inscripcion?service=academy",
-            cta: "Solicitar plaza",
+            cta: "Apuntarme a Academia",
           },
           {
-            title: "Campus",
+            title: "Vive el campus",
             icon: Tent,
             description: "Semanas, packs y tecnificación de porteros.",
             href: "#campus-disponibles",
-            cta: "Elegir campus",
+            cta: "Ver campus disponibles",
           },
           {
-            title: "Torneos",
+            title: "Compite con Academy",
             icon: Trophy,
             description: "Compite con Academy usando la ficha de tu hijo.",
             href: "/torneos/inscripcion",
-            cta: "Elegir torneos",
+            cta: "Apuntarme a torneos",
           },
         ].map((item) => (
           <Link
@@ -233,46 +255,6 @@ export default async function FamilyActivities({
           </p>
         </section>
       )}
-      <section className="rounded-3xl border bg-white p-6">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-xl font-bold text-navy">Tus inscripciones</h2>
-          <Link
-            href="/portal/pagos"
-            className="text-sm font-semibold text-amber-800"
-          >
-            Ver pagos →
-          </Link>
-        </div>
-        <div className="mt-4 divide-y">
-          {activities.map((a) => (
-            <article
-              key={a.id}
-              className="flex flex-wrap items-center justify-between gap-4 py-4"
-            >
-              <div>
-                <p className="text-xs font-semibold text-amber-700">{a.name}</p>
-                <h3 className="mt-1 font-bold text-navy">{a.title}</h3>
-                <p className="mt-1 text-xs text-slate-500">{a.detail}</p>
-                <span className="mt-2 inline-block rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs">
-                  {state[a.status] || a.status}
-                </span>
-              </div>
-              <Link
-                href={a.href}
-                className="rounded-xl border px-4 py-2.5 text-xs font-bold text-navy"
-              >
-                Ver detalle →
-              </Link>
-            </article>
-          ))}
-        </div>
-        {!activities.length && (
-          <p className="py-8 text-center text-sm text-slate-500">
-            Aquí aparecerán tus inscripciones y su estado. Puedes empezar
-            eligiendo una actividad.
-          </p>
-        )}
-      </section>
       <section id="campus-disponibles" className="scroll-mt-6 space-y-4">
         <h2 className="flex items-center gap-2 text-xl font-bold text-navy">
           <CalendarDays size={21} />
@@ -288,7 +270,7 @@ export default async function FamilyActivities({
               <div>
                 <h3 className="text-lg font-bold text-navy">{c.name}</h3>
                 <p className="mt-2 text-sm text-slate-500">
-                  {c.start_date} — {c.end_date} · {c.schedule}
+                  {date(c.start_date)} — {date(c.end_date)} · {c.schedule}
                 </p>
                 <p className="mt-1 text-sm text-slate-500">{c.location}</p>
                 <p className="mt-3 text-sm font-semibold">

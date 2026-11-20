@@ -41,6 +41,7 @@ export default async function ComunicadosWallPage() {
         <div className="max-w-3xl mx-auto space-y-6">
             <PortalPageHeader icon={<Megaphone className="h-6 w-6" />} title={translate("Comunicados")} description={translate("Avisos oficiales de Academy y de los equipos de tus jugadores.")} />
 
+            <aside className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-gold/30 bg-white p-5"><div><h2 className="font-bold text-navy">{translate('¿Tienes una consulta?')}</h2><p className="mt-1 text-sm text-slate-500">{translate('Aquí recibes los avisos del equipo. Para responder o consultar algo sobre tu jugador, escribe a Academy por WhatsApp.')}</p></div><a href="https://wa.me/34691179600" target="_blank" rel="noopener noreferrer" className="rounded-xl bg-navy px-4 py-3 text-sm font-bold text-white">{translate('Escribir a Academy')} →</a></aside>
             <div className="space-y-6 mt-8">
                 {translate((!messages || messages.length === 0) ? (
                     <Card className="border-dashed border-2 bg-slate-50 border-slate-200">

@@ -17,7 +17,7 @@ const NAV_ITEMS = [
     { href: '/portal/muro', label: 'Muro Academy', icon: Heart },
     { href: '/portal/profile', label: 'Mi Perfil', icon: User },
     { href: '/portal/calendario', label: 'Mi Calendario', icon: CalendarIcon },
-    { href: '/portal/videoteca', label: 'Videoteca', icon: Video },
+    { href: '/portal/videoteca', label: 'Fotos y vídeos', icon: Video },
     { href: '/portal/documentos', label: 'Documentos y autorizaciones', icon: FileText },
     { href: '/portal/pagos', label: 'Pagos', icon: ShoppingBag },
     { href: '/torneos/inscripcion', label: 'Mis torneos', icon: Trophy },

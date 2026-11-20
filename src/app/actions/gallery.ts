@@ -30,7 +30,7 @@ export async function uploadImage(formData: FormData) {
             const { error: dbError } = await admin.from('media_assets').insert({ child_id: childId, title: file.name.slice(0,150), url: path, media_type: 'image', context: 'academia', created_by: user.id })
             if (dbError) throw new Error('No se pudo guardar la foto.')
         } catch (error) { await admin.storage.from('gallery').remove([path]); throw error }
-        revalidatePath(`/portal/${childId}`); revalidatePath(`/admin/crm/alumnos/${childId}`)
+        revalidatePath('/portal/videoteca'); revalidatePath(`/portal/${childId}`); revalidatePath(`/admin/crm/alumnos/${childId}`)
         return { success: true }
     } catch (error) { return { error: error instanceof Error ? error.message : 'No se pudo subir la foto.' } }
 }
@@ -47,7 +47,7 @@ export async function deleteImage(id: string, childId: string) {
         // Only remove objects in this player's folder, never arbitrary external URLs.
         const path = media.url?.startsWith('http') ? media.url.split('/gallery/')[1]?.split('?')[0] : media.url
         if (path?.startsWith(`${childId}/`) && !path.includes('..')) await admin.storage.from('gallery').remove([path])
-        revalidatePath(`/portal/${childId}`); revalidatePath(`/admin/crm/alumnos/${childId}`)
+        revalidatePath('/portal/videoteca'); revalidatePath(`/portal/${childId}`); revalidatePath(`/admin/crm/alumnos/${childId}`)
         return { success: true }
     } catch (error) { return { error: error instanceof Error ? error.message : 'No se pudo eliminar la foto.' } }
 }

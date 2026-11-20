@@ -4,13 +4,13 @@ import { createClient } from '@/lib/supabase/server'
 import PlayerFIFAStats from '../components/player-fifa-stats'
 import { TrophyCard } from '@/components/portal/trophy-card'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { AttendanceRing } from '@/components/portal/attendance-ring'
+import { attendanceSummary } from '@/lib/attendance-summary'
+import { adminReadAll } from '@/lib/admin-read-all'
 import { Button } from '@/components/ui/button'
 import { Activity, AlertCircle, CalendarDays, Medal, Trophy } from 'lucide-react'
 import { PlayerProfileDetails } from '@/components/portal/player-profile-details'
 import { PlayerPhotoEditor } from '@/components/portal/player-photo-editor'
-import { getPlayerGallery } from '@/app/actions/gallery'
-import { PhotoGallery } from '@/components/portal/photo-gallery'
 import { ShareProfile } from '@/components/portal/share-profile'
 import { ReportDownloadButton } from '@/components/admin/report-download-button'
 import Link from 'next/link'
@@ -20,7 +20,6 @@ export default async function ChildPage({ params }: { params: Promise<{ childId:
 
     const { childId } = await params
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
 
     // Verify access (guardian of child) - RLS handles query results, but better to check existence
     const { data: child } = await supabase
@@ -63,37 +62,38 @@ export default async function ChildPage({ params }: { params: Promise<{ childId:
         .select('*')
         .eq('child_id', childId)
 
-    const nextTrophy = allAchievements?.find(a => !childAchievements?.some(ca => ca.achievement_id === a.id))
 
-    const [{ data: attendanceRows }, { data: campusEnrollments }, { data: tournamentEnrollments }] = await Promise.all([
-        supabase.from('training_sessions').select('attendance').eq('child_id', childId).eq('visible_to_guardian', true),
+    const [{ data: attendanceRows }, { data: campusEnrollments }, { data: tournamentEnrollments }, {data:groupAssignments}] = await Promise.all([
+        adminReadAll((f,t)=>supabase.from('training_sessions').select('attendance,session_date').eq('child_id', childId).eq('visible_to_guardian', true).order('id').range(f,t)),
         supabase.from('campus_enrollments').select('campus_id').eq('child_id', childId).neq('status', 'cancelled'),
         supabase.from('tournament_players').select('tournament_id').eq('child_id', childId).neq('status', 'cancelled'),
+        supabase.from('academy_group_assignments').select('team_id').eq('child_id',childId),
     ])
-    const attendanceTotal = attendanceRows?.length || 0
-    const attendancePresent = attendanceRows?.filter((row) => row.attendance === 'present').length || 0
-    const attendancePercentage = attendanceTotal > 0 ? Math.round((attendancePresent / attendanceTotal) * 100) : 0
+    const attendance = attendanceSummary(attendanceRows || [], new Date().toLocaleDateString('en-CA',{timeZone:'Europe/Madrid'}))
+    const {total:attendanceTotal,present:attendancePresent}=attendance
+    const attendancePercentage=attendance.percentage ?? 0
 
     // RLS limits the result to this family. We then narrow it to this player,
     // so siblings do not accidentally share the same "next event" card.
     const now = new Date().toISOString()
-    const { data: upcomingEvents } = await supabase
+    const { data: upcomingEvents } = await adminReadAll((f,t)=>supabase
         .from('calendar_events')
         .select('*')
         .gte('start_date', now)
         .order('start_date', { ascending: true })
-        .limit(50)
+        .order('id').range(f,t))
     const campusIds = new Set((campusEnrollments || []).map((row) => row.campus_id))
     const tournamentIds = new Set((tournamentEnrollments || []).map((row) => row.tournament_id))
+    const teamIds=new Set([child.team_id,...(groupAssignments||[]).map(g=>g.team_id)].filter(Boolean))
     const nextEvent = upcomingEvents?.find((event) => {
+        if(event.status==='cancelled')return false
         if (event.source_type === 'campus') return campusIds.has(event.source_id)
         if (event.source_type === 'tournament') return tournamentIds.has(event.source_id)
-        if (event.team_id) return event.team_id === child.team_id
+        if (event.team_id) return teamIds.has(event.team_id)
         if (event.category_id) return event.category_id === child.category_id
         return event.source_type === 'manual'
     })
 
-    const galleryImages = await getPlayerGallery(childId)
 
     return (
         <div className="space-y-6 md:space-y-8">
@@ -153,33 +153,8 @@ export default async function ChildPage({ params }: { params: Promise<{ childId:
                     </CardContent>
                 </Card>
 
-                {/* Next Trophy */}
-                <Card className="relative overflow-hidden border-none bg-gradient-to-r from-gold to-[#b88717] text-white shadow-lg">
-                    <div className="absolute right-0 top-0 opacity-20 transform translate-x-4 -translate-y-4">
-                        <Trophy className="h-32 w-32" />
-                    </div>
-                    <CardContent className="p-6 relative z-10">
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <p className="text-amber-900 font-bold uppercase tracking-wider text-[10px] mb-1">{translate("Siguiente Desafío")}</p>
-                                {translate(nextTrophy ? (
-                                    <>
-                                        <h3 className="text-xl font-black mb-1 text-slate-900">{translate(nextTrophy.name)}</h3>
-                                        <p className="text-amber-900 text-sm mb-4 line-clamp-2 max-w-[85%] font-medium">
-                                            {translate(nextTrophy.description)}
-                                        </p>
-                                        <span className="inline-flex rounded-full bg-navy px-3 py-1 text-[10px] font-black uppercase tracking-wider text-white">{translate("Próximo objetivo")}</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <h3 className="text-xl font-black mb-1 text-slate-900">{translate("¡Todo Desbloqueado!")}</h3>
-                                        <p className="text-amber-900 text-sm mb-4">{translate("Has conseguido todos los trofeos actuales.")}</p>
-                                    </>
-                                ))}
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                <AttendanceRing summary={attendance}/>
+
             </div>
 
             {/* FIFA Stats Section */}
@@ -222,11 +197,7 @@ export default async function ChildPage({ params }: { params: Promise<{ childId:
 
                 {/* Photo Gallery */}
                 <div className="lg:col-span-full">
-                    <PhotoGallery key={childId}
-                        childId={childId}
-                        initialImages={galleryImages}
-                        canEdit={true}
-                    />
+                    <Link href={`/portal/videoteca?child=${childId}`} className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-gold/30 bg-white p-6 shadow-sm"><div><p className="text-xs font-bold uppercase tracking-widest text-amber-700">{translate('Momentos Academy')}</p><h2 className="mt-2 text-2xl font-black text-navy">{translate('Sus fotos y vídeos')}</h2><p className="mt-2 text-sm text-slate-500">{translate('Sube recuerdos y descubre lo que Academy comparte con su equipo.')}</p></div><span className="rounded-xl bg-navy px-5 py-3 text-sm font-bold text-white">{translate('Abrir galería')} →</span></Link>
                 </div>
 
                 {/* Coach Notes */}
