@@ -5,7 +5,7 @@ import { translateMetadata } from '@/lib/i18n/translate'
 import { Badge, Brain, CalendarDays, CheckCircle2, CircleDot, Clock3, Dumbbell, ExternalLink, FileText, HeartHandshake, MapPin, ShieldCheck, Sparkles, Sun } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
-import { CarouselCustom } from "@/components/ui/carousel-custom"
+import { AcademyGallery } from "@/components/academy-gallery"
 import { Button } from "@/components/ui/button"
 
 export async function generateMetadata() {
@@ -39,10 +39,6 @@ export default async function AcademyPage() {
     const plans = offer.plans.map(p => ({title:p.name,price:`${p.price} €`,suffix:'/ mes',detail:`${p.description} Matrícula nuevos jugadores: ${p.enrollment_fee} €.`,featured:p.sessions_per_week===2}))
     const weeklySchedule = Array.from(new Set(offer.groups.map(g=>g.public_offer.day))).map(day=>({day,slots:offer.groups.filter(g=>g.public_offer.day===day).map(g=>`${g.schedule} · ${g.name} · ${g.public_offer.location}${g.public_offer.note?' · '+g.public_offer.note:''}`)}))
 
-
-    const galleryImages = [
-        "/academy-gallery-1.jpg", "/academy-gallery-2.jpg", "/academy-gallery-3.jpg", "/academy-gallery-4.jpg", "/academy-gallery-5.jpg", "/academy-gallery-6.jpg", "/academy-gallery-7.jpg", "/academy-gallery-8.jpg", "/academy-gallery-9.jpg",
-    ]
 
     return (
         <div className="min-h-screen bg-navy text-white">
@@ -101,7 +97,7 @@ export default async function AcademyPage() {
                     </div>
                 </section>
 
-                <section className="mt-24 md:mt-32"><div className="mb-12 flex flex-col items-center text-center"><Badge className="mb-4 h-12 w-12 text-gold" /><h2 className="font-heading text-3xl font-black uppercase sm:text-4xl text-white md:text-5xl">{translate("Galería de ")}<span className="text-gold">{translate("momentos")}</span></h2><p className="mt-4 max-w-2xl text-slate-400">{translate("Entrenamientos, partidos y aprendizajes que forman parte del camino Academy.")}</p></div><div className="mx-auto w-full max-w-5xl rounded-3xl border border-white/10 bg-gradient-to-br from-navy-light to-navy p-2 shadow-2xl md:p-4"><CarouselCustom images={galleryImages} className="aspect-video w-full rounded-2xl md:aspect-[16/9]" /></div></section>
+                <section id="galeria" className="mt-24 scroll-mt-28 md:mt-32"><div className="mb-12 flex flex-col items-center text-center"><Badge className="mb-4 h-12 w-12 text-gold" /><h2 className="font-heading text-3xl font-black uppercase sm:text-4xl text-white md:text-5xl">{translate("Galería de ")}<span className="text-gold">{translate("momentos")}</span></h2><p className="mt-4 max-w-2xl text-slate-400">{translate("Entrenamientos, partidos y aprendizajes que forman parte del camino Academy.")}</p></div><div className="mx-auto w-full max-w-5xl rounded-3xl border border-white/10 bg-gradient-to-br from-navy-light to-navy p-2 shadow-2xl md:p-4"><AcademyGallery /></div></section>
 
                 <section className="mx-auto mt-24 max-w-3xl rounded-3xl border border-gold/25 bg-navy-light p-6 text-center sm:p-8 md:mt-32 md:p-10"><h2 className="font-heading text-2xl font-black uppercase sm:text-4xl text-white">{translate("¿Listo para ")}<span className="text-gold">{translate("empezar?")}</span></h2><p className="mt-5 text-lg text-slate-300">{translate("Reserva la plaza sin compromiso de pago. Confirmaremos grupo, horario y los siguientes pasos de forma personalizada.")}</p><div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row"><Button asChild size="lg" className="bg-gold font-bold text-navy hover:bg-gold-light"><Link href="/inscripcion?service=academy">{translate("Solicitar plaza")}</Link></Button><Button asChild size="lg" variant="outline" className="border-white/25 bg-white/5 text-white hover:bg-white/10 hover:text-white"><a href="/dossier-tecnificacion-2026-27.pdf" target="_blank" rel="noreferrer">{translate("Ver dossier PDF")}</a></Button></div></section>
             </div>
