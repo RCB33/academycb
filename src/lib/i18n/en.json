@@ -1524,5 +1524,22 @@
   "Día de nacimiento": "Day of birth",
   "Mes de nacimiento": "Month of birth",
   "Año de nacimiento": "Year of birth",
-  "Completa día, mes y año.": "Enter the day, month and year."
+  "Completa día, mes y año.": "Enter the day, month and year.",
+  "Añadir foto": "Add photo",
+  "Cambiar foto": "Change photo",
+  "Foto de": "Photo of",
+  "Sin evaluar": "Not evaluated",
+  "Fotos privadas del jugador. Toca una imagen para verla completa.": "Private player photos. Tap an image to view it in full.",
+  "Ampliar foto": "Enlarge photo",
+  "Foto del jugador": "Player photo",
+  "Eliminar foto": "Delete photo",
+  "Galería privada": "Private gallery",
+  "Seleccionar foto": "Select photo",
+  "Solo para la familia de este jugador y Academy. JPG, PNG o WebP, máximo 3 MB.": "Only for this player’s family and Academy. JPG, PNG or WebP, maximum 3 MB.",
+  "Cuando el equipo técnico registre la primera evaluación aparecerán aquí sus puntuaciones, el análisis técnico y la evolución real del jugador.": "Once the coaching team records the first evaluation, the player’s scores, technical analysis and actual progress will appear here.",
+  "No se pudo guardar la foto.": "Could not save the photo.",
+  "No se pudo subir la foto.": "Could not upload the photo.",
+  "No se pudo eliminar la foto.": "Could not delete the photo.",
+  "Selecciona una foto JPG, PNG o WebP de hasta 3 MB.": "Select a JPG, PNG or WebP photo up to 3 MB.",
+  "No se pudo leer la foto. Prueba con otra imagen JPG, PNG o WebP.": "Could not read the photo. Try another JPG, PNG or WebP image."
 }

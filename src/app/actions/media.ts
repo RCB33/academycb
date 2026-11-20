@@ -85,6 +85,8 @@ export async function getMediaAssets(categoryId?: string) {
             teams(name),
             children(full_name)
         `)
+        .eq('media_type', 'video')
+        .not('video_url', 'is', null)
         .order('created_at', { ascending: false })
 
     if (categoryId) {

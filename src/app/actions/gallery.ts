@@ -1,89 +1,53 @@
 'use server'
-
-import { revalidatePath } from 'next/cache'
-import { requireAdmin } from '@/lib/auth'
 import { randomUUID } from 'node:crypto'
+import { revalidatePath } from 'next/cache'
+import { z } from 'zod'
+import { requirePlayerPhotoAccess } from '@/lib/player-photo-access'
+import { preparePlayerPhoto } from '@/lib/player-photo'
+import { createAdminClient } from '@/lib/supabase/admin'
+
+export async function getPlayerGallery(childId: string) {
+    const { supabase, role, user } = await requirePlayerPhotoAccess(childId)
+    const { data, error } = await supabase.from('media_assets').select('id,url,title,created_by').eq('child_id', childId).eq('media_type', 'image').order('created_at', { ascending: false })
+    if (error) throw new Error('No se pudo cargar la galería.')
+    return (data || []).filter(image => image.url).map(image => ({
+        id: image.id, title: image.title, url: `/api/player-gallery/${image.id}`,
+        canDelete: role === 'admin' || image.created_by === user.id,
+    }))
+}
 
 export async function uploadImage(formData: FormData) {
-    const { supabase, user } = await requireAdmin()
-
-    const file = formData.get('file') as File
-    const childId = formData.get('childId') as string
-    if (!file || !childId) {
-        return { error: 'No file or child ID provided' }
-    }
-
-    const extensions: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }
-    const fileExt = extensions[file.type]
-    if (!fileExt || file.size > 3 * 1024 * 1024) {
-        return { error: 'Solo se admiten JPG, PNG o WebP de hasta 3 MB.' }
-    }
-
-    // 1. Upload to Storage
-    const fileName = `${childId}/${randomUUID()}.${fileExt}`
-
-    const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('gallery')
-        .upload(fileName, file)
-
-    if (uploadError) {
-        console.error('Upload Error:', uploadError)
-        return { error: 'Failed to upload image' }
-    }
-
-    // Store the private object path. Signed URLs are generated only for
-    // authenticated guardians and staff when rendering the page.
-    const { error: dbError } = await supabase
-        .from('media_assets')
-        .insert({
-            child_id: childId,
-            title: file.name,
-            url: fileName,
-            media_type: 'image',
-            context: 'academia',
-            created_by: user.id
-        })
-
-    if (dbError) {
-        await supabase.storage.from('gallery').remove([fileName])
-        console.error('DB Error:', dbError)
-        return { error: 'Failed to save image metadata' }
-    }
-
-    revalidatePath(`/portal/${childId}`)
-    return { success: true }
+    try {
+        const childId = String(formData.get('childId') || '')
+        const { user } = await requirePlayerPhotoAccess(childId)
+        const file = formData.get('file') as File
+        const bytes = await preparePlayerPhoto(file)
+        const admin = createAdminClient(), path = `${childId}/${randomUUID()}.webp`
+        const { error } = await admin.storage.from('gallery').upload(path, bytes, { contentType: 'image/webp' })
+        if (error) throw new Error('No se pudo subir la foto.')
+        try {
+            await requirePlayerPhotoAccess(childId)
+            const { error: dbError } = await admin.from('media_assets').insert({ child_id: childId, title: file.name.slice(0,150), url: path, media_type: 'image', context: 'academia', created_by: user.id })
+            if (dbError) throw new Error('No se pudo guardar la foto.')
+        } catch (error) { await admin.storage.from('gallery').remove([path]); throw error }
+        revalidatePath(`/portal/${childId}`); revalidatePath(`/admin/crm/alumnos/${childId}`)
+        return { success: true }
+    } catch (error) { return { error: error instanceof Error ? error.message : 'No se pudo subir la foto.' } }
 }
 
 export async function deleteImage(id: string, childId: string) {
-    const { supabase } = await requireAdmin()
-
-    // Get the file path first? No, we just delete the record and let storage be?
-    // Ideally delete from storage too.
-    // Fetch URL to get path.
-    const { data: media } = await supabase
-        .from('media_assets')
-        .select('url')
-        .eq('id', id)
-        .eq('child_id', childId)
-        .single()
-
-    if (media) {
-        const path = media.url?.startsWith('http') ? media.url.split('/gallery/')[1] : media.url
-        if (path) {
-            await supabase.storage.from('gallery').remove([path])
-        }
-    }
-
-    const { error } = await supabase
-        .from('media_assets')
-        .delete()
-        .eq('id', id)
-        .eq('child_id', childId)
-
-    if (error) {
-        return { error: 'Failed to delete image' }
-    }
-
-    revalidatePath(`/portal/${childId}`)
-    return { success: true }
+    try {
+        const { supabase, role, user } = await requirePlayerPhotoAccess(childId)
+        if (!z.string().uuid().safeParse(id).success) throw new Error('Foto no válida.')
+        const { data: media, error } = await supabase.from('media_assets').select('id,url,created_by').eq('id', id).eq('child_id', childId).eq('media_type', 'image').maybeSingle()
+        if (error || !media || (role !== 'admin' && media.created_by !== user.id)) throw new Error('No puedes eliminar esta foto.')
+        const admin = createAdminClient()
+        const { error: deleteError } = await admin.from('media_assets').delete().eq('id', id).eq('child_id', childId)
+        if (deleteError) throw new Error('No se pudo eliminar la foto.')
+        // Only remove objects in this player's folder, never arbitrary external URLs.
+        const path = media.url?.startsWith('http') ? media.url.split('/gallery/')[1]?.split('?')[0] : media.url
+        if (path?.startsWith(`${childId}/`) && !path.includes('..')) await admin.storage.from('gallery').remove([path])
+        revalidatePath(`/portal/${childId}`); revalidatePath(`/admin/crm/alumnos/${childId}`)
+        return { success: true }
+    } catch (error) { return { error: error instanceof Error ? error.message : 'No se pudo eliminar la foto.' } }
 }

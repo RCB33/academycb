@@ -1,4 +1,5 @@
 
+import { PlayerPhotoEditor } from '@/components/portal/player-photo-editor'
 import { getT } from '@/lib/i18n/server'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
@@ -32,10 +33,10 @@ export default async function DashboardPage() {
     // Get Children
     const { data: relations } = await supabase
         .from('child_guardians')
-        .select('child:children(id, full_name, birth_year, category:categories(name))')
+        .select('child:children(id, full_name, birth_year, avatar_url, archived_at, category:categories(name))')
         .eq('guardian_id', guardian.id)
 
-    const children = relations?.map(r => r.child) || []
+    const children = (relations?.map(r => r.child) || []).filter((child: any) => child && !child.archived_at)
 
     if (children.length === 1) {
         redirect(`/portal/${(children[0] as any).id}`)
@@ -55,9 +56,7 @@ export default async function DashboardPage() {
                 {translate(children.map((child: any) => (
                     <Card key={child.id} className="group border-primary/20 transition-all hover:-translate-y-0.5 hover:shadow-lg">
                         <CardHeader className="flex flex-row items-center gap-4">
-                            <div className="h-16 w-16 bg-primary/10 rounded-full flex items-center justify-center text-primary">
-                                <UserCircle className="h-10 w-10" />
-                            </div>
+                            <PlayerPhotoEditor childId={child.id} name={child.full_name} avatarUrl={child.avatar_url} />
                             <div>
                                 <CardTitle className="text-xl">{translate(child.full_name)}</CardTitle>
                                 <CardDescription>{translate("Año ")}{translate(child.birth_year)} {translate(" • ")}{translate(child.category?.name || 'Sin Categoría')}</CardDescription>

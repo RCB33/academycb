@@ -1,140 +1,63 @@
 'use client'
+import { useEffect, useState, useTransition } from 'react'
 import { useT } from '@/lib/i18n/client'
-
-
-import { useState, useTransition } from 'react'
-import Image from 'next/image'
-import { uploadImage, deleteImage } from '@/app/actions/gallery'
+import { uploadImage, deleteImage, getPlayerGallery } from '@/app/actions/gallery'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Loader2, Plus, Trash2, Image as ImageIcon } from 'lucide-react'
-import { toast } from 'sonner'
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from "@/components/ui/dialog"
+import { Loader2, Plus, Trash2, Image as ImageIcon, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
-interface PhotoGalleryProps {
-    childId: string
-    initialImages: any[]
-    canEdit: boolean
+type GalleryImage = { id: string; url: string; title?: string; canDelete?: boolean }
+export function PhotoGallery({ childId, initialImages, canEdit }: { childId: string; initialImages: GalleryImage[]; canEdit: boolean }) {
+    const t = useT()
+    const [images,setImages] = useState(initialImages)
+    const [pending,start] = useTransition()
+    const [uploadOpen,setUploadOpen] = useState(false)
+    const [selected,setSelected] = useState<string | null>(null)
+    const [error,setError] = useState('')
+    useEffect(()=>setImages(initialImages),[initialImages])
+    const index = images.findIndex(image=>image.id===selected), current = images[index]
+    const move = (delta:number) => setSelected(images[(index+delta+images.length)%images.length]?.id || null)
+    const reload = async () => setImages(await getPlayerGallery(childId))
+    return <Card className="overflow-hidden border-none bg-white shadow-xl">
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 bg-slate-900 pb-8">
+            <CardTitle className="flex items-center gap-2 text-lg font-black uppercase text-white"><ImageIcon className="h-5 w-5 text-gold" />{t('Galería de Fotos')}</CardTitle>
+            {canEdit && <Button onClick={()=>{setError('');setUploadOpen(true)}} className="bg-gold font-bold text-navy hover:bg-gold-light"><Plus className="mr-2 h-4 w-4" />{t('Subir Foto')}</Button>}
+        </CardHeader>
+        <CardContent className="relative -mt-4 min-h-48 rounded-t-2xl bg-white pt-6">
+            <p className="mb-4 text-xs text-slate-500">{t('Fotos privadas del jugador. Toca una imagen para verla completa.')}</p>
+            {error && !uploadOpen && <p role="alert" className="mb-4 text-sm text-red-700">{t(error)}</p>}
+            {!images.length ? <p className="py-12 text-center text-sm text-slate-500">{t('No hay fotos en la galería')}</p> : <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+                {images.map((img,i)=><div key={img.id} className="relative overflow-hidden rounded-xl border bg-slate-100">
+                    <button type="button" className="block aspect-square w-full focus-visible:outline-4 focus-visible:outline-gold" aria-label={`${t('Ampliar foto')} ${i+1}`} onClick={()=>setSelected(img.id)}>
+                        <img src={img.url} alt={img.title || `${t('Foto del jugador')} ${i+1}`} loading="lazy" className="h-full w-full object-cover" />
+                    </button>
+                    {canEdit && img.canDelete && <button type="button" disabled={pending} aria-label={`${t('Eliminar foto')} ${i+1}`} className="absolute right-1 top-1 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-red-700 shadow" onClick={()=>{
+                        if(!confirm(t('¿Estás seguro de eliminar esta imagen?')))return
+                        setError('');start(async()=>{try{const result=await deleteImage(img.id,childId);if(result.error)setError(result.error);else await reload()}catch{setError('No se pudo eliminar la foto.')}})
+                    }}><Trash2 className="h-4 w-4" /></button>}
+                </div>)}
+            </div>}
+        </CardContent>
+        <Dialog open={uploadOpen} onOpenChange={setUploadOpen}><DialogContent><DialogHeader><DialogTitle>{t('Subir Foto')}</DialogTitle><DialogDescription>{t('Solo para la familia de este jugador y Academy. JPG, PNG o WebP, máximo 3 MB.')}</DialogDescription></DialogHeader>
+            <form className="space-y-4" action={form=>{setError('');start(async()=>{try{form.set('childId',childId);const result=await uploadImage(form);if(result.error)setError(result.error);else{await reload();setUploadOpen(false)}}catch{setError('No se pudo subir la foto.')}})}}>
+                <label className="block space-y-2 text-sm font-semibold"><span>{t('Seleccionar foto')}</span><input required type="file" name="file" accept="image/jpeg,image/png,image/webp" className="block w-full rounded-lg border p-2" /></label>
+                {error && <p role="alert" className="text-sm text-red-700">{t(error)}</p>}
+                <Button disabled={pending} className="w-full">{pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{t(pending?'Subiendo...':'Subir Imagen')}</Button>
+            </form>
+        </DialogContent></Dialog>
+        <Dialog open={!!current} onOpenChange={open=>{if(!open)setSelected(null)}}><DialogContent className="max-h-[95dvh] overflow-y-auto sm:max-w-4xl" onKeyDown={event=>{if(event.key==='ArrowLeft'){event.preventDefault();move(-1)}if(event.key==='ArrowRight'){event.preventDefault();move(1)}}}>
+            <DialogHeader><DialogTitle>{t('Foto del jugador')} {index+1} / {images.length}</DialogTitle><DialogDescription>{t('Galería privada')}</DialogDescription></DialogHeader>
+            {current && <img src={current.url} alt={current.title || t('Foto del jugador')} className="max-h-[65dvh] w-full rounded-lg object-contain" />}
+            {images.length>1 && <div className="flex justify-between gap-3"><Button variant="outline" onClick={()=>move(-1)}><ChevronLeft className="mr-1 h-4 w-4" />{t('Anterior')}</Button><Button variant="outline" onClick={()=>move(1)}>{t('Siguiente')}<ChevronRight className="ml-1 h-4 w-4" /></Button></div>}
+        </DialogContent></Dialog>
+    </Card>
 }
 
-export function PhotoGallery({ childId, initialImages, canEdit }: PhotoGalleryProps) {
-    const translate = useT()
-
-    const [isPending, startTransition] = useTransition()
-    const [uploadOpen, setUploadOpen] = useState(false)
-
-    async function handleUpload(formData: FormData) {
-        const file = formData.get('file') as File | null
-        if (file && file.size > 3 * 1024 * 1024) {
-            toast.error(translate('La foto supera los 3 MB. Reduce su tamaño antes de subirla.'))
-            return
-        }
-        startTransition(async () => {
-            formData.append('childId', childId)
-            const result = await uploadImage(formData)
-            if (result?.error) {
-                toast.error(translate(result.error))
-            } else {
-                toast.success(translate('Imagen subida correctamente'))
-                setUploadOpen(false)
-            }
-        })
-    }
-
-    async function handleDelete(id: string) {
-        if (!confirm(translate('¿Estás seguro de eliminar esta imagen?'))) return
-
-        startTransition(async () => {
-            const result = await deleteImage(id, childId)
-            if (result?.error) {
-                toast.error(translate(result.error))
-            } else {
-                toast.success(translate('Imagen eliminada'))
-            }
-        })
-    }
-
-    return (
-        <Card className="border-none shadow-xl bg-white overflow-hidden">
-            <CardHeader className="bg-slate-900 flex flex-row items-center justify-between pb-8">
-                <CardTitle className="flex items-center gap-2 text-white text-lg font-black uppercase">
-                    <ImageIcon className="h-5 w-5 text-gold" />
-                    {translate("Galería de Fotos")}</CardTitle>
-                {translate(canEdit && (
-                    <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
-                        <DialogTrigger asChild>
-                            <Button size="sm" className="border-none bg-gold font-bold text-navy shadow-lg shadow-gold/20 hover:bg-gold-light">
-                                <Plus className="h-4 w-4 mr-2" />
-                                {translate("Subir Foto")}</Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>{translate("Subir Foto")}</DialogTitle>
-                                <DialogDescription>
-                                    {translate("Selecciona una imagen para añadir a la galería del jugador.")}</DialogDescription>
-                            </DialogHeader>
-                            <form action={handleUpload} className="space-y-4">
-                                <div className="grid w-full max-w-sm items-center gap-1.5">
-                                    <input
-                                        type="file"
-                                        name="file"
-                                        accept="image/*"
-                                        required
-                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                    />
-                                </div>
-                                <Button type="submit" disabled={isPending} className="w-full">
-                                    {translate(isPending ? (
-                                        <>
-                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                            {translate("Subiendo...")}</>
-                                    ) : (
-                                        'Subir Imagen'
-                                    ))}
-                                </Button>
-                            </form>
-                        </DialogContent>
-                    </Dialog>
-                ))}
-            </CardHeader>
-            <CardContent className="bg-white rounded-t-2xl pt-6 -mt-4 min-h-[200px]">
-                {translate(initialImages.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-12 text-center">
-                        <div className="h-12 w-12 rounded-full bg-slate-50 flex items-center justify-center mb-3">
-                            <ImageIcon className="h-6 w-6 text-slate-200" />
-                        </div>
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{translate("No hay fotos en la galería")}</p>
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                        {translate(initialImages.map((img) => (
-                            <div key={img.id} className="group relative aspect-square rounded-xl overflow-hidden bg-slate-100 border border-slate-100 shadow-sm transition-all hover:shadow-md">
-                                <Image
-                                    src={img.url}
-                                    alt={translate("Gallery image")}
-                                    fill
-                                    className="object-cover transition-transform group-hover:scale-105"
-                                />
-                                {translate(canEdit && (
-                                    <button
-                                        onClick={() => handleDelete(img.id)}
-                                        className="absolute top-2 right-2 p-1.5 bg-red-500/90 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                                    >
-                                        <Trash2 className="h-3 w-3" />
-                                    </button>
-                                ))}
-                            </div>
-                        )))}
-                    </div>
-                ))}
-            </CardContent>
-        </Card>
-    )
+export function ManagedPlayerGallery({childId}:{childId:string}) {
+    const [images,setImages]=useState<GalleryImage[] | null>(null),[error,setError]=useState('')
+    useEffect(()=>{let active=true;getPlayerGallery(childId).then(data=>{if(active)setImages(data)}).catch(()=>{if(active)setError('No se pudo cargar la galería.')});return()=>{active=false}},[childId])
+    if(error)return <p role="alert">{error}</p>
+    if(!images)return <p className="p-6 text-sm text-slate-500">Cargando galería…</p>
+    return <PhotoGallery childId={childId} initialImages={images} canEdit />
 }

@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Activity, AlertCircle, CalendarDays, Medal, Trophy } from 'lucide-react'
+import { PlayerPhotoEditor } from '@/components/portal/player-photo-editor'
+import { getPlayerGallery } from '@/app/actions/gallery'
 import { PhotoGallery } from '@/components/portal/photo-gallery'
 import { ShareProfile } from '@/components/portal/share-profile'
 import { ReportDownloadButton } from '@/components/admin/report-download-button'
@@ -24,6 +26,7 @@ export default async function ChildPage({ params }: { params: Promise<{ childId:
         .from('children')
         .select('*, category:categories(name)')
         .eq('id', childId)
+        .is('archived_at', null)
         .single()
 
     if (!child) {
@@ -89,29 +92,19 @@ export default async function ChildPage({ params }: { params: Promise<{ childId:
         return event.source_type === 'manual'
     })
 
-    // Fetch Gallery
-    const { data: galleryImages } = await supabase
-        .from('media_assets')
-        .select('id, url')
-        .eq('child_id', childId)
-        .eq('media_type', 'image')
-        .order('created_at', { ascending: false })
-
-    const signedGalleryImages = await Promise.all((galleryImages || []).map(async (image) => {
-        if (!image.url || image.url.startsWith('http')) return image
-        const { data } = await supabase.storage.from('gallery').createSignedUrl(image.url, 3600)
-        return { ...image, url: data?.signedUrl || '' }
-    }))
+    const galleryImages = await getPlayerGallery(childId)
 
     return (
         <div className="space-y-6 md:space-y-8">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-slate-900">{translate(child.full_name)}</h1>
+                <div className="flex items-center gap-4">
+                    <PlayerPhotoEditor key={child.id} childId={child.id} name={child.full_name} avatarUrl={child.avatar_url} />
+                    <div><h1 className="text-3xl font-bold tracking-tight text-slate-900">{translate(child.full_name)}</h1>
                     <div className="flex items-center gap-2 text-muted-foreground">
                         <span className="rounded border border-gold/20 bg-gold/10 px-2 py-1 text-[10px] font-black uppercase tracking-wider text-gold">{translate(child.category?.name || 'Academia')}</span>
                         <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
                         <span className="text-xs font-bold uppercase tracking-widest opacity-60">{translate("Gen. ")}{translate(child.birth_year)}</span>
+                    </div>
                     </div>
                 </div>
                 <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
@@ -230,10 +223,10 @@ export default async function ChildPage({ params }: { params: Promise<{ childId:
 
                 {/* Photo Gallery */}
                 <div className="lg:col-span-full">
-                    <PhotoGallery
+                    <PhotoGallery key={childId}
                         childId={childId}
-                        initialImages={signedGalleryImages.filter(image => image.url)}
-                        canEdit={false}
+                        initialImages={galleryImages}
+                        canEdit={true}
                     />
                 </div>
 

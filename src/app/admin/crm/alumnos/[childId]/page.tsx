@@ -2,6 +2,7 @@
 
 import { isAcceptedTournamentRegistration } from '@/lib/christmas-tournaments'
 
+import { ManagedPlayerGallery } from '@/components/portal/photo-gallery'
 import { useState, useEffect, use } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from "@/components/ui/button"
@@ -883,6 +884,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
 
                         {/* Documents Tab - Real Records Here */}
                         <TabsContent value="documents" className="space-y-6">
+                            <ManagedPlayerGallery childId={childId} />
                             <Card className="border-none shadow-md bg-white">
                                 <CardHeader className="flex flex-row items-center justify-between">
                                     <div>

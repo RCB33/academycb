@@ -49,13 +49,13 @@ export default async function AuthenticatedLayout({
     const { data: childRelations } = guardian
         ? await supabase
             .from('child_guardians')
-            .select('child:children(id, full_name, birth_year)')
+            .select('child:children(id, full_name, birth_year, archived_at)')
             .eq('guardian_id', guardian.id)
         : { data: [] }
 
     const familyPlayers = (childRelations || [])
         .map((relation: any) => relation.child)
-        .filter(Boolean)
+        .filter((child: any) => child && !child.archived_at)
 
     const signOut = async () => {
         'use server'

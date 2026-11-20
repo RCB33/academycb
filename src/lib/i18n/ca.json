@@ -1524,5 +1524,22 @@
   "Día de nacimiento": "Dia de naixement",
   "Mes de nacimiento": "Mes de naixement",
   "Año de nacimiento": "Any de naixement",
-  "Completa día, mes y año.": "Completa dia, mes i any."
+  "Completa día, mes y año.": "Completa dia, mes i any.",
+  "Añadir foto": "Afegir foto",
+  "Cambiar foto": "Canviar foto",
+  "Foto de": "Foto de",
+  "Sin evaluar": "Sense avaluar",
+  "Fotos privadas del jugador. Toca una imagen para verla completa.": "Fotos privades del jugador. Toca una imatge per veure-la completa.",
+  "Ampliar foto": "Ampliar foto",
+  "Foto del jugador": "Foto del jugador",
+  "Eliminar foto": "Eliminar foto",
+  "Galería privada": "Galeria privada",
+  "Seleccionar foto": "Seleccionar foto",
+  "Solo para la familia de este jugador y Academy. JPG, PNG o WebP, máximo 3 MB.": "Només per a la família d’aquest jugador i Academy. JPG, PNG o WebP, màxim 3 MB.",
+  "Cuando el equipo técnico registre la primera evaluación aparecerán aquí sus puntuaciones, el análisis técnico y la evolución real del jugador.": "Quan l’equip tècnic registri la primera avaluació apareixeran aquí les puntuacions, l’anàlisi tècnica i l’evolució real del jugador.",
+  "No se pudo guardar la foto.": "No s’ha pogut desar la foto.",
+  "No se pudo subir la foto.": "No s’ha pogut pujar la foto.",
+  "No se pudo eliminar la foto.": "No s’ha pogut eliminar la foto.",
+  "Selecciona una foto JPG, PNG o WebP de hasta 3 MB.": "Selecciona una foto JPG, PNG o WebP de fins a 3 MB.",
+  "No se pudo leer la foto. Prueba con otra imagen JPG, PNG o WebP.": "No s’ha pogut llegir la foto. Prova amb una altra imatge JPG, PNG o WebP."
 }

@@ -65,6 +65,8 @@ export default async function FamilyVideotecaPage() {
                 teams(name),
                 children(full_name)
             `)
+            .eq('media_type', 'video')
+            .not('video_url', 'is', null)
             .or(
                 [
                     childCategories.length > 0 ? `category_id.in.(${childCategories.join(',')})` : null,
@@ -81,7 +83,8 @@ export default async function FamilyVideotecaPage() {
         }))
     }
 
-    const getYoutubeId = (url: string) => {
+    const getYoutubeId = (url: string | null) => {
+        if (!url) return null
         const match = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/)
         return match ? match[1] : null
     }

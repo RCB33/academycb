@@ -197,12 +197,13 @@ export function MediaAdminClient({ assets, categories }: { assets: MediaAsset[],
         }
     }
 
-    const getYoutubeId = (url: string) => {
+    const getYoutubeId = (url: string | null) => {
+        if (!url) return null
         const match = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/)
         return match ? match[1] : null
     }
 
-    const isStorageUrl = (url: string) => url.includes('supabase') && url.includes('storage')
+    const isStorageUrl = (url: string) => Boolean(url) && url.includes('supabase') && url.includes('storage')
 
     const contextCfg = (ctx: string) => CONTEXT_OPTIONS.find(c => c.value === ctx) || CONTEXT_OPTIONS[0]
 

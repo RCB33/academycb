@@ -16,7 +16,7 @@ type Stats = {
 }
 
 type FifaCardProps = {
-    stats: Stats
+    stats: Stats | null
     child: any
     ovr?: number
     className?: string
@@ -26,7 +26,7 @@ export function FifaCard({ stats, child, ovr, className }: FifaCardProps) {
     const translate = useT()
 
     // Calculate OVR if not provided
-    if (!ovr) {
+    if (stats && ovr === undefined) {
         const values = [stats.pace, stats.shooting, stats.passing, stats.dribbling, stats.defending, stats.physical]
         ovr = Math.round(values.reduce((a, b) => a + b, 0) / values.length)
     }
@@ -51,8 +51,8 @@ export function FifaCard({ stats, child, ovr, className }: FifaCardProps) {
                     {/* Top Section: Rating & Position */}
                     <div className="flex justify-between items-start mb-2">
                         <div className="flex flex-col items-center leading-none">
-                            <span className="text-5xl font-[900] text-yellow-500 drop-shadow-[0_0_5px_rgba(234,179,8,0.5)]">{translate(ovr)}</span>
-                            <span className="text-lg font-bold text-white tracking-widest mt-1">{translate("OVR")}</span>
+                            <span className="text-5xl font-[900] text-yellow-500 drop-shadow-[0_0_5px_rgba(234,179,8,0.5)]">{translate(stats ? ovr : '—')}</span>
+                            <span className="text-lg font-bold text-white tracking-widest mt-1">{translate(stats ? 'OVR' : 'Sin evaluar')}</span>
                         </div>
                         <div className="flex flex-col items-center">
                             {/* Academy Logo */}
@@ -82,27 +82,27 @@ export function FifaCard({ stats, child, ovr, className }: FifaCardProps) {
                     {/* Stats Grid */}
                     <div className="grid grid-cols-2 gap-x-4 gap-y-2 w-full font-bold text-lg tracking-wide uppercase px-2">
                         <div className="flex items-center gap-2">
-                            <span className="text-yellow-500 w-8 text-right">{translate(stats.pace)}</span>
+                            <span className="text-yellow-500 w-8 text-right">{translate(stats?.pace ?? '—')}</span>
                             <span className="text-yellow-100/70 text-sm font-normal">{translate("PAC")}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="text-yellow-500 w-8 text-right">{translate(stats.dribbling)}</span>
+                            <span className="text-yellow-500 w-8 text-right">{translate(stats?.dribbling ?? '—')}</span>
                             <span className="text-yellow-100/70 text-sm font-normal">{translate("REG")}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="text-yellow-500 w-8 text-right">{translate(stats.shooting)}</span>
+                            <span className="text-yellow-500 w-8 text-right">{translate(stats?.shooting ?? '—')}</span>
                             <span className="text-yellow-100/70 text-sm font-normal">{translate("TIR")}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="text-yellow-500 w-8 text-right">{translate(stats.defending)}</span>
+                            <span className="text-yellow-500 w-8 text-right">{translate(stats?.defending ?? '—')}</span>
                             <span className="text-yellow-100/70 text-sm font-normal">{translate("DEF")}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="text-yellow-500 w-8 text-right">{translate(stats.passing)}</span>
+                            <span className="text-yellow-500 w-8 text-right">{translate(stats?.passing ?? '—')}</span>
                             <span className="text-yellow-100/70 text-sm font-normal">{translate("PAS")}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="text-yellow-500 w-8 text-right">{translate(stats.physical)}</span>
+                            <span className="text-yellow-500 w-8 text-right">{translate(stats?.physical ?? '—')}</span>
                             <span className="text-yellow-100/70 text-sm font-normal">{translate("FIS")}</span>
                         </div>
                     </div>
