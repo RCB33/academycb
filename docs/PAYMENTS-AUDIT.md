@@ -1,3 +1,18 @@
+## Piloto LIVE autorizado por el propietario — 20 noviembre 2026
+
+Nueva autorización expresa: una única suscripción LIVE de **1 € total, un mes, sin matrícula/extras ni renovación**, para `rokecordoba@gmail.com`. No habilita las mensualidades para el resto de familias. `STRIPE_RECURRING_PAYMENTS_ENABLED=false` se conserva.
+
+- Fuente: fetch explícito de main, base `a78c693`; producción comparada `dpl_DZxWXaW25TQ6hChxq9bTfcdRcosJ`. Launcher limitado publicado en `b996471`, Vercel `dpl_9csDZz7eDnRqTULAqT595PgDraXf`, READY.
+- Solicitud privada `9afa5f6f-1caf-4b78-89fc-40303eafc607`, creada por backend y aceptada mediante la RPC administrativa real `accept_academy_request`, con la sesión autorizada del propietario. **No es una prueba del formulario público ni de sus precios normales.** Plan inactivo, no publicado, y grupo privado de demostración. Jugador y teléfono son ficticios; la ficha de diciembre no representa entrenamientos reales.
+- Jugador `0d5440c7-0b5b-454c-a515-4fe47fdb773e`, matrícula `4b868430-13ba-45e8-8495-07535a6d56bd`, tutor nuevo vinculado a la cuenta existente del propietario. No se cambió su rol ni contraseña. Sesiones administrativas de la comprobación cerradas con alcance local.
+- Un recibo nuevo pendiente de 1 €: `ef24d010-287b-4f7d-98e0-cb73ee31872e`. Contrato privado `78b7e771-3b5c-4525-8baa-7dea137bd3e9`, LIVE, mensual, 100 céntimos, cero extras, un mes. Launcher exige administrador y la cuenta concreta del propietario, contrato fijo, origen exacto e importe/duración exactos; no acepta precios o destinatarios del cliente. Anónimo devuelve 403. No activa el catálogo público.
+- Stripe aceptó Checkout LIVE `cs_live_cgybqR7iQwNTeIkI3I4hrTYIXTylrdnLonTJiihMuY0jKynfzdVrDUpf5q`, modo **setup**, todavía sin tarjeta ni cargo al preparar el enlace. El webhook existente crea, tras autorización, un schedule de una fase mensual con `end_behavior=cancel`. No se cobra ni se añade tarjeta guardada por parte del agente. La primera factura puede no cobrarse inmediatamente después de guardar la tarjeta.
+- Correos realmente recibidos en Gmail INBOX: solicitud `1a1f804dc07e83d1` (Resend `01a1f804-da27-79e1-be9e-d4645eba0830`) y bienvenida `1a1f80702b21e3eb` (Resend `01a1f806-fea1-787c-b1f8-a4ee885892b3`). Bienvenida identificada como prueba, logo azul/dorado, botón directo a Stripe, total y fin explícitos, transferencia e instrucciones WhatsApp. Plantilla reproducible en `scripts/templates/owner-pilot-welcome.cjs`; envío asociado a la fila real de outbox `7bfc5070-139b-44ee-9508-9c58770c2fe7`. No sustituye todavía todas las bienvenidas del producto.
+- Verificación: tests Stripe simulados, guardas del piloto, tests de correo, TypeScript, lint de archivos nuevos y build correctos. Logo público HTTP 200. No se certifica una revisión visual de todos los clientes de correo.
+- Los **11 pagos anteriores** conservan el digest `e9b3ce77d682aabd79e1097a68a22b23`, excluyendo solo el nuevo jugador autorizado. No se modificaron importes, estados ni vínculos antiguos.
+
+**Pendiente del propietario:** introducir tarjeta y autorizar en Checkout. Después comprobar schedule LIVE finito, factura de 1 € pagada, webhook y recibo en Academy, así como fin automático. Este piloto no acredita renovaciones, impagos, recuperación ni fin de temporada en mayo. No eliminar una factura/cobro real para limpiar la prueba. Retirar el launcher tras completar la validación; conservar la trazabilidad financiera. El plan privado sigue inactivo.
+
 # Pagos — auditoría y diseño de implementación
 
 ## Cierre de pruebas de Karen — 19 noviembre 2026, última revisión
