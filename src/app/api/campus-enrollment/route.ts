@@ -1,3 +1,4 @@
+import { enrollmentPaymentLabel } from '@/lib/enrollment-payment';
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCampusOffer } from "@/lib/offering-server";
@@ -86,6 +87,7 @@ export async function POST(request: Request) {
   const d = parsed.data;
   const details = [
     `Formulario: ${CAMPUS_VERSION} · ${new Date().toISOString()}`,
+    `Forma de pago · Campus: ${enrollmentPaymentLabel(d.payment_choice)}`,
     `Equipo: ${d.team}`,
     `Modalidad: ${d.role}`,
     `Semanas: ${campusWeeks

@@ -1,3 +1,4 @@
+import { ActivityPaymentSummary } from '@/components/activity-payment-summary';
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
@@ -87,7 +88,7 @@ export default async function FamilyActivities({
         admin
           .from("enrollment_requests")
           .select(
-            "id,linked_child_id,child_name,activity_name,status,created_at,service",
+            "id,linked_child_id,child_name,activity_name,status,created_at,service,academy_details,campus_details",
           )
           .eq("submitted_by", family.userId)
           .order("created_at", { ascending: false })
@@ -222,6 +223,7 @@ export default async function FamilyActivities({
                   {state[r.status] || r.status} · Ref.{" "}
                   {r.id.slice(0, 8).toUpperCase()}
                 </p>
+                <ActivityPaymentSummary request={r} />
               </article>
             ))}
           </div>

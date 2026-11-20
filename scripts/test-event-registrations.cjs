@@ -2,7 +2,7 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const ts = require('typescript')
 const moduleValue = { exports: {} }
-new Function('module','exports','require',ts.transpileModule(fs.readFileSync('src/lib/christmas-tournaments.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText)(moduleValue,moduleValue.exports,require)
+new Function('module','exports','require',ts.transpileModule(fs.readFileSync('src/lib/christmas-tournaments.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText)(moduleValue,moduleValue.exports,name => { if(name !== '@/lib/enrollment-payment') return require(name); const policy={exports:{}};new Function('module','exports',ts.transpileModule(fs.readFileSync('src/lib/enrollment-payment.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText)(policy,policy.exports);return policy.exports })
 const {tournamentQuote:q,tournamentRegistrationSchema:s}=moduleValue.exports
 assert.equal(Object.keys(moduleValue.exports.legacyChristmasTournamentTargets).length,3,'Legacy Christmas cards route to the full campaign')
 assert.equal(q(['champions'],false).total,65)

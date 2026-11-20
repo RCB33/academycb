@@ -37,7 +37,7 @@ export async function getEventFamily() {
   const { data: registrations, error: registrationError } = await db.from('event_registrations').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
   if (registrationError) throw new Error('Las inscripciones todavía no están disponibles. Inténtalo más tarde.')
   const { data: bank } = await db.from('event_campaign_settings').select('bank_holder,iban').eq('id', 'christmas-2026').single()
-  const checkoutMode = null // Campus and tournaments are paid by bank transfer.
+  const checkoutMode = null // Tournaments are paid by bank transfer. Campus allows transfer or cash.
   const { data: checkoutAttempts } = await db.from('event_checkout_attempts').select('id,registration_id,mode,state').eq('owner_id',user.id).order('created_at',{ascending:false}).limit(100)
   return { catalog:await getTournamentOffer(), guardian, children, registrations: registrations || [], email: user.email, bank, checkoutMode, checkoutAttempts: checkoutAttempts || [] }
 }

@@ -1,3 +1,4 @@
+import { paymentChoicesText, requestedPaymentChoices } from '@/lib/enrollment-payment';
 import "server-only";
 import { agreedAcademyMethod, monthlyPaymentStatus } from './monthly-payment-status';
 import { isCurrentTournamentRegistration } from "@/lib/christmas-tournaments";
@@ -148,6 +149,7 @@ export async function getAdminWorkspace(
       name: r.child_name,
       guardian: r.guardian_name,
       activity: r.activity_name,
+      paymentChoices: paymentChoicesText(requestedPaymentChoices(r)),
       status: r.status,
       created: r.created_at,
       amount:
@@ -169,6 +171,7 @@ export async function getAdminWorkspace(
       name: String(r.details.child_name || "Jugador"),
       guardian: String(r.details.guardian_name || ""),
       activity: "Torneos · Navidad 2026–2027",
+      paymentChoices: "Torneos: Transferencia bancaria",
       status: r.status,
       created: r.created_at,
       amount: Number(r.approved_amount ?? r.quoted_amount),

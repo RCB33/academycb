@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { tournamentPaymentMessage } from '@/lib/enrollment-payment'
 
 // Historical catalogue entries remain in the database for administration/history.
 // Public visitors must use the complete campaign, not the old coming-soon pages.
@@ -17,6 +18,7 @@ export const christmasTournaments = [
 export const tournamentIds = ['231', 'champions', 'costa-brava'] as const
 export const registrationStatuses: Record<string, string> = { requested: 'Pendiente de validación', awaiting_payment: 'Pendiente de transferencia', proof_review: 'Justificante en revisión', confirmed: 'Inscripción confirmada', cancelled: 'Anulada' }
 export function tournamentRegistrationSchemaFor(events:ReadonlyArray<{id:string;name:string;categories:readonly string[]}>=christmasTournaments) { return z.object({
+  payment_choice: z.literal('transfer', { error: tournamentPaymentMessage }).default('transfer'),
   request_id: z.string().uuid(), child_id: z.string().uuid().nullable(),
   child_name: z.string().trim().min(3).max(120), birth_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(v => { const d = new Date(v + 'T12:00:00Z'); return !isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v && d <= new Date() }, 'Revisa la fecha de nacimiento.'),
   guardian_name: z.string().trim().min(3).max(120), phone: z.string().trim().regex(/^\+?[\d\s()-]{9,20}$/, 'Revisa el teléfono'),

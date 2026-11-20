@@ -1,3 +1,15 @@
+## Formas de pago independientes por actividad — 20 noviembre 2026
+
+Esta instrucción posterior del propietario sustituye la excepción de pago compartido para Academia + Campus descrita más abajo.
+
+- Academia: tarjeta con Stripe o efectivo. Campus: transferencia o efectivo. Torneos: solo transferencia. El servidor valida cada elección aunque se soliciten dos o tres actividades; una transferencia de Campus nunca se aplica a Academia.
+- La inscripción de Academia permite añadir interés en Campus y Torneos con selectores independientes. Se conserva la selección validada de plan/grupos de Academia y el mapa `requested_payments` en su snapshot existente. Las plazas adicionales se concretan por separado con Secretaría; aceptar Academia no las confirma ni crea cargos adicionales.
+- Campus guarda su método en `campus_details.payment_choice`; el formulario propio admite efectivo. Torneos conserva transferencia como única opción. Los formularios antiguos de Campus/Torneos sin ese campo conservan su comportamiento anterior de transferencia.
+- Se muestra el detalle en solicitudes, CRM, solicitudes del portal y en la ficha vinculada/aceptada. La consulta de la ficha está restringida a administración, relaciona cada inscripción de Campus mediante `campus_request_links` y solo lee las preferencias de pago del JSON. Los valores históricos desconocidos no se convierten en acuerdos nuevos.
+- Confirmaciones de Campus en efectivo indican cómo coordinar la entrega, sin instrucciones bancarias. Las confirmaciones combinadas detallan los tres métodos y distinguen las plazas pendientes. Las formas solicitadas/acordadas no acreditan ingresos.
+- Pruebas de código: matriz de métodos por actividad, combinaciones de una/dos/tres, persistencia separada, validación de propiedad, atomicidad, restricciones de esquemas, ficha/links/autorización y textos de correo con inserciones/correos simulados; oferta/prorrateos, torneos y gestión. TypeScript, build y lint sin errores (advertencias preexistentes).
+- No hay migraciones ni modificaciones de registros financieros existentes, pruebas de escritura en producción, envíos reales de correo ni cambios en flags de Stripe. No se afirma una nueva comprobación de digest, aceptación del proveedor ni entrega de email de extremo a extremo.
+
 ## Revisión mensual y recordatorios de Karen — 20 noviembre 2026
 
 Publicación funcional `16fb539`, Vercel `dpl_5uxQRBgoyRqumo2SmRQZtiXT6PnG`, READY (build remoto correcto). Navegador real: acceso autorizado, carga de datos, filtros de mes y pendientes, rechazo de recordatorios para cuotas futuras; captura `auditoria-2026-11-20/revision-cuotas-karen.jpg`. Sin cuotas vencidas elegibles en noviembre: no se afirma un envío real ni una validación manual real de efectivo desde UI; esos caminos se probaron con fixtures y proveedor simulado. Cuenta QA eliminada y sesiones revocadas. Digest final de 19 pagos conservado y cero recordatorios enviados. Flags de producción consultados: LIVE true preexistente, mensualidades generales false. Texto de gestión alineado en `d16885f`.

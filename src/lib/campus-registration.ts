@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { campusPaymentMessage } from '@/lib/enrollment-payment'
 export const CAMPUS_VERSION = 'navidad-2026-2027-v1'
 export const campusWeeks = [
     { id: '1', label: '22, 23 y 24 de diciembre', price: 89 },
@@ -28,6 +29,7 @@ export function campusRegistrationSchemaFor(birthFrom=2013,birthTo=2022) { retur
     weeks: z.array(z.enum(['1','2','3'])).min(1, 'Selecciona al menos una semana.').max(3).refine(v => new Set(v).size === v.length),
     preferences: z.string().trim().max(1000), size: z.string().trim().max(40), sibling: z.boolean(), sibling_name: z.string().trim().max(120),
     image_consent: yesNo, reason: text(), expectations: text(1000),
+    payment_choice: z.enum(['transfer', 'cash'], { error: campusPaymentMessage }).default('transfer'),
     payment_consent: z.literal(true), privacy_consent: z.literal(true), terms_consent: z.literal(true), health_consent: z.literal(true),
     website: z.string().max(0),
 }).refine(v => v.weeks.length !== 3 || !!v.size, { message: 'Indica la talla de sudadera del pack completo.', path: ['size'] })

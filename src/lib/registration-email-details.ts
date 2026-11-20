@@ -1,4 +1,5 @@
 import 'server-only'
+import { paymentChoicesText, requestedPaymentChoices } from '@/lib/enrollment-payment'
 import { receiptBalance } from '@/lib/receipt-balance'
 import { createAdminClient } from '@/lib/supabase/admin'
 
@@ -35,7 +36,9 @@ export async function registrationEmailDetails(source:string,id:string,kind:stri
     const {data:r,error}=await db.from('enrollment_requests').select('service,child_name,activity_name,status,academy_details,campus_details').eq('id',id).single()
     if(error||!r) throw new Error('Registration unavailable')
     const a=r.academy_details
-    const selection=a?`${a.plan.name}\n${a.groups.map((g:{name:string;schedule:string;public_offer?:{day:string;location:string}|null})=>[g.name,g.public_offer?.day,g.schedule,g.public_offer?.location].filter(Boolean).join(' · ')).join('\n')}\nIncorporación: ${a.start_date}`:r.activity_name
+    const methods = paymentChoicesText(requestedPaymentChoices(r))
+    const extra = r.service === 'academy' && (requestedPaymentChoices(r).campus || requestedPaymentChoices(r).tournament) ? '\nCampus y/o Torneos: solicitud adicional pendiente de concretar; su plaza se confirmará por separado.' : ''
+    const selection=(a?`${a.plan.name}\n${a.groups.map((g:{name:string;schedule:string;public_offer?:{day:string;location:string}|null})=>[g.name,g.public_offer?.day,g.schedule,g.public_offer?.location].filter(Boolean).join(' · ')).join('\n')}\nIncorporación: ${a.start_date}`:r.activity_name) + (methods ? `\n\nFormas de pago solicitadas:\n${methods}` : '') + extra
     if(kind==='received') return {subject:`${r.child_name}, hemos recibido tu solicitud`,message:`La solicitud de ${r.child_name} se ha guardado correctamente.\n\n${selection}\n\nEl equipo revisará disponibilidad, edad y grupo. Te comunicaremos la aceptación y los siguientes pasos por correo. Este mensaje no confirma una plaza ni acredita un pago. Todavía no realices ningún pago.${contact}`}
     if(kind!=='reviewed'||r.status!=='enrolled') return null
     let payment='',detail=selection
@@ -57,7 +60,7 @@ export async function registrationEmailDetails(source:string,id:string,kind:stri
       const {data:receipts,error:paymentError}=await db.from('payments').select('amount,status,manual_receipt_allocations(*)').eq('ref_id',link.enrollment_id)
       if(paymentError||!receipts?.length) throw new Error('Campus payment unavailable')
       const due=receipts.filter(p=>['pending','failed','overdue'].includes(p.status)).reduce((n,p)=>n+receiptBalance(p).remaining,0)
-      payment=due?await transfer(due,r.child_name):'No consta un pago pendiente para esta inscripción.'
+      payment=due?(r.campus_details?.payment_choice === 'cash' ? `Importe pendiente: ${due.toFixed(2)} €\nForma de pago · Campus: efectivo. Contacta por WhatsApp https://wa.me/34691179600 para acordar la entrega. El pago se registrará cuando se reciba el efectivo.` : await transfer(due,r.child_name)):'No consta un pago pendiente para esta inscripción.'
       const p=r.campus_details?.program_snapshot
       if(p) detail+=`\n${r.campus_details.schedule} · ${r.campus_details.location}\n${p.weeks.filter((w:{id:string})=>r.campus_details.weeks.includes(w.id)).map((w:{label:string})=>w.label).join('\n')}\nModalidad: ${r.campus_details.role}`
     } else return null

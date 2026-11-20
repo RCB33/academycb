@@ -25,6 +25,7 @@ export type WorkspaceRequest = {
   name: string;
   guardian: string;
   activity: string;
+  paymentChoices?: string;
   status: string;
   created: string;
   amount: number | null;

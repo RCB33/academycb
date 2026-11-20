@@ -694,6 +694,7 @@ export function RequestInbox({
                 <p className="mt-1 text-xs text-slate-500">
                   Tutor: {r.guardian} · {r.activity}
                 </p>
+                {r.paymentChoices && <p className="mt-2 whitespace-pre-line text-xs font-semibold text-navy">{r.paymentChoices}</p>}
                 <p className="mt-2 text-[11px] text-slate-400">
                   {new Date(r.created).toLocaleDateString("es-ES")} · Ref.{" "}
                   {r.id.slice(0, 8).toUpperCase()}

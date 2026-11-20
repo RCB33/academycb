@@ -42,7 +42,7 @@ export async function StripeProductionStatus() {
                 <li>Cuenta: {accountName || 'comprueba Academy Costa Brava en Stripe'}</li>
                 <li>Cobros autorizados por Stripe: {canCharge === true ? 'sí' : canCharge === false ? 'no; completa la activación de la cuenta en Stripe' : 'comprueba el estado en Stripe'}</li>
                 <li>Mensualidades automáticas: {process.env.STRIPE_RECURRING_PAYMENTS_ENABLED === 'true' ? 'habilitadas para planes compatibles' : 'pendientes de validación; no hay cobro automático activo'}</li>
-                <li>Uso de Stripe: solo suscripciones mensuales de Academia. Campus, Torneos, matrícula y extras se pagan por transferencia.</li>
+                <li>Uso de Stripe: solo suscripciones mensuales de Academia. Campus: transferencia o efectivo. Torneos: solo transferencia. Matrícula y extras de Academia: efectivo.</li>
             </ul>
             <p className="text-sm text-slate-600">Guardar las credenciales no confirma ningún pago. La web registra el cobro cuando recibe y verifica el aviso de Stripe.</p>
             <div className="flex flex-wrap gap-4 text-sm underline"><Link href="/admin/ajustes">Métodos de pago y planes</Link><a href="https://dashboard.stripe.com/" target="_blank" rel="noopener noreferrer">Abrir Stripe</a></div>

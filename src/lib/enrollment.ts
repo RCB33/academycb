@@ -6,7 +6,7 @@ import { academySelection } from '@/lib/offering-server'
 import { createClient } from '@/lib/supabase/server'
 import { deliverRegistrationEmails } from '@/lib/registration-email'
 
-import { academyPaymentMessage, combinedEnrollmentMessage, enrollmentPaymentLabel, isCombinedEnrollment } from '@/lib/enrollment-payment'
+import { isAllowedEnrollmentPayment, paymentMessages, paymentChoicesText, paymentServiceLabels, type EnrollmentPayment, type PaymentService } from '@/lib/enrollment-payment'
 
 const serviceSchema = z.enum(['academy', 'campus', 'tournament'])
 
@@ -14,6 +14,9 @@ export const enrollmentSchema = z.object({
     plan_id: z.string().optional(), group_id: z.string().optional(), second_group_id: z.string().optional(),
     start_date: z.string().optional(), plus: z.enum(['yes','no','']).optional(), offer_version: z.string().optional(), payment_choice: z.enum(['monthly_card','cash','transfer',''], { error: 'Elige una forma de pago válida: efectivo, tarjeta con Stripe o transferencia cuando corresponda.' }).optional(),
     campus_interest: z.enum(['yes', 'no', '']).optional(),
+    tournament_interest: z.enum(['yes', 'no', '']).optional(),
+    campus_payment_choice: z.string().max(30).optional(),
+    tournament_payment_choice: z.string().max(30).optional(),
     service: serviceSchema,
     activity_id: z.string().uuid().optional().or(z.literal('')),
     child_name: z.string().trim().min(2, 'Indica el nombre completo del jugador.').max(120),
@@ -37,7 +40,7 @@ export const enrollmentSchema = z.object({
 
 export type EnrollmentPayload = z.input<typeof enrollmentSchema>
 const familyEnrollmentSchema = enrollmentSchema.omit({ service: true, activity_id: true, child_name: true, birth_date: true }).extend({
-    children: z.array(enrollmentSchema.pick({ service: true, activity_id: true, child_name: true, birth_date: true, linked_child_id: true, plan_id:true,group_id:true,second_group_id:true,start_date:true,plus:true,offer_version:true,payment_choice:true,campus_interest:true })).min(1).max(6, 'Puedes enviar hasta 6 jugadores a la vez.'),
+    children: z.array(enrollmentSchema.pick({ service: true, activity_id: true, child_name: true, birth_date: true, linked_child_id: true, plan_id:true,group_id:true,second_group_id:true,start_date:true,plus:true,offer_version:true,payment_choice:true,campus_interest:true,tournament_interest:true,campus_payment_choice:true,tournament_payment_choice:true })).min(1).max(6, 'Puedes enviar hasta 6 jugadores a la vez.'),
 })
 export type EnrollmentResult = { success: true; message: string } | { success: false; error: string }
 
@@ -79,10 +82,11 @@ export async function createEnrollmentRequest(payload: unknown): Promise<Enrollm
         return { success: false, error: parsed.error.issues[0]?.message || 'Revisa los datos de la solicitud.' }
     }
 
-    const combined = isCombinedEnrollment(parsed.data.children)
     for (const child of parsed.data.children) {
-        if (child.service === 'academy' && !combined && !['cash', 'monthly_card'].includes(child.payment_choice || '')) {
-            return { success: false, error: academyPaymentMessage }
+        if (!isAllowedEnrollmentPayment(child.service, child.payment_choice)) return { success: false, error: paymentMessages[child.service] }
+        if (child.service === 'academy') {
+            if (child.campus_interest === 'yes' && !isAllowedEnrollmentPayment('campus', child.campus_payment_choice)) return { success: false, error: paymentMessages.campus }
+            if (child.tournament_interest === 'yes' && !isAllowedEnrollmentPayment('tournament', child.tournament_payment_choice)) return { success: false, error: paymentMessages.tournament }
         }
     }
 
@@ -105,7 +109,7 @@ export async function createEnrollmentRequest(payload: unknown): Promise<Enrollm
             if(existing.birth_date) child.birth_date=existing.birth_date
         }
         let academyDetails = null
-        if(child.service==='academy' && !combined) {
+        if(child.service==='academy') {
             try { academyDetails=await academySelection({plan_id:child.plan_id||'',group_id:child.group_id||'',second_group_id:child.second_group_id,start_date:child.start_date||'',plus:child.plus==='yes',offer_version:child.offer_version||'',payment_choice:child.payment_choice!},child.birth_date) }
             catch(e) { return {success:false,error:e instanceof Error?e.message:'Revisa tu elección de Academia.'} }
         }
@@ -114,20 +118,27 @@ export async function createEnrollmentRequest(payload: unknown): Promise<Enrollm
             const {data:linked}=await authDb.rpc('is_guardian_of',{child_uuid:child.linked_child_id})
             if(linked!==true) return {success:false,error:'El jugador no pertenece a tu cuenta.'}
         }
+        const requestedPayments: Partial<Record<PaymentService, EnrollmentPayment>> = { [child.service]: child.payment_choice as EnrollmentPayment }
+        if (child.service === 'academy') {
+            if (child.campus_interest === 'yes') requestedPayments.campus = child.campus_payment_choice as EnrollmentPayment
+            if (child.tournament_interest === 'yes') requestedPayments.tournament = child.tournament_payment_choice as EnrollmentPayment
+        }
+        const extraServices = Object.keys(requestedPayments).filter(service => service !== child.service)
         rows.push({
-            academy_details: academyDetails,
+            academy_details: academyDetails ? { ...academyDetails, requested_payments: requestedPayments } : null,
+            campus_details: child.service === 'campus' ? { payment_choice: child.payment_choice } : null,
             submitted_by:user?.id||null,
             id: crypto.randomUUID(),
             service: child.service,
             activity_id: activity.id || null,
-            activity_name: combined && child.service === 'academy' ? 'Academia + Campus · pendiente de contacto' : activity.name,
+            activity_name: extraServices.length ? Object.keys(requestedPayments).map(service => paymentServiceLabels[service as PaymentService]).join(' + ') : activity.name,
             child_name: child.child_name,
             linked_child_id: child.linked_child_id || null,
             birth_date: child.birth_date,
             guardian_name: parsed.data.guardian_name,
             email: parsed.data.email.toLowerCase(),
             phone: parsed.data.phone,
-            notes: [parsed.data.notes, combined ? `${combinedEnrollmentMessage}\nForma de pago solicitada: ${enrollmentPaymentLabel(child.payment_choice)}${child.service === 'academy' ? `\nPreferencias de Academia: plan ${child.plan_id || 'por concretar'}; grupo ${child.group_id || 'por concretar'}; incorporación ${child.start_date || 'por concretar'}.` : ''}` : '', academyDetails ? `Plan: ${academyDetails.plan.name} · ${academyDetails.quote.monthly_price} €/mes\nGrupos: ${academyDetails.groups.map(g=>g.public_offer.day+' '+g.schedule+' '+g.name).join('; ')}\nIncorporación: ${academyDetails.start_date} · Primera cuota: ${academyDetails.quote.first_month} € (${academyDetails.quote.percent} %)\nMatrícula nuevos jugadores: ${academyDetails.quote.enrollment_fee} € · Plus: ${academyDetails.quote.plus} €\nPago solicitado: ${academyDetails.payment_choice==='monthly_card'?'Mensualidades con tarjeta':'Efectivo'} · Fin: ${academyDetails.quote.season_end}` : ''].filter(Boolean).join('\n') || null,
+            notes: [parsed.data.notes, `Formas de pago solicitadas:\n${paymentChoicesText(requestedPayments)}`, extraServices.length ? 'Actividades adicionales pendientes de concretar con Secretaría: ' + extraServices.map(service => paymentServiceLabels[service as PaymentService]).join(', ') + '. Aceptar Academia no confirma las plazas adicionales.' : '', academyDetails ? `Plan: ${academyDetails.plan.name} · ${academyDetails.quote.monthly_price} €/mes\nGrupos: ${academyDetails.groups.map(g=>g.public_offer.day+' '+g.schedule+' '+g.name).join('; ')}\nIncorporación: ${academyDetails.start_date} · Primera cuota: ${academyDetails.quote.first_month} € (${academyDetails.quote.percent} %)\nMatrícula nuevos jugadores: ${academyDetails.quote.enrollment_fee} € · Plus: ${academyDetails.quote.plus} €\nPago solicitado: ${academyDetails.payment_choice==='monthly_card'?'Mensualidades con tarjeta':'Efectivo'} · Fin: ${academyDetails.quote.season_end}` : ''].filter(Boolean).join('\n') || null,
             status: 'new',
         })
     }
@@ -145,7 +156,7 @@ export async function createEnrollmentRequest(payload: unknown): Promise<Enrollm
 
     return {
         success: true,
-        message: combined ? 'Solicitud de Academia + Campus recibida. Secretaría contactará contigo para concretar las actividades y la forma de pago. No se ha realizado ningún cobro.' : rows.length > 1
+        message: parsed.data.children.some(child => child.service === 'academy' && (child.campus_interest === 'yes' || child.tournament_interest === 'yes')) ? 'Solicitud recibida con una forma de pago para cada actividad. Secretaría revisará Academia y contactará contigo para concretar las demás plazas. No se ha realizado ningún cobro.' : rows.length > 1
             ? `Hemos recibido tus ${rows.length} solicitudes. Secretaría revisará cada plaza y contactará contigo para confirmar los siguientes pasos.`
             : 'Solicitud recibida. Secretaría revisará la plaza y contactará contigo para confirmar los siguientes pasos.',
     }

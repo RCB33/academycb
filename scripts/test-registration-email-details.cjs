@@ -4,6 +4,7 @@ const db = { from(table) { const q = { select() { return q }, eq() { return q },
 function load(file) {
   const m = { exports: {} }
   new Function('module', 'exports', 'require', ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText)(m, m.exports, name => {
+    if (name === '@/lib/enrollment-payment') return load('src/lib/enrollment-payment.ts')
     if (name === 'server-only') return {}
     if (name === '@/lib/supabase/admin') return { createAdminClient: () => db }
     if (name === '@/lib/receipt-balance') return load('src/lib/receipt-balance.ts')
@@ -38,6 +39,18 @@ function load(file) {
   rows.campus_request_links = { enrollment_id: 'campus-test' }
   rows.payments = [{ amount: 197, status: 'pending', manual_receipt_allocations: [{ amount: 100, voided_at: null }] }]
   assert.match((await details('enrollment', 'test-request', 'reviewed')).message, /Importe pendiente: 97\.00 €/)
+  rows.enrollment_requests.campus_details = { payment_choice:'cash' }
+  result = await details('enrollment','test-request','reviewed')
+  assert.match(result.message,/Campus: efectivo/)
+  assert.match(result.message,/97\.00 €/)
+  assert.doesNotMatch(result.message,/IBAN|transferencia|MOCK-ONLY/i,'Cash Campus confirmations never give bank transfer instructions')
+  rows.enrollment_requests = { service:'academy',child_name:'QA',activity_name:'Academia + Campus + Torneos',status:'new',academy_details:{...a,requested_payments:{academy:'monthly_card',campus:'cash',tournament:'transfer'}} }
+  result = await details('enrollment','test-request','received')
+  assert.match(result.message,/Academia: Tarjeta con Stripe/)
+  assert.match(result.message,/Campus: Efectivo/)
+  assert.match(result.message,/Torneos: Transferencia bancaria/)
+  assert.match(result.message,/plaza se confirmará por separado/)
+  assert.doesNotMatch(result.message,/IBAN|MOCK-ONLY/)
   assert.match(familyAccessMessage('invited'), /correo separado/)
   assert.match(familyAccessMessage('existing'), /contraseña habituales/)
   assert.doesNotMatch(familyAccessMessage(), /hemos enviado/)
