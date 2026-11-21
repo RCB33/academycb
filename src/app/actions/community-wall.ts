@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
+import sharp from 'sharp'
 import { requireAdmin, requireUser } from '@/lib/auth'
 
 const postSchema = z.object({
@@ -118,8 +119,29 @@ export async function createAcademyWallPost(formData: FormData) {
     const { supabase, user } = await requireAdmin()
     const body = z.string().trim().min(2).max(1500).safeParse(formData.get('body'))
     if (!body.success) return { success: false, error: 'Escribe un mensaje entre 2 y 1.500 caracteres.' }
-    const { error } = await supabase.from('community_posts').insert({ author_user_id: user.id, body: body.data, visibility: 'community', status: 'published', published_at: new Date().toISOString() })
-    if (error) return { success: false, error: 'No se pudo publicar el mensaje Academy.' }
+    const photo = formData.get('photo')
+    let mediaPath: string | null = null
+    if (photo instanceof File && photo.size > 0) {
+        if (photo.size > 3 * 1024 * 1024 || !['image/jpeg', 'image/png', 'image/webp'].includes(photo.type)) {
+            return { success: false, error: 'Elige una foto JPG, PNG o WebP de hasta 3 MB.' }
+        }
+        let image: Buffer
+        try {
+            // Decode and re-encode the image: reject invalid files and strip metadata.
+            image = await sharp(Buffer.from(await photo.arrayBuffer()), { limitInputPixels: 40_000_000 })
+                .rotate().resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true }).webp({ quality: 85 }).toBuffer()
+        } catch {
+            return { success: false, error: 'No se pudo leer la foto. Prueba con otra imagen.' }
+        }
+        mediaPath = `${user.id}/${crypto.randomUUID()}.webp`
+        const { error: uploadError } = await supabase.storage.from('community-wall').upload(mediaPath, image, { contentType: 'image/webp', upsert: false })
+        if (uploadError) return { success: false, error: 'No se pudo subir la foto. Vuelve a intentarlo.' }
+    }
+    const { error } = await supabase.from('community_posts').insert({ author_user_id: user.id, body: body.data, visibility: 'community', status: 'published', published_at: new Date().toISOString(), media_path: mediaPath, media_type: mediaPath ? 'image' : null })
+    if (error) {
+        if (mediaPath) await supabase.storage.from('community-wall').remove([mediaPath])
+        return { success: false, error: 'No se pudo publicar el mensaje Academy.' }
+    }
     revalidatePath('/portal/muro'); revalidatePath('/admin/muro')
     return { success: true }
 }
