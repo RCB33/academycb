@@ -18,6 +18,7 @@ export type AcademyRequestReviewContext = {
     academy_details: {
       plan: AcademyPlan; groups: AcademyGroup[]; start_date: string; payment_choice: string
       quote: ReturnType<typeof academyQuote>
+      admin_completion?: { charge_enrollment: boolean }
     }
   }
 }

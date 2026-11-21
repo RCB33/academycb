@@ -13,7 +13,7 @@ const dateLabel = (date: string) => new Date(date + 'T12:00:00Z').toLocaleDateSt
 export function AcademyRequestReview({ context }: { context: AcademyRequestReviewContext }) {
   const r = context.request, d = r.academy_details
   const [startDate, setStartDate] = useState(d.start_date)
-  const [chargeEnrollment, setChargeEnrollment] = useState(!context.fee_exempt && d.plan.enrollment_fee > 0)
+  const [chargeEnrollment, setChargeEnrollment] = useState(!context.fee_exempt && d.plan.enrollment_fee > 0 && (d.admin_completion?.charge_enrollment ?? true))
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [accepted, setAccepted] = useState(false), [notice, setNotice] = useState('')
   let quote: ReturnType<typeof reviewedAcademyQuote> | null = null
   try { quote = reviewedAcademyQuote(context, startDate, chargeEnrollment) } catch { /* Invalid or incomplete date: keep acceptance disabled. */ }
@@ -49,6 +49,7 @@ export function AcademyRequestReview({ context }: { context: AcademyRequestRevie
       <div className="space-y-5">
         <section className={card}>
           <h2 className="font-bold text-navy">La plaza solicitada</h2>
+          {d.admin_completion && <Link href={`/admin/solicitudes/academia/${r.id}/completar`} className="mt-2 inline-flex text-sm font-semibold text-navy underline">Cambiar plan, grupos o pago</Link>}
           <p className="mt-3 text-sm font-semibold">{d.plan.name}</p>
           {d.groups.map(g => <p key={g.id} className="mt-2 text-sm text-slate-600">{g.name} · {g.public_offer.day} · {g.schedule}</p>)}
           <p className="mt-3 text-sm text-slate-600">Pago: <strong>{d.payment_choice === 'monthly_card' ? 'Tarjeta · Stripe' : d.payment_choice === 'cash' ? 'Efectivo' : d.payment_choice}</strong></p>

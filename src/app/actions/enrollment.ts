@@ -57,6 +57,7 @@ export async function convertEnrollmentRequest(id: string, review?: AcademyReque
 
     const {data:request,error:requestError}=await supabase.from('enrollment_requests').select('service,activity_id,campus_details,academy_details,email').eq('id',parsedId.data).single()
     if(requestError || !request)return {success:false,error:'No se pudo cargar la solicitud.'}
+    if(request.service==='academy'&&!request.academy_details)return {success:false,error:'Completa el plan desde la solicitud antes de aceptar la plaza.'}
     if(request.service==='campus') {
         if(!request.activity_id || request.campus_details)return {success:false,error:'Revisa y acepta esta solicitud desde Campus → Solicitudes, indicando su edición y el importe de las semanas.'}
         const {data:enrollmentId,error}=await supabase.rpc('accept_campus_request',{request_uuid:parsedId.data})

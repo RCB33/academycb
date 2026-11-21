@@ -160,8 +160,8 @@ export async function getAdminWorkspace(
       href:
         r.service === "campus"
           ? `/admin/campus/solicitudes?request=${r.id}`
-          : r.service === "academy" && r.academy_details && ["new", "contacted", "interested"].includes(r.status)
-          ? `/admin/solicitudes/academia/${r.id}`
+          : r.service === "academy" && ["new", "contacted", "interested"].includes(r.status)
+          ? `/admin/solicitudes/academia/${r.id}${r.academy_details ? '' : '/completar'}`
           : `/admin/leads?request=${r.id}`,
       needsReview: ["new", "contacted", "interested"].includes(r.status),
       proof: false,
