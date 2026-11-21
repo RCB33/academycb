@@ -77,6 +77,7 @@ export function AcademyRequestReview({ context: initialContext }: { context: Aca
       <h2 className="text-xl font-bold text-navy">Plaza aceptada con los importes revisados</h2>
       <p className="mt-3 text-sm text-slate-600">{notice}</p>
       <p className="mt-2 text-sm text-slate-600">La bienvenida utiliza esta fecha y este desglose. Puedes comprobar su envío en Estado de correos.</p>
+      {d.family_batch_id && <Link href={`/admin/solicitudes/familia/${d.family_batch_id}`} className="mt-4 block font-bold text-navy underline">Ver estado y enlace del pago familiar</Link>}
       <Link href="/admin/solicitudes" className="mt-5 inline-flex rounded-xl bg-navy px-5 py-3 font-bold text-white">Volver a solicitudes</Link>
     </section> : <div className="grid items-start gap-6 lg:grid-cols-[1.1fr_1fr]">
       <div className="space-y-5">
@@ -95,6 +96,7 @@ export function AcademyRequestReview({ context: initialContext }: { context: Aca
         </section>
         <section className={card}>
           <h2 className="font-bold text-navy">La plaza solicitada</h2>
+          {d.family_batch_id && <Link href={`/admin/solicitudes/familia/${d.family_batch_id}`} className="mt-3 block rounded-xl bg-amber-50 p-3 text-sm font-semibold text-navy underline">Pago familiar conjunto · Revisar las plazas de los hermanos. El enlace reúne los importes cuando estén todas resueltas.</Link>}
           {d.admin_completion && <Link href={`/admin/solicitudes/academia/${r.id}/completar`} className="mt-2 inline-flex text-sm font-semibold text-navy underline">Cambiar plan, grupos o pago</Link>}
           <p className="mt-3 text-sm font-semibold">{d.plan.name}</p>
           {d.groups.map(g => <p key={g.id} className="mt-2 text-sm text-slate-600">{g.name} · {g.public_offer.day} · {g.schedule}</p>)}

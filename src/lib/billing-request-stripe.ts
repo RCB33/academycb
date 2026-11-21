@@ -2,7 +2,7 @@ import 'server-only'
 import type Stripe from 'stripe'
 import { configuredStripe } from './stripe-payments'
 import { createAdminClient } from './supabase/admin'
-import { billingParts, billingSummary, type BillingRequest, type BillingAttempt } from './billing-request'
+import { billingParts, billingMonthly, familyBilling, billingItemLabel, billingSummary, type BillingRequest, type BillingAttempt } from './billing-request'
 
 const purpose='academy_billing_request'
 export function billingScheduleParams(customer:string,paymentMethod:string,price:string,start:number,months:number,metadata:Record<string,string>):Stripe.SubscriptionScheduleCreateParams {
@@ -32,7 +32,7 @@ export async function createBillingCheckout(r: BillingRequest,a: BillingAttempt,
  if(initial.length) return stripe.checkout.sessions.create({...common,mode:'payment',customer:customer.id,
   payment_intent_data:{metadata,...(recurring.length?{setup_future_usage:'off_session' as const}:{})},
   custom_text:{submit:{message:billingSummary(r)}},
-  line_items:initial.map(item=>({quantity:1,price_data:{currency:'eur',unit_amount:Number(item.amount_cents),product_data:{name:(item.snapshot.description||'Alta Academia').slice(0,250)}}})),
+  line_items:initial.map(item=>({quantity:1,price_data:{currency:'eur',unit_amount:Number(item.amount_cents),product_data:{name:(billingItemLabel(item)||'Alta Academia').slice(0,250)}}})),
  },{idempotencyKey:`billing-checkout-${a.id}`})
  return stripe.checkout.sessions.create({...common,mode:'setup',currency:'eur',customer:customer.id,
   setup_intent_data:{metadata,description:billingSummary(r)},custom_text:{submit:{message:billingSummary(r)}}},{idempotencyKey:`billing-checkout-${a.id}`})
@@ -98,13 +98,28 @@ export async function fulfillBillingCheckout(session: Stripe.Checkout.Session,ev
   if(setup.status!=='succeeded'||setup.livemode!==session.livemode||setup.metadata?.billing_attempt_id!==a.id||!pm||!customer||customer!==sc)throw Error('Setup not authorized')
  }
  if(!customer||!pm||!items.length)throw Error('Monthly authorization missing')
- const start=Math.floor(new Date(items[0].due_date+'T12:00:00Z').getTime()/1000)
+ const months=billingMonthly(r)
+ const start=Math.floor(new Date(months[0].due_date+'T12:00:00Z').getTime()/1000)
  if(start<=Math.floor(Date.now()/1000))throw Error('Start date passed: manual review required')
- const price=await stripe.prices.create({currency:'eur',unit_amount:Number(items[0].amount_cents),recurring:{interval:'month'},product_data:{name:r.title},metadata:{billing_attempt_id:a.id}},{idempotencyKey:`billing-price-${a.id}`})
- const schedule=await stripe.subscriptionSchedules.create(billingScheduleParams(customer,pm,price.id,start,items.length,{purpose,billing_attempt_id:a.id}), {idempotencyKey:`billing-schedule-${a.id}`})
+ let firstPriceId: string
+ let schedule: Stripe.SubscriptionSchedule
+ if(familyBilling(r)) {
+  const phases: Stripe.SubscriptionScheduleCreateParams.Phase[]=[]
+  for(let index=0;index<months.length;index++) {
+   const month=months[index]
+   const price=await stripe.prices.create({currency:'eur',unit_amount:month.amount_cents,recurring:{interval:'month'},product_data:{name:r.title},metadata:{billing_attempt_id:a.id,family_billing:'true'}},{idempotencyKey:`billing-family-price-${a.id}-${month.amount_cents}`})
+   if(index===0) firstPriceId=price.id
+   phases.push({duration:{interval:'month',interval_count:1},items:[{price:price.id,quantity:1}],proration_behavior:'none',discounts:'',metadata:{purpose,billing_attempt_id:a.id}})
+  }
+  schedule=await stripe.subscriptionSchedules.create({customer,start_date:start,end_behavior:'cancel',metadata:{purpose,billing_attempt_id:a.id},default_settings:{default_payment_method:pm,collection_method:'charge_automatically'},phases},{idempotencyKey:`billing-schedule-${a.id}`})
+ } else {
+  const price=await stripe.prices.create({currency:'eur',unit_amount:Number(items[0].amount_cents),recurring:{interval:'month'},product_data:{name:r.title},metadata:{billing_attempt_id:a.id}},{idempotencyKey:`billing-price-${a.id}`})
+  firstPriceId=price.id
+  schedule=await stripe.subscriptionSchedules.create(billingScheduleParams(customer,pm,price.id,start,items.length,{purpose,billing_attempt_id:a.id}),{idempotencyKey:`billing-schedule-${a.id}`})
+ }
  if(schedule.livemode!==session.livemode||schedule.end_behavior!=='cancel')throw Error('Invalid schedule')
  const sub=typeof schedule.subscription==='string'?schedule.subscription:schedule.subscription?.id||null
- const saved=await db.from('billing_request_attempts').update({schedule_id:schedule.id,subscription_id:sub,price_id:price.id,state:'active',billing_status:'scheduled'}).eq('id',a.id).in('state',['creating','open']).select('id')
+ const saved=await db.from('billing_request_attempts').update({schedule_id:schedule.id,subscription_id:sub,price_id:firstPriceId!,state:'active',billing_status:'scheduled'}).eq('id',a.id).in('state',['creating','open']).select('id')
  if(saved.error||!saved.data?.length)throw Error('Schedule binding pending')
  const updated=await db.from('billing_requests').update({state:'active'}).eq('id',r.id).eq('state','processing');if(updated.error)throw updated.error
 }
@@ -141,9 +156,16 @@ export async function fulfillBillingInvoice(invoice: Stripe.Invoice) {
  const {db,a,r}=await bindSubscription(sub)
  if(invoice.status!=='paid'||invoice.currency!=='eur'||invoice.livemode!==(r.mode==='live')||!['subscription_create','subscription_cycle'].includes(invoice.billing_reason||''))throw Error('Unexpected invoice')
  const lines=await stripe.invoices.listLineItems(invoice.id!,{limit:100})
- const line=lines.data.find(l=>l.pricing?.price_details?.price===a.price_id)
+ const line=familyBilling(r)?lines.data[0]:lines.data.find(l=>l.pricing?.price_details?.price===a.price_id)
  if(!line||lines.data.length!==1||line.amount!==invoice.amount_paid)throw Error('Unexpected invoice lines')
  const due=new Date(line.period.start*1000).toISOString().slice(0,10)
+ if(familyBilling(r)) {
+  const priceId=line.pricing?.price_details?.price
+  if(!priceId)throw Error('Missing family price')
+  const price=typeof priceId==='string'?await stripe.prices.retrieve(priceId):priceId
+  const month=billingMonthly(r).find(m=>m.due_date===due)
+  if(!month||price.metadata.billing_attempt_id!==a.id||price.metadata.family_billing!=='true'||price.currency!=='eur'||price.unit_amount!==month.amount_cents||invoice.amount_paid!==month.amount_cents)throw Error('Unexpected family invoice')
+ }
  const result=await db.rpc('collect_billing_request',{attempt_input:a.id,collection_input:invoice.id,session_input:null,subscription_input:subId,livemode_input:invoice.livemode,amount_input:invoice.amount_paid,due_input:due})
  if(result.error)throw result.error
  return true

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { Mail, ArrowLeft } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
-import { billingLabels, billingSummary, euros, type BillingRequest } from '@/lib/billing-request'
+import { billingItemLabel, billingLabels, billingSummary, euros, type BillingRequest } from '@/lib/billing-request'
 type Guardian={id:string;full_name:string;email:string|null;phone:string|null;user_id:string|null}
 type Workspace={children:{id:string;full_name:string}[];requests:(BillingRequest&{recipient_email:string|null;billing_request_attempts:{id:string;state:string;billing_status:string;billing_request_collections:{payment_id:string;amount_cents:number}[]}[]})[];guardians:Guardian[];receipts:{id:string;description:string;amount:number;due_date:string;covered_month:string|null}[];cardEnabled:boolean;recurringEnabled:boolean;emailConfigured:boolean}
 export function BillingRequests({initialChildId=''}:{initialChildId?:string}) {

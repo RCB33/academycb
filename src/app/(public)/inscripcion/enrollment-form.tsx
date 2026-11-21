@@ -139,6 +139,7 @@ function EnrollmentFields({
                 {summary?.complete && <p className="flex justify-between gap-4 border-t border-white/30 pt-3 font-bold"><span>Importe inicial previsto</span><span>{summary.initial.toFixed(2)} €</span></p>}
                 {!!summary?.monthly.length && <div className="border-t border-white/30 pt-3"><h3 className="font-bold">Mensualidades posteriores de Academia</h3>{summary.monthly.map((m,i)=><p key={i} className="mt-2 text-sm">{m.player}: {m.count} mensualidades de {m.amount.toFixed(2)} €, hasta {new Date(m.until+'T12:00:00Z').toLocaleDateString('es-ES')}. No incluidas en el importe inicial.</p>)}</div>}
                 <p className="text-xs text-slate-200">Hoy no pagas nada. La matrícula y los descuentos por hermanos se revisan antes de aceptar cada plaza. El resumen incluye la matrícula de nuevo jugador y la tarifa base del campus; no aplica descuentos pendientes de comprobar. No hay descuento adicional por combinar actividades.</p>
+                <p className="text-xs text-slate-200">Si inscribes a varios hijos en Academia con tarjeta en este envío, recibirás un único enlace de Stripe cuando se resuelvan sus plazas. El primer pago suma las cuotas y extras de cada hijo; después habrá un solo cobro mensual con el desglose de todos. Efectivo, Campus y Torneos se gestionan por separado.</p>
                 <p className="text-xs text-slate-200">Recibirás un correo de recepción por actividad. Después, un correo de aceptación con el importe confirmado y las instrucciones de pago de cada plaza.</p>
             </section>
 

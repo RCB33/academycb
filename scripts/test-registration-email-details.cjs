@@ -5,6 +5,7 @@ function load(file) {
   const m = { exports: {} }
   new Function('module', 'exports', 'require', ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText)(m, m.exports, name => {
     if (name === '@/lib/enrollment-payment') return load('src/lib/enrollment-payment.ts')
+    if(name === '@/lib/family-billing') return {prepareFamilyBilling:async()=>{throw Error('Unexpected family billing in individual fixture')},familyBillingEmail:async()=>{throw Error('Unexpected family email in individual fixture')}}
     if (name === 'server-only') return {}
     if (name === '@/lib/supabase/admin') return { createAdminClient: () => db }
     if (name === '@/lib/receipt-balance') return load('src/lib/receipt-balance.ts')

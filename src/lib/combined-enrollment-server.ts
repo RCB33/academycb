@@ -67,7 +67,7 @@ export async function submitCombinedEnrollment(input:unknown) {
     // Hash the validated user intent, not random row IDs. Repeating a lost response
     // returns the same batch; changing a submitted batch never adds a second charge/request.
     const fingerprint=createHash('sha256').update(JSON.stringify(d)).digest('hex')
-    const {data,error}=await createAdminClient().rpc('submit_combined_enrollment',{batch_id:d.request_id,actor:family?.userId||null,fingerprint,players})
+    const {data,error}=await createAdminClient().rpc('submit_family_enrollment',{batch_id:d.request_id,actor:family?.userId||null,fingerprint,players})
     if(error) return {success:false,error:'No se pudo guardar el conjunto de solicitudes. No se ha guardado parcialmente. Revisa si el jugador ya tiene una solicitud o contacta con Academy.'}
     const sources=data as {source:'enrollment'|'event';id:string}[]
     // Saving is complete even if the provider is temporarily unavailable. Outbox

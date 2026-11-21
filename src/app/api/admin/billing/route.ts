@@ -19,7 +19,14 @@ export async function GET(request:Request) {
  if(childId&&!uuid.safeParse(childId).success)return reply({error:'Jugador no válido'},400)
  const children=await db.from('children').select('id,full_name').order('full_name').limit(1000)
  let q=db.from('billing_requests').select('*,billing_request_items(*),billing_request_attempts(id,state,billing_status,subscription_id,accepted_at,billing_request_collections(payment_id,amount_cents))').order('created_at',{ascending:false}).limit(100)
- if(childId)q=q.eq('child_id',childId)
+ if(childId) {
+  const {data:owned,error:ownedError}=await db.from('payments').select('id').eq('child_id',childId)
+  if(ownedError)return reply({error:'No se pudieron cargar los recibos del jugador'},500)
+  const related=owned?.length?await db.from('billing_request_items').select('request_id').in('payment_id',owned.map(p=>p.id)):{data:[],error:null}
+  if(related.error)return reply({error:'No se pudieron cargar los cobros del jugador'},500)
+  const ids=[...new Set(related.data?.map(i=>i.request_id)||[])]
+  q=ids.length?q.or(`child_id.eq.${childId},id.in.(${ids.join(',')})`):q.eq('child_id',childId)
+ }
  const requests=await q
  const [receipts,guardians]=childId?await Promise.all([
   db.from('payments').select('id,description,amount,status,due_date,covered_month,concept_code,manual_receipt_allocations(id)').eq('child_id',childId).eq('type','academy').eq('concept_code','monthly').gt('due_date',new Date().toISOString().slice(0,10)).in('status',['pending','failed']).order('due_date'),

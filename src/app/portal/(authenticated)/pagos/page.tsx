@@ -134,6 +134,7 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
             {translate(returnedContract && <><p role="status" className="rounded-xl border p-4 text-sm">{translate(returnedContract.state === 'completed' ? 'Contrato pagado por completo.' : returnedContract.state === 'active' ? 'Mensualidades activadas. Los cobros terminarán automáticamente al finalizar el periodo contratado.' : 'Estamos confirmando tu contrato con Stripe.')}{translate(checkoutMode === 'test' ? ' Simulación: no se ha cobrado dinero real.' : '')}</p><ConfirmationRefresh pending={['creating','open'].includes(returnedContract.state) && !params.cancelled} /></>)}
             {translate(checkoutMode && (memberships || []).map((m: any)=>{
                 const plan = m.plan
+                if(m.plan_snapshot?.offering?.family_batch_id) return <section key={m.id} className="rounded-2xl border bg-amber-50 p-5 text-sm">Esta plaza forma parte de un pago familiar conjunto. Revisa el enlace familiar cuando estén resueltas las plazas de los hermanos; no contrates una suscripción individual.</section>
                 const contract = contracts?.find(c=>c.membership_id===m.id)
                 if(contract) return <section key={m.id} className="space-y-3 rounded-2xl border bg-white p-5">
                     <h2 className="font-bold text-navy">{translate(plan?.name || 'Academia')} {translate(" · Plan de pago")}</h2>

@@ -2,6 +2,7 @@ import 'server-only'
 import { paymentChoicesText, requestedPaymentChoices } from '@/lib/enrollment-payment'
 import { receiptBalance } from '@/lib/receipt-balance'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { familyBillingEmail } from '@/lib/family-billing'
 import { academyCashInstructions } from '@/lib/academy-cash-instructions'
 
 export function familyAccessMessage(access?:string) {
@@ -67,6 +68,7 @@ export async function registrationEmailDetails(source:string,id:string,kind:stri
         if(a.onboarding?.billing==='ready'&&a.onboarding.billing_request_id) action={label:'Activar pago mensual con tarjeta',href:`https://www.academycostabrava.com/portal/pagos/solicitud/${a.onboarding.billing_request_id}`} 
         payment+=a.onboarding?.billing==='ready'&&a.onboarding.billing_request_id?`\n\nActiva tu suscripción mensual con tarjeta y olvídate de gestionar cada mensualidad:\nhttps://www.academycostabrava.com/portal/pagos/solicitud/${a.onboarding.billing_request_id}\nEl primer vencimiento será el indicado en el enlace; la suscripción terminará al acabar la temporada.`:'\n\nHas solicitado mensualidades con tarjeta. Academy te enviará el enlace de autorización cuando esté disponible. Todavía no hay ningún cobro automático activado.'
       }
+      if(a.family_batch_id&&a.payment_choice==='monthly_card') { const family=await familyBillingEmail(a.family_batch_id);payment=family.message;action=family.action }
     } else if(r.service==='campus') {
       const {data:link}=await db.from('campus_request_links').select('enrollment_id').eq('request_id',id).maybeSingle()
       if(!link) return null

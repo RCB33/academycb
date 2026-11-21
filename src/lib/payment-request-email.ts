@@ -1,4 +1,4 @@
-import { billingParts, billingSummary, euros, type BillingRequest } from './billing-request'
+import { billingItemLabel, familyBilling, billingParts, billingSummary, euros, type BillingRequest } from './billing-request'
 
 export const INITIAL_PAYMENT_CTA = 'Pagar alta y activar mensualidades'
 export const MONTHLY_PAYMENT_CTA = 'Activar pago mensual con tarjeta'
@@ -13,11 +13,11 @@ export function paymentRequestEmail(input: { request: BillingRequest; childName:
     if (r.kind !== 'subscription' || !items.length || items.some(i => i.snapshot.type !== 'academy') || items.reduce((n,i)=>n+Number(i.amount_cents),0) !== Number(r.total_cents)) throw new Error('Invalid monthly request')
     const link = `${origin}/portal/pagos/solicitud/${r.id}`
     const { initial, recurring } = billingParts(r)
-    if (recurring.some(i=>Number(i.amount_cents)!==Number(recurring[0].amount_cents))) throw new Error('Invalid monthly request')
+    if (!familyBilling(r) && recurring.some(i=>Number(i.amount_cents)!==Number(recurring[0].amount_cents))) throw new Error('Invalid monthly request')
     if (initial.length) {
-        const subject = `${childName}, tu primer pago de Academy está listo`
-        const label = recurring.length ? INITIAL_PAYMENT_CTA : 'Pagar el importe inicial'
-        const message = `${r.mode==='test'?'PRUEBA SIN COBRO REAL\n\n':''}Hola, ${guardianName}.\n\nTu plaza está aceptada. Revisa el primer pago de ${childName}:\n${initial.map(i=>`${i.snapshot.description}: ${euros(i.amount_cents)}`).join('\n')}\n\n${billingSummary(r)}\n\nLa matrícula y el Plus, cuando corresponden, se incluyen una sola vez. ${recurring.length?'Con este pago autorizas las mensualidades posteriores en la misma tarjeta. ':''}Cada recibo se confirmará cuando Stripe comunique el cobro.\n\nEntra con el email de tu inscripción. Enlace válido hasta ${day(r.expires_at.slice(0,10))}.\n\n¿Necesitas ayuda o prefieres efectivo? Contacta por WhatsApp al 691 17 96 00 antes de realizar otro pago.\n\nEquipo Academy Costa Brava`
+        const subject = familyBilling(r) ? `Vuestro pago familiar de Academy está listo` : `${childName}, tu primer pago de Academy está listo`
+        const label = familyBilling(r) ? 'Pagar el total familiar' : recurring.length ? INITIAL_PAYMENT_CTA : 'Pagar el importe inicial'
+        const message = `${r.mode==='test'?'PRUEBA SIN COBRO REAL\n\n':''}Hola, ${guardianName}.\n\n${familyBilling(r)?'Las plazas incluidas están aceptadas. Revisa el pago conjunto de':'Tu plaza está aceptada. Revisa el primer pago de'} ${childName}:\n${initial.map(i=>`${billingItemLabel(i)}: ${euros(i.amount_cents)}`).join('\n')}\n\n${billingSummary(r)}\n\nLa matrícula y el Plus, cuando corresponden, se incluyen una sola vez. ${recurring.length?'Con este pago autorizas las mensualidades posteriores en la misma tarjeta. ':''}Cada recibo se confirmará cuando Stripe comunique el cobro.\n\nEntra con el email de tu inscripción. Enlace válido hasta ${day(r.expires_at.slice(0,10))}.\n\n¿Necesitas ayuda o prefieres efectivo? Contacta por WhatsApp al 691 17 96 00 antes de realizar otro pago.\n\nEquipo Academy Costa Brava`
         const text = `${message}\n\n${label}\n${link}`
         const html = `<!doctype html><html lang="es"><body style="margin:0;background:#f1f5f9;font-family:Arial,sans-serif;color:#10294a"><div style="max-width:620px;margin:auto;padding:28px;background:white;border-top:6px solid #d4af37"><img src="https://www.academycostabrava.com/email-logo.png" alt="Academy Costa Brava" width="80" height="80"><h1 style="font-size:26px">${escape(subject)}</h1><p style="line-height:1.7">${escape(message).replaceAll('\n','<br>')}</p><a href="${escape(link)}" style="display:block;background:#d4af37;padding:18px;border-radius:12px;color:#10294a;text-align:center;font-weight:bold;text-decoration:none">${escape(label)} →</a></div></body></html>`
         return {subject,text,html}

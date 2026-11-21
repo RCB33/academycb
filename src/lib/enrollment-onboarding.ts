@@ -1,6 +1,7 @@
 import 'server-only'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { deliverRegistrationEmails } from '@/lib/registration-email'
+import { prepareFamilyBilling } from '@/lib/family-billing'
 import { configuredStripe } from '@/lib/stripe-payments'
 
 // Called only after an administrator commits acceptance. Never reset an existing
@@ -43,6 +44,7 @@ export async function prepareAcceptedSubscription(requestId:string,actorId:strin
   const {data:request}=await db.from('enrollment_requests').select('academy_details').eq('id',requestId).single()
   const details=request?.academy_details
   if(details?.payment_choice!=='monthly_card') return {status:details?.payment_choice==='cash'?'cash':'needs_review'}
+ if(details?.family_batch_id) return prepareFamilyBilling(details.family_batch_id,actorId)
   if(process.env.STRIPE_RECURRING_PAYMENTS_ENABLED!=='true') return {status:'pending_activation'}
   try {
     const {mode}=configuredStripe(true)
