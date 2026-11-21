@@ -47,6 +47,19 @@ export function AcademyRequestReview({ context }: { context: AcademyRequestRevie
       <Link href="/admin/solicitudes" className="mt-5 inline-flex rounded-xl bg-navy px-5 py-3 font-bold text-white">Volver a solicitudes</Link>
     </section> : <div className="grid items-start gap-6 lg:grid-cols-[1.1fr_1fr]">
       <div className="space-y-5">
+        <section className={`${card} border-emerald-200`}>
+          <h2 className="flex items-center gap-2 font-bold text-navy"><ShieldCheck size={18} /> Comprobación de fichas</h2>
+          <p className="mt-3 text-sm text-slate-600">{context.child_id
+            ? 'Este jugador ya existe. Se reutilizarán su ficha y su vínculo familiar, conservando su historial.'
+            : context.identity?.guardian_id
+              ? 'El tutor ya existe. Se conservará su cuenta y se añadirá únicamente la ficha del nuevo jugador.'
+              : 'No hay una ficha coincidente. Se crearán las fichas de esta familia al aceptar.'}</p>
+          <div className="mt-3 flex flex-wrap gap-4 text-sm font-semibold text-navy">
+            {context.child_id && <Link className="underline" href={`/admin/crm/alumnos/${context.child_id}`}>Ver ficha del jugador</Link>}
+            {context.identity?.guardian_id && <Link className="underline" href="/admin/crm/tutores">Revisar tutor existente</Link>}
+          </div>
+          <p className="mt-3 text-xs text-slate-500">Los datos se vuelven a comprobar al aceptar. Una coincidencia dudosa bloquea el alta para revisarla antes de crear otra ficha.</p>
+        </section>
         <section className={card}>
           <h2 className="font-bold text-navy">La plaza solicitada</h2>
           {d.admin_completion && <Link href={`/admin/solicitudes/academia/${r.id}/completar`} className="mt-2 inline-flex text-sm font-semibold text-navy underline">Cambiar plan, grupos o pago</Link>}

@@ -593,3 +593,9 @@ Las menciones a “pendiente” en las secciones siguientes reflejan su fecha, n
 - Pruebas: `test:request-completion`, `test:request-review`, `test:management`; fixture PostgreSQL local y `test-academy-request-completion-rollback.sql` contra esquema real con rol authenticated/RLS. Borrador sin movimientos, rechazo de precios manipulados, cambios concurrentes, edad/grupo/pago incorrecto; aceptación posterior con recibos y outbox esperado. Toda la fixture de base de datos se revierte con ROLLBACK. No se llamó a Stripe, Auth ni al proveedor de correo; no se afirma entrega real de email.
 - Comprobación visual con datos ficticios: plan de dos sesiones, grupo del domingo, efectivo, matrícula exenta y Plus: 140 + 0 + 50 = 190 €. Captura en `auditoria-2026-11-21/completar-plan-solicitud.jpg` del workspace del propietario. Ruta de muestra retirada antes de publicar.
 - Yassin permanece pendiente y sin plan asignado; la nueva pantalla permite a Karen introducir las condiciones acordadas. No se acepta ni envía un correo real en esta tarea. Baseline de pagos antes/después de pruebas: 21 registros, digest `cf174b6b8ec293e4653b62107e341555`. No se cambian flags Stripe ni pagos anteriores.
+
+## 21/11/2026 — Reutilización de fichas en solicitudes
+
+- Revisión y aceptación reutilizan tutores/jugadores coincidentes y bloquean identidades dudosas. Consolidados tres tutores duplicados inequívocos, con respaldo privado; caso pendiente de Karen conservado sin cambios.
+- Ver [auditoría de identidad y consolidación](ENROLLMENT-IDENTITY-AUDIT.md) para alcance, pruebas y recuperación. Ninguna solicitud real aceptada ni correo enviado en estas pruebas.
+- Pagos antes/después: 21 filas, digest `cf174b6b8ec293e4653b62107e341555`, sin cambios de Stripe.

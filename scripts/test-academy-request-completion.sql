@@ -38,6 +38,7 @@ create table public.billing_request_items(request_id uuid,payment_id uuid);
 \ir ../supabase/migrations/20261120090827_academy_payment_preferences.sql
 alter table enrollment_requests add column notes text, add column created_at timestamptz default now();
 \ir ../supabase/migrations/20261121154134_academy_request_review.sql
+\ir ../supabase/migrations/20261121160625_enrollment_identity_reuse.sql
 \ir ../supabase/migrations/20261121160648_complete_legacy_academy_request.sql
 update membership_plans set enrollment_fee=30;
 set local role authenticated;
