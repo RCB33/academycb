@@ -8,6 +8,7 @@ function load(file) {
     if (name === 'server-only') return {}
     if (name === '@/lib/supabase/admin') return { createAdminClient: () => db }
     if (name === '@/lib/receipt-balance') return load('src/lib/receipt-balance.ts')
+    if (name === '@/lib/academy-cash-instructions') return load('src/lib/academy-cash-instructions.ts')
     return require(name)
   })
   return m.exports
@@ -43,6 +44,20 @@ function load(file) {
   assert.match(result.message,/Incorporación: 2026-12-01/);assert.match(result.message,/Primera cuota: 75.00 € \(100 %\)/);assert.match(result.message,/Matrícula: 0.00 € \(exenta\)/)
   assert.match(result.message,/Primer pago con tarjeta: 75.00/);assert.match(result.message,/no se cobrará de nuevo al empezar/);assert.match(result.message,/siguiente cobro mensual será el 2027-01-01/)
   a.start_date=original.start_date;a.quote=original.quote;a.accepted=original.accepted;rows.payments=original.payments
+  // Cash: include only the chosen annual Plus, preserve partial payments and
+  // never send card activation or transfer instructions to a cash family.
+  a.payment_choice='cash';a.start_date='2027-02-01';a.accepted={...a.accepted,first_month:75,enrollment_fee:30,plus:0}
+  rows.payments=[{amount:75,status:'pending',concept_code:'monthly',covered_month:'2027-02'},{amount:30,status:'pending',concept_code:'registration'},{amount:75,status:'pending',concept_code:'monthly',covered_month:'2027-03'}]
+  result=await details('enrollment','test-request','reviewed')
+  assert.match(result.message,/Trae 105,00\s€ el primer día de entrenamiento/);assert.match(result.message,/1 de febrero de 2027/);assert.match(result.message,/equipo confirme la entrega/);assert.equal(result.action,undefined)
+  assert.doesNotMatch(result.message,/IBAN|transferencia|Activa tu suscripción|paga de forma segura en Stripe/)
+  a.accepted.plus=50;rows.payments.push({amount:50,status:'pending',concept_code:'plus'})
+  result=await details('enrollment','test-request','reviewed');assert.match(result.message,/Trae 155,00\s€/);assert.match(result.message,/Plus anual: 50.00/)
+  rows.payments[0].manual_receipt_allocations=[{amount:20,voided_at:null}]
+  result=await details('enrollment','test-request','reviewed');assert.match(result.message,/Trae 135,00\s€/)
+  rows.payments.forEach(p=>p.status='paid')
+  result=await details('enrollment','test-request','reviewed');assert.doesNotMatch(result.message,/Trae/)
+  a.payment_choice='monthly_card';a.start_date=original.start_date;a.quote=original.quote;a.accepted=original.accepted;rows.payments=original.payments
   const remaining=a.quote.remaining;a.quote.remaining=[]
   result=await details('enrollment','test-request','reviewed');assert.equal(result.action.label,'Pagar el importe inicial');assert.match(result.message,/no hay cargos mensuales posteriores/);a.quote.remaining=remaining
   rows.payments.forEach(p => p.status = 'paid')

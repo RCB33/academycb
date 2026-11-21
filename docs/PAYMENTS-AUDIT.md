@@ -1,4 +1,9 @@
-## Primer pago conjunto con tarjeta — 20 noviembre 2026
+## Desglose del Plus e instrucciones de efectivo — 21 noviembre 2026
+
+- La revisión muestra siempre «Plus anual»: solicitado/pago único, no solicitado o previamente registrado. El cálculo existente suma 50 € únicamente si fue elegido y no consta ya registrado; no se prorratea ni se repite en mensualidades posteriores. Casos verificados: 75 + 30 = 105 €, con Plus 155 €; sin matrícula y con Plus 125 €; alta al 25 % con matrícula y Plus 98,75 €.
+- Para solicitudes de Academia con efectivo, vista previa y bienvenida comparten instrucciones: llevar el saldo inicial pendiente el primer día de entrenamiento a partir de la incorporación indicada; WhatsApp para acordar entrega; solo se acredita cuando administración confirma el efectivo. Así no se exige acudir un día sin entrenamiento ni se anuncia un cobro por tarjeta a una familia que eligió efectivo.
+- Tests mock cubren Plus/no Plus, primer mes parcial, meses posteriores, importes parcialmente abonados y ausencia de nueva petición de efectivo cuando ya está pagado. No se envían correos reales ni se crean/cambian pagos. Se conserva el flujo de tarjeta y no se modifican flags Stripe.
+- Lectura de origen del tutor duplicado: las dos fichas de Liudmyla constan del 29/09/2026, separadas unos tres minutos; la segunda coincide con una invitación Auth. El duplicado precede a la solicitud de noviembre. No hay evidencia suficiente para atribuir la primera alta a una administradora concreta; no se ha eliminado ni fusionado ninguna ficha.
 
 ## Revisión de matrícula e incorporación — 21 noviembre 2026
 
@@ -10,6 +15,8 @@
 - Prueba sobre esquema/RLS real con dos solicitudes sintéticas en **una transacción revertida**: matrícula sí/no, incorporación futura, recibos e inserción de bienvenida en cola. Sin Auth API, Stripe ni proveedor de correo. Los **21 pagos existentes** conservan digest `cf174b6b8ec293e4653b62107e341555`. No se ha probado una nueva entrega real de correo.
 - Lectura de pendientes: 7 solicitudes estructuradas, 6 contextos revisables y 1 bloqueada por tutores duplicados preexistentes; 1 solicitud adicional requiere el circuito manual por no tener plan estructurado. No se fusionan tutores automáticamente. Advisors sin nuevas funciones SECURITY DEFINER; avisos anteriores ajenos a este cambio permanecen.
 - Navegador local con datos ficticios: casilla de matrícula (75/105 €), incorporación 1 de diciembre, siguiente mensualidad 1 de enero y texto de cobro inmediato verificados. Captura en `auditoria-2026-11-21/revision-matricula-fecha.jpg` del workspace. Ruta de muestra retirada antes del build.
+
+## Primer pago conjunto con tarjeta — 20 noviembre 2026
 
 Nueva instrucción expresa del propietario: las altas nuevas con tarjeta pagan en una sola operación el primer mes (con el prorrateo aceptado), la matrícula aplicable y el Plus opcional. Las mensualidades posteriores contienen solo el precio mensual acordado. Esta instrucción sustituye la separación en efectivo del primer pago descrita en auditorías anteriores. Se mantiene la aceptación de plaza antes de enviar el enlace; enviar la inscripción no cobra nada.
 

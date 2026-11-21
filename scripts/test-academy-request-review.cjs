@@ -28,6 +28,11 @@ function load(file) {
  }
  const q = reviewedAcademyQuote(context, '2026-12-01', false)
  assert.equal(q.first_total, 75); assert.equal(q.remaining[0].due_date, '2027-01-01'); assert.equal(q.remaining.length, 5)
+ context.request.academy_details.quote.plus = 50
+ assert.equal(reviewedAcademyQuote(context, '2027-02-01', true).first_total, 155)
+ assert.equal(reviewedAcademyQuote(context, '2027-02-01', false).first_total, 125)
+ assert.equal(reviewedAcademyQuote(context, '2027-02-23', true).first_total, 98.75, 'Plus and matrícula are never prorated')
+ assert.equal(reviewedAcademyQuote(context, '2027-02-01', true).remaining[0].amount, 75, 'Plus is not charged again each month')
  context.fee_exempt = true; context.plus_recorded = true; context.request.academy_details.quote.plus = 50
  assert.equal(reviewedAcademyQuote(context, '2027-05-23', true).first_total, 18.75)
  assert.throws(() => reviewedAcademyQuote(context, '2027-06-01', false))

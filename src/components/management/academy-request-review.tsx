@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { CalendarDays, Check, ChevronLeft, Mail, ShieldCheck, UserRound } from 'lucide-react'
 import { convertEnrollmentRequest } from '@/app/actions/enrollment'
 import { reviewedAcademyQuote, type AcademyRequestReviewContext } from '@/lib/academy-request-review'
+import { academyCashInstructions } from '@/lib/academy-cash-instructions'
 
 const euros = (n: number) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(n)
 const dateLabel = (date: string) => new Date(date + 'T12:00:00Z').toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
@@ -51,6 +52,7 @@ export function AcademyRequestReview({ context }: { context: AcademyRequestRevie
           <p className="mt-3 text-sm font-semibold">{d.plan.name}</p>
           {d.groups.map(g => <p key={g.id} className="mt-2 text-sm text-slate-600">{g.name} · {g.public_offer.day} · {g.schedule}</p>)}
           <p className="mt-3 text-sm text-slate-600">Pago: <strong>{d.payment_choice === 'monthly_card' ? 'Tarjeta · Stripe' : d.payment_choice === 'cash' ? 'Efectivo' : d.payment_choice}</strong></p>
+          <p className="mt-2 text-sm text-slate-600">Plus anual: <strong>{d.quote.plus === 50 ? 'Solicitado · 50 € · pago único' : 'No solicitado'}</strong></p>
           {r.notes && <p className="mt-3 whitespace-pre-line rounded-xl bg-slate-50 p-3 text-sm text-slate-600">{r.notes}</p>}
         </section>
         <fieldset disabled={busy} className={`${card} space-y-6 disabled:opacity-70`}>
@@ -80,10 +82,11 @@ export function AcademyRequestReview({ context }: { context: AcademyRequestRevie
           <dl className="mt-5 space-y-3 text-sm">
             <div className="flex justify-between gap-3"><dt>Primera cuota <span className="ml-1 rounded-full bg-amber-100 px-2 py-1 font-bold text-amber-900">{quote.percent} %</span></dt><dd className="font-semibold">{euros(quote.first_month)}</dd></div>
             <div className="flex justify-between gap-3"><dt>Matrícula{quote.enrollment_fee === 0 ? ' · exenta' : ''}</dt><dd className="font-semibold">{euros(quote.enrollment_fee)}</dd></div>
-            {quote.plus > 0 && <div className="flex justify-between gap-3"><dt>Plus anual</dt><dd className="font-semibold">{euros(quote.plus)}</dd></div>}
+            <div className="flex justify-between gap-3"><dt>Plus anual{quote.plus > 0 ? ' · pago único' : context.plus_recorded && d.quote.plus === 50 ? ' · ya registrado' : ' · no solicitado'}</dt><dd className="font-semibold">{euros(quote.plus)}</dd></div>
             <div className="flex items-center justify-between gap-3 border-t pt-4 text-navy"><dt className="font-bold">Primer pago</dt><dd className="text-3xl font-bold">{euros(quote.first_total)}</dd></div>
           </dl>
           {d.payment_choice === 'monthly_card' && <p className="mt-4 rounded-xl bg-amber-50 p-3 text-sm leading-relaxed text-amber-950"><strong>Se cobra al completar Stripe.</strong> Este primer pago cubre el mes de incorporación, aunque la familia lo pague antes de empezar. Ese mes no se cobrará de nuevo.</p>}
+          {d.payment_choice === 'cash' && <p className="mt-4 whitespace-pre-line rounded-xl bg-amber-50 p-3 text-sm leading-relaxed text-amber-950">{academyCashInstructions(quote.first_total, startDate)}</p>}
           <p className="mt-4 text-xs leading-relaxed text-slate-500">{quote.remaining.length ? `Después: ${euros(quote.monthly_price)}/mes desde ${dateLabel(quote.remaining[0].due_date)} hasta el final de temporada (${dateLabel(quote.season_end)}).` : 'Último mes de la temporada: sin mensualidades posteriores.'}</p>
           <p className="mt-3 text-xs leading-relaxed text-slate-500">Prorrateo: días 1–7: 100 % · 8–15: 75 % · 16–22: 50 % · 23–fin: 25 %.</p>
         </>}

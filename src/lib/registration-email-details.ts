@@ -2,6 +2,7 @@ import 'server-only'
 import { paymentChoicesText, requestedPaymentChoices } from '@/lib/enrollment-payment'
 import { receiptBalance } from '@/lib/receipt-balance'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { academyCashInstructions } from '@/lib/academy-cash-instructions'
 
 export function familyAccessMessage(access?:string) {
  const link='Portal familiar: https://www.academycostabrava.com/portal'
@@ -54,7 +55,7 @@ export async function registrationEmailDetails(source:string,id:string,kind:stri
       if(paymentError) throw new Error('Payment unavailable')
       const first=(receipts||[]).filter(p=>['pending','failed','overdue'].includes(p.status)&&(p.concept_code!=='monthly'||p.covered_month===a.start_date.slice(0,7)))
       const due=first.reduce((n,p)=>n+receiptBalance(p).remaining,0)
-      payment=due?academyPayment(due):'El primer pago no tiene importes pendientes.'
+      payment=due?(a.payment_choice==='cash'?academyCashInstructions(due,a.start_date):academyPayment(due)):'El primer pago no tiene importes pendientes.'
       detail+=`\nPrimera cuota: ${Number(a.accepted.first_month).toFixed(2)} € (${a.quote.percent} %)\nMatrícula: ${Number(a.accepted.enrollment_fee).toFixed(2)} €${Number(a.accepted.enrollment_fee)===0?' (exenta)':''} · Plus anual: ${Number(a.accepted.plus).toFixed(2)} €\nMensualidad completa: ${Number(a.quote.monthly_price).toFixed(2)} €, hasta ${a.quote.season_end}.`
       if(a.payment_choice==='monthly_card'&&a.onboarding?.billing_initial===true) {
         payment=due?`Primer pago con tarjeta: ${due.toFixed(2)} €. Incluye juntos el primer mes, la matrícula que corresponda y el Plus elegido. Matrícula y Plus se cobran una sola vez.\nEste importe se cobra al completar Stripe, aunque la incorporación sea más adelante. La primera cuota corresponde al mes ${a.start_date.slice(0,7)} y no se cobrará de nuevo al empezar.${a.quote.remaining?.[0]?.due_date?` El siguiente cobro mensual será el ${a.quote.remaining[0].due_date}.`:''}`:'El primer pago no tiene importes pendientes.'
