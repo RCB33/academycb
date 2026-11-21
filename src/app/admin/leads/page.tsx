@@ -1,5 +1,6 @@
 'use client'
 import Link from 'next/link'
+import { ContactMessageInbox, type ContactMessage } from '@/components/admin/contact-message-inbox'
 import { ActivityPaymentSummary } from '@/components/activity-payment-summary'
 
 import { useState, useEffect } from 'react'
@@ -14,7 +15,8 @@ import { convertEnrollmentRequest, updateEnrollmentRequestStatus } from '@/app/a
 
 export default function AdminLeadsPage() {
     const [leads, setLeads] = useState<any[]>([])
-    const [contacts, setContacts] = useState<any[]>([])
+    const [contacts, setContacts] = useState<ContactMessage[]>([])
+    const [contactLoadError, setContactLoadError] = useState(false)
     const [enrollmentRequests, setEnrollmentRequests] = useState<any[]>([])
     const [canConvert, setCanConvert] = useState(false)
     const supabase = createClient()
@@ -35,6 +37,7 @@ export default function AdminLeadsPage() {
             supabase.from('enrollment_requests').select('*').order('created_at', { ascending: false })
         ])
         if (leadResult.data) setLeads(leadResult.data)
+        setContactLoadError(Boolean(contactResult.error))
         if (contactResult.data) setContacts(contactResult.data)
         if (enrollmentResult.data) {const selected=new URLSearchParams(window.location.search).get('request');setEnrollmentRequests(enrollmentResult.data.filter(r=>!selected||r.id===selected))}
     }
@@ -169,28 +172,7 @@ export default function AdminLeadsPage() {
                 </div>
             </section>
 
-            <div className="space-y-4 pt-6 border-t">
-                <h2 className="text-xl font-bold">Consultas generales</h2>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {contacts.map((contact) => (
-                        <Card key={contact.id} className="border-l-4 border-l-indigo-500">
-                            <CardHeader className="pb-2">
-                                <div className="flex justify-between gap-3">
-                                    <Badge variant="secondary">Consulta</Badge>
-                                    <span className="text-xs text-muted-foreground">{new Date(contact.created_at).toLocaleDateString()}</span>
-                                </div>
-                                <CardTitle className="text-lg">{contact.name}</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-3 text-sm">
-                                <a href={`mailto:${contact.email}`} className="flex items-center gap-2 hover:underline"><Mail className="h-4 w-4" />{contact.email}</a>
-                                {contact.phone && <a href={`tel:${contact.phone}`} className="flex items-center gap-2 hover:underline"><Phone className="h-4 w-4" />{contact.phone}</a>}
-                                <p className="whitespace-pre-wrap text-slate-600">{contact.message}</p>
-                            </CardContent>
-                        </Card>
-                    ))}
-                    {contacts.length === 0 && <p className="text-muted-foreground col-span-full text-center py-8">No hay consultas generales.</p>}
-                </div>
-            </div>
+            <ContactMessageInbox contacts={contacts} canManage={canConvert} loadError={contactLoadError} onStatusChanged={(id, status) => setContacts(current => current.map(contact => contact.id === id ? { ...contact, status } : contact))} />
         </div>
     )
 }
