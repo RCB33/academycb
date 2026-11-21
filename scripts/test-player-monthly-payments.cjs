@@ -1,0 +1,40 @@
+const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const path = require('node:path')
+const ts = require('typescript')
+const React = require('react')
+const { renderToStaticMarkup } = require('react-dom/server')
+function load(file) {
+  const module = { exports: {} }
+  const output = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText
+  new Function('module', 'exports', 'require', output)(module, module.exports, name => {
+    if (!name.startsWith('.') && !name.startsWith('@/')) return require(name)
+    const base = name.startsWith('@/') ? path.resolve('src', name.slice(2)) : path.resolve(path.dirname(file), name)
+    return load(base + (fs.existsSync(base + '.ts') ? '.ts' : '.tsx'))
+  })
+  return module.exports
+}
+const { PlayerMonthlyPayments } = load('src/components/admin/player-monthly-payments.tsx')
+const parts = new Intl.DateTimeFormat('en', { timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit' }).formatToParts(new Date())
+const year = Number(parts.find(p => p.type === 'year').value) - (Number(parts.find(p => p.type === 'month').value) < 9 ? 1 : 0)
+const p = (month, status, amount, extra = {}) => ({ type: 'academy', concept_code: 'monthly', covered_month: `${year}-${month}`, amount, status, ...extra })
+const payments = [p('09', 'paid', 75), p('10', 'pending', 75, { manual_receipt_allocations: [{ amount: 25, paid_date: `${year}-10-01`, method: 'cash', voided_at: null }] }), p('11', 'failed', 75), p('12', 'paid', 0), p('09', 'pending', 999, { type: 'campus' }), p('10', 'paid', 200, { covered_month: null })]
+const html = renderToStaticMarkup(React.createElement(PlayerMonthlyPayments, { payments, onViewPayments() {} }))
+assert.equal((html.match(/<article /g) || []).length, 9)
+for (const month of ['septiembre', 'octubre', 'noviembre', 'diciembre', 'enero', 'febrero', 'marzo', 'abril', 'mayo']) assert.ok(html.includes(month))
+assert.ok(!html.includes('junio'))
+assert.ok(html.includes(`enero ${year + 1}`))
+assert.ok(html.includes(`septiembre ${year}`))
+assert.match(html, /Falta por pagar: 125,00/)
+assert.match(html, /Meses con saldo pendiente: octubre, noviembre/)
+assert.match(html, /Abonado: <strong>25,00/)
+assert.match(html, /Falta: 50,00/)
+for (const label of ['Pagado', 'Pago parcial', 'Pendiente', 'Bonificado', 'Sin cuota creada']) assert.ok(html.includes(label))
+assert.match(html, /5 meses sin cuota creada/)
+assert.match(html, /1 recibo de Academia sin mes asignado/)
+assert.ok(!html.includes('999'))
+const empty = renderToStaticMarkup(React.createElement(PlayerMonthlyPayments, { payments: [], onViewPayments() {} }))
+assert.match(empty, /9 meses sin cuota creada/)
+assert.ok(!empty.includes('Falta por pagar'))
+assert.ok(!empty.includes('>Pagado<'))
+console.log('PASS: nine season months, year rollover, paid/partial/failed/waived/missing, exact balances, unrelated and unassigned receipts (isolated rendering; no database writes)')
