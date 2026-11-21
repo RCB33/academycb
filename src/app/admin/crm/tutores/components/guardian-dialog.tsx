@@ -57,7 +57,7 @@ export function GuardianDialog({ mode, guardian, trigger, onUpdate }: Props) {
                     toast.error(result.error || "Error al crear tutor")
                 }
             } else {
-                const result = await updateGuardian(guardian.id, formData)
+                const result = await updateGuardian(guardian.id, { full_name: formData.full_name, email: formData.email, phone: formData.phone })
                 if (result.success) {
                     toast.success("Datos actualizados")
                     setOpen(false)
@@ -75,7 +75,11 @@ export function GuardianDialog({ mode, guardian, trigger, onUpdate }: Props) {
     }
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(nextOpen) => {
+            if (loading) return
+            if (nextOpen && mode === 'edit') setFormData({ full_name: guardian?.full_name || '', email: guardian?.email || '', phone: guardian?.phone || '', notes: guardian?.notes || '', createPortalAccount: false })
+            setOpen(nextOpen)
+        }}>
             <DialogTrigger asChild>
                 {trigger ? trigger : (
                     mode === 'create' ? (
@@ -89,13 +93,13 @@ export function GuardianDialog({ mode, guardian, trigger, onUpdate }: Props) {
                     )
                 )}
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-[425px]">
                 <DialogHeader>
                     <DialogTitle>{mode === 'create' ? 'Registrar Nuevo Tutor' : 'Editar Tutor'}</DialogTitle>
                     <DialogDescription>
                         {mode === 'create'
                             ? 'Añade los datos de contacto principales del tutor o responsable del alumno.'
-                            : 'Modifica los datos de contacto de este tutor.'}
+                            : 'Edita nombre, correo y teléfono. Estos datos se comparten con las fichas de sus hijos vinculados.'}
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="grid gap-4 py-4">
@@ -106,6 +110,8 @@ export function GuardianDialog({ mode, guardian, trigger, onUpdate }: Props) {
                             value={formData.full_name}
                             onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
                             placeholder="Ej: Marcos Alonso"
+                            minLength={2}
+                            maxLength={120}
                             required
                         />
                     </div>
@@ -117,6 +123,7 @@ export function GuardianDialog({ mode, guardian, trigger, onUpdate }: Props) {
                             value={formData.email}
                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                             placeholder="ejemplo@email.com"
+                            maxLength={200}
                         />
                     </div>
                     <div className="grid gap-2">
@@ -127,6 +134,7 @@ export function GuardianDialog({ mode, guardian, trigger, onUpdate }: Props) {
                             value={formData.phone}
                             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                             placeholder="+34 600 000 000"
+                            maxLength={40}
                         />
                     </div>
                     {mode === 'create' && (
@@ -159,8 +167,9 @@ export function GuardianDialog({ mode, guardian, trigger, onUpdate }: Props) {
                             />
                         </div>
                     )}
+                    {mode === 'edit' && guardian?.user_id && <p className="text-xs text-slate-500">El correo de contacto no cambia el correo de acceso al Portal Familias.</p>}
                     <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+                        <Button type="button" variant="outline" disabled={loading} onClick={() => setOpen(false)}>Cancelar</Button>
                         <Button type="submit" disabled={loading} className="bg-[#0C2241] hover:bg-[#1a365d] text-white">
                             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             {mode === 'create' ? 'Crear' : 'Guardar Cambios'}

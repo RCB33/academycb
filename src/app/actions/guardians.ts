@@ -160,23 +160,27 @@ export async function createGuardian(data: { full_name: string; email: string; p
 
 export async function updateGuardian(id: string, data: { full_name: string; email: string; phone: string; notes?: string }) {
     const { supabase } = await requireAdmin()
+    if (!z.string().uuid().safeParse(id).success) return { success: false, error: 'Tutor no válido.' }
+    const parsed = z.object({
+        full_name: z.string().trim().min(2, 'Indica el nombre completo del tutor.').max(120, 'El nombre es demasiado largo.'),
+        email: z.string().trim().toLowerCase().max(200).email('Indica un correo válido.').or(z.literal('')),
+        phone: z.string().trim().max(40, 'El teléfono es demasiado largo.'),
+    }).safeParse(data)
+    if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
 
-    const { error } = await supabase
+    const { data: saved, error } = await supabase
         .from('guardians')
-        .update({
-            full_name: data.full_name,
-            email: data.email || null,
-            phone: data.phone || '',
-            notes: data.notes || null
-        })
+        .update({ full_name: parsed.data.full_name, email: parsed.data.email || null, phone: parsed.data.phone })
         .eq('id', id)
+        .select('id')
+        .maybeSingle()
 
-    if (error) {
-        return { success: false, error: error.message }
-    }
+    if (error || !saved) return { success: false, error: 'No se pudieron guardar los datos del tutor. Revisa el correo e inténtalo de nuevo.' }
 
     revalidatePath('/admin/crm/tutores')
     revalidatePath(`/admin/crm/tutores/${id}`)
+    revalidatePath('/admin/crm/alumnos')
+    revalidatePath('/admin/crm/alumnos/[childId]', 'page')
     return { success: true }
 }
 

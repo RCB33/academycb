@@ -42,6 +42,7 @@ import { PaymentsList } from "@/components/admin/payments-list"
 import { PlayerPaymentMethods } from '@/components/admin/player-payment-methods'
 import { getStudentPayments } from "@/app/actions/payments"
 import { ManageAchievementsDialog } from "@/components/admin/manage-achievements-dialog"
+import { GuardianDialog } from "@/app/admin/crm/tutores/components/guardian-dialog"
 import { LinkGuardianDialog } from "@/components/admin/link-guardian-dialog"
 import { ReportDownloadButton } from "@/components/admin/report-download-button"
 import { getGuardiansSignatures } from "@/app/actions/signatures"
@@ -295,15 +296,6 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
 
     return (
         <div className="space-y-6">
-            <section id="inscripciones" className="mb-6 rounded-3xl border border-gold/25 bg-gradient-to-r from-amber-50 to-white p-5">
-                <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-widest text-amber-800">Ficha única del jugador</p><h2 className="mt-2 text-lg font-bold text-navy">Familia, actividades y pagos</h2><p className="mt-2 text-sm text-slate-600">Revisa el tutor y elige la actividad. La inscripción y el ingreso se gestionan por separado.</p></div><Link href="/admin/solicitudes" className="rounded-xl border bg-white px-4 py-2 text-xs font-bold">Solicitudes de familias →</Link></div>
-                <div className="mt-4 flex flex-wrap gap-2"><FamilyPlanAssignment childId={childId} childName={student.full_name} plans={plans} teams={assignmentTeams} defaultTeamId={student.team_id||''} onComplete={fetchStudentData}/><Link href={`/admin/finanzas/solicitudes?child_id=${childId}`} className="inline-flex items-center gap-2 rounded-xl bg-gold px-4 py-3 text-sm font-bold text-navy"><Mail className="h-4 w-4" />Enviar enlace de pago</Link><button onClick={()=>{setActiveTab('finance');document.getElementById('player-tabs')?.scrollIntoView({behavior:'smooth'})}} className="rounded-xl bg-navy px-4 py-3 text-sm font-bold text-white">Ver pagos</button><Link href={`/admin/campus?child=${childId}`} className="rounded-xl border bg-white px-4 py-3 text-sm font-bold text-navy">Campus · inscribir</Link><Link href="/admin/torneos" className="rounded-xl border bg-white px-4 py-3 text-sm font-bold text-navy">Torneos · equipos</Link></div>
-            </section>
-            <PlayerPaymentMethods childId={childId} memberships={paymentsData.memberships} payments={paymentsData.payments} onSaved={()=>void fetchStudentData()} activities={[
-                ...(student.campus_enrollments||[]).filter((a:any)=>!['cancelled','rejected'].includes(a.status)).map((a:any)=>({id:a.id,name:a.campus?.name||'Campus',branch:'Campus',status:a.status})),
-                ...(student.tournament_players||[]).filter((a:any)=>!['cancelled','rejected'].includes(a.status)).map((a:any)=>({id:a.id,name:a.tournament?.title||'Torneo',branch:'Torneo',status:a.status})),
-                ...(student.event_registrations||[]).filter((a:any)=>!['cancelled','rejected','requested'].includes(a.status)).map((a:any)=>({id:a.id,name:a.campaign,branch:'Torneos',status:a.status})),
-            ]}/>
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
@@ -340,6 +332,114 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
                 </div>
             </div>
 
+            <Card id="tutores" className="border-gold/30 shadow-sm overflow-hidden">
+                <CardHeader className="bg-amber-50/50 border-b border-slate-100 py-4 flex flex-row flex-wrap items-center justify-between gap-3">
+                    <CardTitle className="text-lg font-bold flex items-center gap-2">
+                        <User className="h-4 w-4 text-slate-700" /> Datos de los tutores
+                    </CardTitle>
+                    <LinkGuardianDialog childId={childId} onUpdate={fetchStudentData} />
+                </CardHeader>
+                <CardContent className="pt-4 space-y-4 text-sm">
+                    {student.guardians && student.guardians.length > 0 ? (
+                        <div className="grid gap-4 xl:grid-cols-2">
+                            {student.guardians.map((gRef: any) => {
+                                const g = gRef.guardian
+                                const isPrimary = gRef.is_primary
+                                const hasSigned = signatures.some(s => s.guardian_id === g.id && s.document_type === 'Condiciones Generales Academia' && s.document_version === '2026.08')
+                                const imageConsent = signatures.find(s => s.guardian_id === g.id && s.child_id === childId && s.document_type === 'Autorización de imagen y vídeo')
+                                const imageOptions = imageConsent?.consent_options || {}
+                                const imageConsentText = !imageConsent
+                                    ? 'Imagen no autorizada (sin decisión registrada)'
+                                    : imageOptions.portal_internal || imageOptions.public_communications
+                                        ? `Imagen autorizada: ${[imageOptions.portal_internal && 'uso interno', imageOptions.public_communications && 'uso público'].filter(Boolean).join(' · ')}`
+                                        : 'Imagen no autorizada (decisión firmada)'
+                                return (
+                                    <div key={g.id} className="group relative bg-slate-50 p-3 rounded-lg border border-slate-100 hover:border-yellow-200 transition-colors">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <div>
+                                                <div className="font-bold text-slate-900 flex items-center gap-2">
+                                                    {g.full_name}
+                                                    {isPrimary && <span className="bg-yellow-100 text-yellow-800 text-[10px] px-1.5 py-0.5 rounded font-bold">Principal</span>}
+                                                    {hasSigned && (
+                                                        <TooltipProvider>
+                                                            <Tooltip>
+                                                                <TooltipTrigger>
+                                                                    <ShieldCheck className="h-4 w-4 text-green-500" />
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>Condiciones y privacidad firmadas · v2026.08</TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+                                                    )}
+                                                </div>
+                                                <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{gRef.relationship || 'Tutor'}</div>
+                                            </div>
+                                            <Button
+                                                variant="ghost"
+                                                aria-label={`Desvincular tutor: ${g.full_name}`}
+                                                size="icon"
+                                                className="h-6 w-6 text-slate-400 hover:text-red-500 hover:bg-red-50 -mt-1 -mr-1"
+                                                onClick={async () => {
+                                                    if (confirm('¿Desvincular a este tutor?')) {
+                                                        await unlinkGuardian(childId, g.id)
+                                                        fetchStudentData()
+                                                        toast.success('Tutor desvinculado')
+                                                    }
+                                                }}
+                                            >
+                                                <UserMinus className="h-3 w-3" />
+                                            </Button>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            {g.phone && (
+                                                <a href={`tel:${g.phone}`} className="flex items-center gap-2 text-slate-600 hover:text-yellow-600 transition-colors text-sm">
+                                                    <Phone className="h-3 w-3" /> <span>{g.phone}</span>
+                                                </a>
+                                            )}
+                                            {g.email && <a href={`mailto:${g.email}`} className="flex items-center gap-2 text-slate-600 hover:text-yellow-600 transition-colors text-sm">
+                                                <Mail className="h-3 w-3" /> <span className="break-all">{g.email}</span>
+                                            </a>}
+                                            {!g.phone && <p className="text-sm text-slate-500">Teléfono pendiente de completar</p>}
+                                            {!g.email && <p className="text-sm text-slate-500">Correo pendiente de completar</p>}
+                                            <div className="py-2">
+                                                <GuardianDialog mode="edit" guardian={g} onUpdate={fetchStudentData} trigger={
+                                                    <Button className="min-h-11 bg-gold font-bold text-navy hover:bg-gold/80" aria-label={`Editar tutor: ${g.full_name}`}>
+                                                        <Pencil className="mr-2 h-4 w-4" /> Editar tutor
+                                                    </Button>
+                                                } />
+                                            </div>
+                                            <div className={`mt-2 flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[10px] font-bold ${hasSigned ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}>
+                                                <ShieldCheck className="h-3.5 w-3.5" />
+                                                {hasSigned ? 'Condiciones y privacidad firmadas · v2026.08' : 'Pendiente de firma en Portal Familias'}
+                                            </div>
+                                            <div className={`mt-2 flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[10px] font-bold ${imageOptions.portal_internal || imageOptions.public_communications ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-600'}`}>
+                                                <ShieldCheck className="h-3.5 w-3.5" />
+                                                {imageConsentText}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    ) : (
+                        <div className="flex flex-col items-center py-4 text-center">
+                            <div className="h-10 w-10 rounded-full bg-red-50 flex items-center justify-center mb-2">
+                                <User className="h-5 w-5 text-red-500" />
+                            </div>
+                            <p className="text-red-500 font-bold text-xs uppercase">Sin tutor asignado</p>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+
+            <section id="inscripciones" className="mb-6 rounded-3xl border border-gold/25 bg-gradient-to-r from-amber-50 to-white p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-widest text-amber-800">Ficha única del jugador</p><h2 className="mt-2 text-lg font-bold text-navy">Familia, actividades y pagos</h2><p className="mt-2 text-sm text-slate-600">Revisa el tutor y elige la actividad. La inscripción y el ingreso se gestionan por separado.</p></div><Link href="/admin/solicitudes" className="rounded-xl border bg-white px-4 py-2 text-xs font-bold">Solicitudes de familias →</Link></div>
+                <div className="mt-4 flex flex-wrap gap-2"><FamilyPlanAssignment childId={childId} childName={student.full_name} plans={plans} teams={assignmentTeams} defaultTeamId={student.team_id||''} onComplete={fetchStudentData}/><Link href={`/admin/finanzas/solicitudes?child_id=${childId}`} className="inline-flex items-center gap-2 rounded-xl bg-gold px-4 py-3 text-sm font-bold text-navy"><Mail className="h-4 w-4" />Enviar enlace de pago</Link><button onClick={()=>{setActiveTab('finance');document.getElementById('player-tabs')?.scrollIntoView({behavior:'smooth'})}} className="rounded-xl bg-navy px-4 py-3 text-sm font-bold text-white">Ver pagos</button><Link href={`/admin/campus?child=${childId}`} className="rounded-xl border bg-white px-4 py-3 text-sm font-bold text-navy">Campus · inscribir</Link><Link href="/admin/torneos" className="rounded-xl border bg-white px-4 py-3 text-sm font-bold text-navy">Torneos · equipos</Link></div>
+            </section>
+            <PlayerPaymentMethods childId={childId} memberships={paymentsData.memberships} payments={paymentsData.payments} onSaved={()=>void fetchStudentData()} activities={[
+                ...(student.campus_enrollments||[]).filter((a:any)=>!['cancelled','rejected'].includes(a.status)).map((a:any)=>({id:a.id,name:a.campus?.name||'Campus',branch:'Campus',status:a.status})),
+                ...(student.tournament_players||[]).filter((a:any)=>!['cancelled','rejected'].includes(a.status)).map((a:any)=>({id:a.id,name:a.tournament?.title||'Torneo',branch:'Torneo',status:a.status})),
+                ...(student.event_registrations||[]).filter((a:any)=>!['cancelled','rejected','requested'].includes(a.status)).map((a:any)=>({id:a.id,name:a.campaign,branch:'Torneos',status:a.status})),
+            ]}/>
             <PlayerProfileDetails key={childId} player={student} editable onSaved={()=>void fetchStudentData()} />
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -382,94 +482,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
                         </Card>
                     )}
 
-                    <Card className="border-slate-200/60 shadow-sm overflow-hidden">
-                        <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-4 flex flex-row items-center justify-between">
-                            <CardTitle className="text-sm font-bold flex items-center gap-2">
-                                <User className="h-4 w-4 text-slate-700" /> Tutores / Acceso
-                            </CardTitle>
-                            <LinkGuardianDialog childId={childId} onUpdate={fetchStudentData} />
-                        </CardHeader>
-                        <CardContent className="pt-4 space-y-4 text-sm">
-                            {student.guardians && student.guardians.length > 0 ? (
-                                <div className="space-y-4">
-                                    {student.guardians.map((gRef: any) => {
-                                        const g = gRef.guardian
-                                        const isPrimary = gRef.is_primary
-                                        const hasSigned = signatures.some(s => s.guardian_id === g.id && s.document_type === 'Condiciones Generales Academia' && s.document_version === '2026.08')
-                                        const imageConsent = signatures.find(s => s.guardian_id === g.id && s.child_id === childId && s.document_type === 'Autorización de imagen y vídeo')
-                                        const imageOptions = imageConsent?.consent_options || {}
-                                        const imageConsentText = !imageConsent
-                                            ? 'Imagen no autorizada (sin decisión registrada)'
-                                            : imageOptions.portal_internal || imageOptions.public_communications
-                                                ? `Imagen autorizada: ${[imageOptions.portal_internal && 'uso interno', imageOptions.public_communications && 'uso público'].filter(Boolean).join(' · ')}`
-                                                : 'Imagen no autorizada (decisión firmada)'
-                                        return (
-                                            <div key={g.id} className="group relative bg-slate-50 p-3 rounded-lg border border-slate-100 hover:border-yellow-200 transition-colors">
-                                                <div className="flex justify-between items-start mb-2">
-                                                    <div>
-                                                        <div className="font-bold text-slate-900 flex items-center gap-2">
-                                                            {g.full_name}
-                                                            {isPrimary && <span className="bg-yellow-100 text-yellow-800 text-[10px] px-1.5 py-0.5 rounded font-bold">Principal</span>}
-                                                            {hasSigned && (
-                                                                <TooltipProvider>
-                                                                    <Tooltip>
-                                                                        <TooltipTrigger>
-                                                                            <ShieldCheck className="h-4 w-4 text-green-500" />
-                                                                        </TooltipTrigger>
-                                                                        <TooltipContent>Condiciones y privacidad firmadas · v2026.08</TooltipContent>
-                                                                    </Tooltip>
-                                                                </TooltipProvider>
-                                                            )}
-                                                        </div>
-                                                        <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{gRef.relationship || 'Tutor'}</div>
-                                                    </div>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-6 w-6 text-slate-400 hover:text-red-500 hover:bg-red-50 -mt-1 -mr-1"
-                                                        onClick={async () => {
-                                                            if (confirm('¿Desvincular a este tutor?')) {
-                                                                await unlinkGuardian(childId, g.id)
-                                                                fetchStudentData()
-                                                                toast.success('Tutor desvinculado')
-                                                            }
-                                                        }}
-                                                    >
-                                                        <UserMinus className="h-3 w-3" />
-                                                    </Button>
-                                                </div>
-                                                <div className="space-y-1.5">
-                                                    {g.phone && (
-                                                        <a href={`tel:${g.phone}`} className="flex items-center gap-2 text-slate-600 hover:text-yellow-600 transition-colors text-xs">
-                                                            <Phone className="h-3 w-3" /> <span>{g.phone}</span>
-                                                        </a>
-                                                    )}
-                                                    <a href={`mailto:${g.email}`} className="flex items-center gap-2 text-slate-600 hover:text-yellow-600 transition-colors text-xs">
-                                                        <Mail className="h-3 w-3" /> <span className="truncate">{g.email}</span>
-                                                    </a>
-                                                    <div className={`mt-2 flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[10px] font-bold ${hasSigned ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}>
-                                                        <ShieldCheck className="h-3.5 w-3.5" />
-                                                        {hasSigned ? 'Condiciones y privacidad firmadas · v2026.08' : 'Pendiente de firma en Portal Familias'}
-                                                    </div>
-                                                    <div className={`mt-2 flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[10px] font-bold ${imageOptions.portal_internal || imageOptions.public_communications ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-600'}`}>
-                                                        <ShieldCheck className="h-3.5 w-3.5" />
-                                                        {imageConsentText}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )
-                                    })}
-                                </div>
-                            ) : (
-                                <div className="flex flex-col items-center py-4 text-center">
-                                    <div className="h-10 w-10 rounded-full bg-red-50 flex items-center justify-center mb-2">
-                                        <User className="h-5 w-5 text-red-500" />
-                                    </div>
-                                    <p className="text-red-500 font-bold text-xs uppercase">Sin tutor asignado</p>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
+
 
                     <Card className="border-slate-200/60 shadow-sm overflow-hidden">
                         <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-4">
