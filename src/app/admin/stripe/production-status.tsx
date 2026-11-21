@@ -32,7 +32,7 @@ export async function StripeProductionStatus() {
     const payments = [...(receipts.data || []), ...(events.data || [])].sort((a,b)=>b.created_at.localeCompare(a.created_at)).slice(0,10)
     const labels: Record<string,string> = {creating:'Preparando enlace',open:'Pendiente de pago',paid:'Pago confirmado',expired:'Enlace caducado',failed:'Pago fallido'}
     return <div className="mx-auto max-w-3xl space-y-6">
-        <header><p className="text-sm text-slate-500">Administración · Producción</p><h1 className="text-3xl font-bold text-navy">Conexión Stripe</h1><p className="mt-2 text-slate-600">Estado de los pagos con tarjeta de Academy.</p></header>
+        <header><p className="text-sm text-slate-500">Administración · Producción</p><h1 className="text-3xl font-bold text-navy">Estado de Stripe</h1><p className="mt-2 text-slate-600">Estado de los pagos con tarjeta de Academy.</p></header>
         <section className="space-y-3 rounded-2xl border bg-white p-6">
             <h2 className="text-xl font-bold">{enabled && apiConnected && canCharge !== false ? 'Conexión de producción disponible' : 'Activación pendiente'}</h2>
             <ul className="list-inside list-disc space-y-2 text-sm">

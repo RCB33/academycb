@@ -1,22 +1,19 @@
 'use client'
 
 import Link from 'next/link'
+import { isActiveAdminSection as isActiveSection } from '@/lib/admin-navigation'
 import Image from 'next/image'
 import { useEffect, useState, type ReactNode } from 'react'
 import { usePathname } from 'next/navigation'
 import {
     Activity, Briefcase, CalendarDays, ChevronLeft, ChevronRight, CreditCard,
-    FileText, LayoutDashboard, LogOut, MessageCircle, MessageSquare,
-    MessageSquareHeart, Settings, ShoppingBag, Trophy, TrendingUp, UserPlus,
+    LayoutDashboard, LogOut, MessageCircle, MessageSquare,
+    MessageSquareHeart, Settings, ShoppingBag, TrendingUp,
     UserRound, Users, Video,
 } from 'lucide-react'
 
 type Item = { href: string, label: string, icon: ReactNode }
 type Group = { label: string, items: Item[] }
-
-function isActiveSection(pathname: string, href: string) {
-    return pathname === href || pathname.startsWith(`${href}/`)
-}
 
 export function AdminDesktopSidebar({
     isAdmin,
@@ -49,11 +46,10 @@ export function AdminDesktopSidebar({
         ...(isAdmin || isMarketing ? [{ label: isMarketing ? 'Marketing' : 'Gestión CRM', items: [
             ...(isAdmin ? [
                 { href: '/admin/crm/alumnos', label: 'Jugadores 360º', icon: <Users size={19} /> },
-                { href: '/admin/seguimiento', label: 'Seguimiento', icon: <TrendingUp size={19} /> },
+                { href: '/admin/seguimiento', label: 'Seguimiento alumnos', icon: <TrendingUp size={19} /> },
             ] : []),
-            { href: '/admin/leads', label: 'Solicitudes web', icon: <MessageSquare size={19} /> },
+            ...(isMarketing && !isAdmin ? [{ href: '/admin/leads', label: 'Consultas comerciales', icon: <MessageSquare size={19} /> }] : []),
             ...(isAdmin ? [
-                { href: '/admin/crm/tutores', label: 'Tutores', icon: <UserPlus size={19} /> },
                 { href: '/admin/familias', label: 'Uso del Portal Familias', icon: <Users size={19} /> },
                 { href: '/admin/crm/trabajadores', label: 'Trabajadores', icon: <Briefcase size={19} /> },
             ] : []),
@@ -73,7 +69,6 @@ export function AdminDesktopSidebar({
         ] }] : []),
         ...(isAdmin || isFinance ? [{ label: isFinance ? 'Finanzas' : 'Sistema', items: [
             { href: '/admin/finanzas', label: 'Finanzas', icon: <CreditCard size={19} /> },
-            ...(isAdmin ? [{ href: '/admin/stripe', label: 'Conexión Stripe', icon: <CreditCard size={19} /> }] : []),
             ...(isAdmin ? [{ href: '/admin/ajustes', label: 'Ajustes', icon: <Settings size={19} /> }] : []),
         ] }] : []),
     ]
@@ -87,7 +82,7 @@ export function AdminDesktopSidebar({
             {href:'/admin/finanzas',label:'Cobros y finanzas',icon:<CreditCard size={19}/>},
             {href:'/admin/crm/trabajadores',label:'Trabajadores',icon:<Briefcase size={19}/>},
         ]},
-        {label:'Más herramientas',items:groups.flatMap(g=>g.items).filter(i=>!['/admin/dashboard','/admin/crm/alumnos','/admin/solicitudes','/admin/gestion','/admin/finanzas','/admin/crm/trabajadores'].includes(i.href)).map(i=>i.href==='/admin/leads'?{...i,label:'Consultas comerciales'}:i)},
+        {label:'Más herramientas',items:groups.flatMap(g=>g.items).filter(i=>!['/admin/dashboard','/admin/crm/alumnos','/admin/solicitudes','/admin/gestion','/admin/finanzas','/admin/crm/trabajadores'].includes(i.href))},
     ] : groups
     return <aside className={`group/sidebar hidden shrink-0 flex-col bg-navy text-white shadow-xl transition-[width] duration-300 md:flex md:h-screen ${collapsed ? 'w-20' : 'w-64'}`}>
         <div className={`flex h-[5.5rem] shrink-0 items-center border-b border-navy-light bg-navy-dark/50 ${collapsed ? 'justify-center px-2' : 'justify-between px-5'}`}>

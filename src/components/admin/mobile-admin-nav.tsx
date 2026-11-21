@@ -1,21 +1,18 @@
 'use client'
 
 import Link from 'next/link'
+import { isActiveAdminSection as isActiveSection } from '@/lib/admin-navigation'
 import { useEffect, useState, type ReactNode } from 'react'
 import { usePathname } from 'next/navigation'
 import {
-    Activity, Briefcase, CalendarDays, ChevronUp, CreditCard, FileText,
+    Activity, Briefcase, CalendarDays, ChevronUp, CreditCard,
     LayoutDashboard, MessageCircle, MessageSquare, MessageSquareHeart,
-    MoreHorizontal, Settings, ShoppingBag, Trophy, TrendingUp, UserPlus,
+    MoreHorizontal, Settings, ShoppingBag, TrendingUp,
     UserRound, Users, Video,
 } from 'lucide-react'
 
 type Item = { href: string, label: string, icon: ReactNode }
 type Group = { label: string, items: Item[] }
-
-function isActiveSection(pathname: string, href: string) {
-    return pathname === href || pathname.startsWith(`${href}/`)
-}
 
 function MenuLink({ item, active, onNavigate }: { item: Item, active?: boolean, onNavigate?: () => void }) {
     return <Link href={item.href} onClick={onNavigate} aria-current={active ? 'page' : undefined} className={`flex min-h-12 items-center gap-3 rounded-xl px-3 text-sm font-semibold transition-all ${active ? 'bg-gold text-navy shadow-lg shadow-black/20' : 'text-slate-100 active:bg-white/10'}`}>
@@ -37,16 +34,15 @@ export function MobileAdminNav({ isAdmin, isStaff, isFinance, isMarketing }: { i
         : isFinance ? [{ href: '/admin/finanzas', label: 'Finanzas', icon: <CreditCard className="h-5 w-5" /> }]
             : [{ href: '/admin/leads', label: 'Solicitudes', icon: <MessageSquare className="h-5 w-5" /> }]
 
-    const groups: Group[] = [
+    const extraGroups: Group[] = [
         { label: 'Cuenta', items: [{ href: '/cuenta', label: 'Mi cuenta y contraseña', icon: <UserRound className="h-5 w-5" /> }] },
         ...(isAdmin || isMarketing ? [{ label: isMarketing ? 'Marketing' : 'Gestión CRM', items: [
             ...(isAdmin ? [
-                { href: '/admin/seguimiento', label: 'Seguimiento', icon: <TrendingUp className="h-5 w-5" /> },
-                { href: '/admin/crm/tutores', label: 'Tutores', icon: <UserPlus className="h-5 w-5" /> },
+                { href: '/admin/seguimiento', label: 'Seguimiento alumnos', icon: <TrendingUp className="h-5 w-5" /> },
                 { href: '/admin/familias', label: 'Uso del Portal Familias', icon: <Users className="h-5 w-5" /> },
                 { href: '/admin/crm/trabajadores', label: 'Trabajadores', icon: <Briefcase className="h-5 w-5" /> },
             ] : []),
-            { href: '/admin/leads', label: 'Solicitudes web', icon: <MessageSquare className="h-5 w-5" /> },
+            ...(isMarketing && !isAdmin ? [{ href: '/admin/leads', label: 'Consultas comerciales', icon: <MessageSquare className="h-5 w-5" /> }] : []),
         ] }] : []),
         ...(isAdmin ? [{ label: 'Operativa', items: [
             {href:'/admin/calendario',label:'Calendario',icon:<CalendarDays className="h-5 w-5"/>},
@@ -61,10 +57,10 @@ export function MobileAdminNav({ isAdmin, isStaff, isFinance, isMarketing }: { i
         ] }] : []),
         ...(isAdmin || isFinance ? [{ label: 'Gestión', items: [
             { href: '/admin/finanzas', label: 'Finanzas', icon: <CreditCard className="h-5 w-5" /> },
-            ...(isAdmin ? [{ href: '/admin/stripe', label: 'Conexión Stripe', icon: <CreditCard className="h-5 w-5" /> }] : []),
             ...(isAdmin ? [{ href: '/admin/ajustes', label: 'Ajustes', icon: <Settings className="h-5 w-5" /> }] : []),
         ] }] : []),
     ]
+    const groups = extraGroups.map(group => ({ ...group, items: group.items.filter(item => !primary.some(main => main.href === item.href)) })).filter(group => group.items.length > 0)
     const isMoreActive = groups.some((group) => group.items.some((item) => isActiveSection(pathname, item.href)))
 
     return <div className="md:hidden">

@@ -17,12 +17,15 @@ export default async function Players() {
             Tutor, actividades y pagos en una sola ficha.
           </p>
         </div>
+        <div className="flex flex-wrap gap-3">
+        <Link href="/admin/crm/tutores" className="rounded-xl border bg-white px-4 py-3 text-xs font-semibold">Tutores →</Link>
         <Link
           href="/admin/crm/alumnos/archivo"
           className="rounded-xl border bg-white px-4 py-3 text-xs font-semibold"
         >
           Archivo y herramientas →
         </Link>
+        </div>
       </header>
       <PlayersOverview players={data.players} />
     </div>

@@ -35,7 +35,7 @@ export default async function StripeTestPage({ searchParams }: { searchParams: P
     const awaitingConfirmation = Boolean(params.session_id && returnedAttempt && ['creating', 'open'].includes(returnedAttempt.state))
     const stateLabels: Record<string,string> = { creating: 'Preparando sesión', open: 'Pendiente de confirmación automática', paid: 'Confirmado y guardado por webhook', expired: 'Sesión caducada', failed: 'Pago fallido' }
     return <div className="mx-auto max-w-3xl space-y-5">
-        <PortalPageHeader icon={<CreditCard />} eyebrow="Administración · Pruebas" title="Conexión Stripe" description="Diagnóstico privado. No activa cobros ni modifica pedidos." />
+        <PortalPageHeader icon={<CreditCard />} eyebrow="Administración · Pruebas" title="Estado de Stripe" description="Diagnóstico privado. No activa cobros ni modifica pedidos." />
         <section className="space-y-4 rounded-2xl border bg-white p-6">
             <h2 className="text-xl font-bold text-navy">1. Conexión API</h2><p role="status">{status}</p>
             <h2 className="text-xl font-bold text-navy">2. Pago ficticio</h2>

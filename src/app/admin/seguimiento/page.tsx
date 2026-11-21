@@ -84,7 +84,7 @@ export default function AdminSeguimientoPage() {
         <div className="space-y-8">
             <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-black tracking-tight text-slate-900">Seguimiento Global</h1>
+                    <h1 className="text-3xl font-black tracking-tight text-slate-900">Seguimiento alumnos</h1>
                     <p className="text-muted-foreground font-medium">Ranking de rendimiento basado en métricas oficiales</p>
                 </div>
                 <div className="flex gap-2">

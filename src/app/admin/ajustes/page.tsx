@@ -222,10 +222,10 @@ export default function AjustesPage() {
                         <div className="space-y-5">
                             <div className="rounded-xl border border-gold/30 bg-gold/5 p-4">
                                 <Badge variant="outline">{overview?.stripeConfigured ? (settings.payment_card_enabled === 'true' ? 'Tarjeta activada' : 'Preparado · tarjeta desactivada') : 'Pendiente de conexión'}</Badge>
-                                <p className="mt-3 text-sm leading-relaxed text-slate-600">Consulta el estado de la conexión y las confirmaciones en Conexión Stripe. Los pagos se registran después de recibir la confirmación de Stripe.</p>
+                                <p className="mt-3 text-sm leading-relaxed text-slate-600">Consulta el diagnóstico de la integración y las confirmaciones en Estado de Stripe. Los pagos se registran después de recibir la confirmación de Stripe.</p>
                             </div>
                             <div className="flex flex-col gap-3 sm:flex-row">
-                                <Button asChild className="min-h-12 bg-gold font-bold text-navy hover:bg-gold/90"><Link href="/admin/stripe">Conexión Stripe</Link></Button>
+                                <Button asChild className="min-h-12 bg-gold font-bold text-navy hover:bg-gold/90"><Link href="/admin/stripe">Estado de Stripe</Link></Button>
                                 <Button asChild variant="outline" className="min-h-12"><a href="https://dashboard.stripe.com/" target="_blank" rel="noopener noreferrer">Abrir mi Stripe <ExternalLink className="ml-2 h-4 w-4" /></a></Button>
                             </div>
                             <div className="border-t pt-4">
