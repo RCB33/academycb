@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { ArrowRight, UsersRound } from "lucide-react";
 import { getAdminWorkspace } from "@/lib/admin-workspace";
 import { PlayersOverview } from "@/components/management/dashboard";
 export default async function Players() {
@@ -15,25 +14,15 @@ export default async function Players() {
             Jugadores
           </h1>
           <p className="mt-3 text-sm text-slate-500">
-            Tutor, actividades y pagos en una sola ficha.
+            Los datos de sus tutores, actividades y pagos están en la ficha de cada jugador.
           </p>
         </div>
-        <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto">
-          <Link
-            href="/admin/crm/tutores"
-            className="inline-flex min-h-12 items-center justify-center gap-3 rounded-xl bg-gold px-6 py-3 text-base font-bold text-navy shadow-sm transition-colors hover:bg-gold/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy focus-visible:ring-offset-2"
-          >
-            <UsersRound className="h-5 w-5 shrink-0" aria-hidden="true" />
-            Tutores
-            <ArrowRight className="h-5 w-5 shrink-0" aria-hidden="true" />
-          </Link>
-          <Link
-            href="/admin/crm/alumnos/archivo"
-            className="inline-flex min-h-12 items-center justify-center rounded-xl border bg-white px-4 py-3 text-sm font-semibold"
-          >
-            Archivo y herramientas →
-          </Link>
-        </div>
+        <Link
+          href="/admin/crm/alumnos/archivo"
+          className="inline-flex min-h-12 items-center justify-center rounded-xl border bg-white px-4 py-3 text-sm font-semibold"
+        >
+          Archivo y herramientas →
+        </Link>
       </header>
       <PlayersOverview players={data.players} />
     </div>
