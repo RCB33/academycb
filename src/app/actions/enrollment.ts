@@ -7,6 +7,7 @@ import { createEnrollmentRequest } from '@/lib/enrollment'
 import { onboardAcceptedFamily,prepareAcceptedSubscription } from '@/lib/enrollment-onboarding'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { deliverRegistrationEmails } from '@/lib/registration-email'
+import { academyRequestReviewSchema, type AcademyRequestReviewInput } from '@/lib/academy-request-review'
 
 export type EnrollmentState = {
     success?: boolean
@@ -49,7 +50,7 @@ export async function updateEnrollmentRequestStatus(id: string, status: string) 
     return { success: true }
 }
 
-export async function convertEnrollmentRequest(id: string) {
+export async function convertEnrollmentRequest(id: string, review?: AcademyRequestReviewInput) {
     const { supabase,user } = await requireAdmin()
     const parsedId = z.string().uuid().safeParse(id)
     if (!parsedId.success) return { success: false, error: 'Solicitud no válida.' }
@@ -68,9 +69,12 @@ export async function convertEnrollmentRequest(id: string) {
         return {success:true,childId:enrollment?.child_id,notice:access.error||'Plaza aceptada. Revisa el envío en Estado de correos.'}
     }
 
-    const { data: childId, error } = await supabase.rpc(request.service==='academy'&&request.academy_details?'accept_academy_request':'convert_enrollment_request', {
-        request_uuid: parsedId.data,
-    })
+    const structuredAcademy = request.service === 'academy' && request.academy_details
+    const parsedReview = academyRequestReviewSchema.safeParse(review)
+    if (structuredAcademy && !parsedReview.success) return { success: false, error: 'Revisa la matrícula y la fecha de incorporación antes de aceptar la plaza.' }
+    const { data: childId, error } = structuredAcademy && parsedReview.success
+        ? await supabase.rpc('accept_reviewed_academy_request', { request_uuid: parsedId.data, start_date_input: parsedReview.data.startDate, charge_enrollment_input: parsedReview.data.chargeEnrollment, revision_input: parsedReview.data.revision })
+        : await supabase.rpc('convert_enrollment_request', { request_uuid: parsedId.data })
     if (error) return { success: false, error: error.message }
     let notice = ''
     if(request.service==='academy'&&request.academy_details) {
@@ -85,6 +89,7 @@ export async function convertEnrollmentRequest(id: string) {
 
     for(const path of ['/admin/gestion','/admin/academia','/admin/finanzas','/portal']) revalidatePath(path,'layout')
     revalidatePath('/admin/leads')
+    revalidatePath('/admin/solicitudes', 'layout')
     revalidatePath('/admin/crm/alumnos')
     revalidatePath('/admin/crm/tutores')
     return { success: true, childId,notice }

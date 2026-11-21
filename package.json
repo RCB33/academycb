@@ -20,7 +20,8 @@
     "verify": "npm run test && npm run build",
     "production:check": "node scripts/check-production.mjs",
     "test:stripe": "node scripts/test-payment-rules.cjs && node scripts/test-academy-pricing.cjs && node scripts/test-stripe-return-origin.cjs && node scripts/test-stripe-webhook.cjs && node scripts/test-stripe-webhook-probe.cjs && node scripts/test-academy-stripe-contract.cjs && node scripts/test-billing-request-stripe.cjs",
-    "test:management": "node scripts/test-management-workspace.cjs"
+    "test:management": "node scripts/test-management-workspace.cjs",
+    "test:request-review": "node scripts/test-academy-request-review.cjs && node scripts/test-registration-email-details.cjs"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.15",

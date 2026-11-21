@@ -35,6 +35,14 @@ function load(file) {
   result=await details('enrollment', 'test-request', 'reviewed');assert.match(result.message,/solicitud\/billing-test/);assert.equal(result.action.label,'Activar pago mensual con tarjeta');assert.match(result.action.href,/solicitud\/billing-test$/);assert.doesNotMatch(result.message,/IBAN|transferencia/i)
   a.onboarding.billing_initial=true
   result=await details('enrollment','test-request','reviewed');assert.equal(result.action.label,'Pagar alta y activar mensualidades');assert.match(result.message,/Primer pago con tarjeta: 57\.50/);assert.match(result.message,/una sola vez/);assert.doesNotMatch(result.message,/efectivo por separado/)
+  assert.match(result.message,/se cobra al completar Stripe/)
+  const original = { start_date:a.start_date, quote:a.quote, accepted:a.accepted, payments:rows.payments }
+  a.start_date='2026-12-01';a.quote={...a.quote,percent:100,remaining:[{due_date:'2027-01-01'}]};a.accepted={...a.accepted,first_month:75,enrollment_fee:0}
+  rows.payments=[{amount:75,status:'pending',concept_code:'monthly',covered_month:'2026-12'},{amount:75,status:'pending',concept_code:'monthly',covered_month:'2027-01'}]
+  result=await details('enrollment','test-request','reviewed')
+  assert.match(result.message,/Incorporación: 2026-12-01/);assert.match(result.message,/Primera cuota: 75.00 € \(100 %\)/);assert.match(result.message,/Matrícula: 0.00 € \(exenta\)/)
+  assert.match(result.message,/Primer pago con tarjeta: 75.00/);assert.match(result.message,/no se cobrará de nuevo al empezar/);assert.match(result.message,/siguiente cobro mensual será el 2027-01-01/)
+  a.start_date=original.start_date;a.quote=original.quote;a.accepted=original.accepted;rows.payments=original.payments
   const remaining=a.quote.remaining;a.quote.remaining=[]
   result=await details('enrollment','test-request','reviewed');assert.equal(result.action.label,'Pagar el importe inicial');assert.match(result.message,/no hay cargos mensuales posteriores/);a.quote.remaining=remaining
   rows.payments.forEach(p => p.status = 'paid')
