@@ -26,3 +26,14 @@ export function reviewedAcademyQuote(context: AcademyRequestReviewContext, start
   const d = context.request.academy_details
   return academyQuote({ ...d.plan, enrollment_fee: chargeEnrollment && !context.fee_exempt ? d.plan.enrollment_fee : 0 }, startDate, !context.plus_recorded && d.quote.plus === 50)
 }
+
+
+/** Retain the administrator's edits, but respect the refreshed season and fee exemption. */
+export function retainedAcademyReviewInput(context: AcademyRequestReviewContext, startDate: string, chargeEnrollment: boolean) {
+  const d = context.request.academy_details
+  const validDate = calendarDate.safeParse(startDate).success && startDate >= d.plan.season_start && startDate <= d.plan.season_end
+  return {
+    startDate: validDate ? startDate : d.start_date,
+    chargeEnrollment: chargeEnrollment && !context.fee_exempt && d.plan.enrollment_fee > 0,
+  }
+}

@@ -1,3 +1,10 @@
+## Recuperar una revisión desactualizada — 21 noviembre 2026
+
+- La revisión mantiene la protección de versión: nunca acepta automáticamente importes o identidades que hayan cambiado. Si la comprobación detecta una versión antigua, vuelve a consultar la ficha, conserva fecha/matrícula compatibles, muestra el resumen actualizado y pide pulsar de nuevo «Aceptar plaza y enviar bienvenida». Los fallos de actualización conservan los campos y ofrecen reintento; una solicitud ya cerrada bloquea otra aceptación. Se previene el doble clic.
+- Acción de actualización solo de lectura y exclusiva de administración. Sin migraciones ni cambios de flags Stripe. La aceptación existente sigue guardando la fecha y el desglose antes de preparar acceso/pago y enviar la bienvenida; actualizar la revisión no envía correo.
+- SQL con dos familias ficticias en una transacción revertida: rechazo de versión antigua sin bienvenida, actualización y aceptación el 1/2/2027 en efectivo con/sin matrícula, cuatro mensualidades febrero–mayo, una bienvenida en cola y recibos pendientes. Los 21 pagos existentes conservan `cf174b6b8ec293e4653b62107e341555` antes y después. No se han aceptado solicitudes reales ni llamado a Stripe/Auth/proveedor de correo.
+- Pruebas mock de permisos, revisión cerrada, recuperación de fecha/exenciones, doble clic y correo con fecha 1/2/2027 y 75 € sin matrícula. Navegador a 390 px con cambio concurrente simulado: el nuevo importe se muestra antes de aceptar, no se confirma automáticamente y una desconexión no pierde los cambios. No acredita una entrega real de correo; consultar Estado de correos después de la aceptación real.
+
 ## Desglose del Plus e instrucciones de efectivo — 21 noviembre 2026
 
 - La revisión muestra siempre «Plus anual»: solicitado/pago único, no solicitado o previamente registrado. El cálculo existente suma 50 € únicamente si fue elegido y no consta ya registrado; no se prorratea ni se repite en mensualidades posteriores. Casos verificados: 75 + 30 = 105 €, con Plus 155 €; sin matrícula y con Plus 125 €; alta al 25 % con matrícula y Plus 98,75 €.

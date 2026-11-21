@@ -75,7 +75,7 @@ export async function convertEnrollmentRequest(id: string, review?: AcademyReque
     const { data: childId, error } = structuredAcademy && parsedReview.success
         ? await supabase.rpc('accept_reviewed_academy_request', { request_uuid: parsedId.data, start_date_input: parsedReview.data.startDate, charge_enrollment_input: parsedReview.data.chargeEnrollment, revision_input: parsedReview.data.revision })
         : await supabase.rpc('convert_enrollment_request', { request_uuid: parsedId.data })
-    if (error) return { success: false, error: error.message }
+    if (error) return { success: false, error: error.message, reviewStale: error.message === 'La solicitud o la ficha ha cambiado. Recarga la revisión antes de aceptar' }
     let notice = ''
     if(request.service==='academy'&&request.academy_details) {
         const access=await onboardAcceptedFamily(childId,request.email)

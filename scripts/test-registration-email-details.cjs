@@ -51,6 +51,13 @@ function load(file) {
   result=await details('enrollment','test-request','reviewed')
   assert.match(result.message,/Trae 105,00\s€ el primer día de entrenamiento/);assert.match(result.message,/1 de febrero de 2027/);assert.match(result.message,/equipo confirme la entrega/);assert.equal(result.action,undefined)
   assert.doesNotMatch(result.message,/IBAN|transferencia|Activa tu suscripción|paga de forma segura en Stripe/)
+  a.quote={...a.quote,percent:100,remaining:[{due_date:'2027-03-01'}]}
+  a.accepted.enrollment_fee=0;rows.payments=rows.payments.filter(p=>p.concept_code!=='registration')
+  result=await details('enrollment','test-request','reviewed')
+  assert.match(result.message,/Incorporación: 2027-02-01/);assert.match(result.message,/Primera cuota: 75.00 € \(100 %\)/)
+  assert.match(result.message,/Matrícula: 0.00 € \(exenta\)/);assert.match(result.message,/Trae 75,00\s€ el primer día de entrenamiento/)
+  assert.doesNotMatch(result.message,/IBAN|transferencia|paga de forma segura en Stripe/)
+  a.accepted.enrollment_fee=30;rows.payments.splice(1,0,{amount:30,status:'pending',concept_code:'registration'})
   a.accepted.plus=50;rows.payments.push({amount:50,status:'pending',concept_code:'plus'})
   result=await details('enrollment','test-request','reviewed');assert.match(result.message,/Trae 155,00\s€/);assert.match(result.message,/Plus anual: 50.00/)
   rows.payments[0].manual_receipt_allocations=[{amount:20,voided_at:null}]
