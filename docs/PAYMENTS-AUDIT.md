@@ -589,3 +589,20 @@ Las menciones a “pendiente” en las secciones siguientes reflejan su fecha, n
 - Archivo público versionado `/email/bienvenida-academy-v1.gif`; SHA-256 `e1c935c49e338755e6556a242b47d2b93d0e953033434124ff9c6459fcdddeb7`, idéntico a la muestra aprobada. Logo original, sobre y pelota; 6 segundos, texto alternativo y tamaño adaptable.
 - La bienvenida mantiene el destinatario real, instrucciones del portal según estado de acceso, datos de plaza, importes, vencimientos y acciones de pago existentes. No cambia cuentas, pagos, activación Stripe ni envía de nuevo mensajes históricos.
 - Pruebas simuladas verifican el GIF en el payload de aceptación, ausencia en recepción y fallback, escape HTML, datos de acceso y de pago, exclusión de etiquetas de muestra e idempotencia del envío. TypeScript, lint y suites de notificaciones, acceso y correo de cobro correctos. Sin nuevos envíos a familias durante las pruebas.
+
+
+## 21/11/2026 — Completar solicitudes antiguas sin volver a registrar a la familia
+
+- Solicitudes de Academia sin plan: botón «Completar plan» en Solicitudes y en la lista anterior. Permite elegir plan, grupo y domingo cuando corresponda, incorporación, efectivo/tarjeta, matrícula y Plus opcional. Los datos, notas, consentimientos y fecha originales permanecen intactos.
+- Guardar prepara un borrador y abre la revisión existente; no acepta, crea jugador/tutor, genera recibos ni envía bienvenida. Karen puede volver a «Cambiar plan, grupos o pago» antes de aceptar. Los planes elegidos originalmente por familias y las solicitudes ya aceptadas no se pueden sobrescribir mediante este flujo.
+- Cálculo independiente en servidor/SQL, precios y horarios vigentes, edad/grupos, temporada, revisión concurrente y permisos de administrador. La aceptación posterior conserva la validación de plazas, duplicados y recibos existentes. Prorrateo por incorporación: 1–7 100 %, 8–15 75 %, 16–22 50 %, 23–fin 25 %. Matrícula y Plus son conceptos separados.
+- Migración aplicada: `20261121160648_complete_legacy_academy_request.sql`, funciones SECURITY INVOKER y comprobación explícita de administrador; sin permisos para anon/PUBLIC. Asesores antes/después sin avisos nuevos atribuibles al cambio; permanecen avisos históricos ajenos.
+- Pruebas: `test:request-completion`, `test:request-review`, `test:management`; fixture PostgreSQL local y `test-academy-request-completion-rollback.sql` contra esquema real con rol authenticated/RLS. Borrador sin movimientos, rechazo de precios manipulados, cambios concurrentes, edad/grupo/pago incorrecto; aceptación posterior con recibos y outbox esperado. Toda la fixture de base de datos se revierte con ROLLBACK. No se llamó a Stripe, Auth ni al proveedor de correo; no se afirma entrega real de email.
+- Comprobación visual con datos ficticios: plan de dos sesiones, grupo del domingo, efectivo, matrícula exenta y Plus: 140 + 0 + 50 = 190 €. Captura en `auditoria-2026-11-21/completar-plan-solicitud.jpg` del workspace del propietario. Ruta de muestra retirada antes de publicar.
+- Yassin permanece pendiente y sin plan asignado; la nueva pantalla permite a Karen introducir las condiciones acordadas. No se acepta ni envía un correo real en esta tarea. Baseline de pagos antes/después de pruebas: 21 registros, digest `cf174b6b8ec293e4653b62107e341555`. No se cambian flags Stripe ni pagos anteriores.
+
+## 21/11/2026 — Reutilización de fichas en solicitudes
+
+- Revisión y aceptación reutilizan tutores/jugadores coincidentes y bloquean identidades dudosas. Consolidados tres tutores duplicados inequívocos, con respaldo privado; caso pendiente de Karen conservado sin cambios.
+- Ver [auditoría de identidad y consolidación](ENROLLMENT-IDENTITY-AUDIT.md) para alcance, pruebas y recuperación. Ninguna solicitud real aceptada ni correo enviado en estas pruebas.
+- Pagos antes/después: 21 filas, digest `cf174b6b8ec293e4653b62107e341555`, sin cambios de Stripe.

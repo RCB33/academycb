@@ -12,12 +12,18 @@ export type AcademyRequestReviewContext = {
   child_id: string | null
   fee_exempt: boolean
   plus_recorded: boolean
+  identity?: {
+    guardian_id: string | null
+    child_id: string | null
+    match: 'existing_player' | 'existing_guardian' | 'new_family'
+  }
   request: {
     id: string; child_name: string; guardian_name: string; email: string; phone: string
     status: string; notes: string | null; created_at: string
     academy_details: {
       plan: AcademyPlan; groups: AcademyGroup[]; start_date: string; payment_choice: string
       quote: ReturnType<typeof academyQuote>
+      admin_completion?: { charge_enrollment: boolean }
     }
   }
 }

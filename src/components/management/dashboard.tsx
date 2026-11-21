@@ -710,7 +710,7 @@ export function RequestInbox({
                   href={r.href}
                   className="mt-2 inline-flex items-center gap-2 rounded-xl bg-navy px-4 py-2.5 text-xs font-bold text-white"
                 >
-                  {r.href.startsWith('/admin/solicitudes/academia/') ? "Revisar matrícula y fecha" : r.needsReview || r.proof ? "Revisar" : "Ver detalle"}
+                  {r.href.endsWith('/completar') ? "Completar plan" : r.href.startsWith('/admin/solicitudes/academia/') ? "Revisar matrícula y fecha" : r.needsReview || r.proof ? "Revisar" : "Ver detalle"}
                   <ArrowRight size={14} />
                 </Link>
               </div>

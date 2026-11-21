@@ -18,7 +18,7 @@ export function AcademyRequestReview({ context: initialContext }: { context: Aca
   const inFlight = useRef(false)
   const r = context.request, d = r.academy_details
   const [startDate, setStartDate] = useState(d.start_date)
-  const [chargeEnrollment, setChargeEnrollment] = useState(!context.fee_exempt && d.plan.enrollment_fee > 0)
+  const [chargeEnrollment, setChargeEnrollment] = useState(!context.fee_exempt && d.plan.enrollment_fee > 0 && (d.admin_completion?.charge_enrollment ?? true))
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [accepted, setAccepted] = useState(false), [notice, setNotice] = useState('')
   let quote: ReturnType<typeof reviewedAcademyQuote> | null = null
   try { quote = reviewedAcademyQuote(context, startDate, chargeEnrollment) } catch { /* Invalid or incomplete date: keep acceptance disabled. */ }
@@ -80,8 +80,22 @@ export function AcademyRequestReview({ context: initialContext }: { context: Aca
       <Link href="/admin/solicitudes" className="mt-5 inline-flex rounded-xl bg-navy px-5 py-3 font-bold text-white">Volver a solicitudes</Link>
     </section> : <div className="grid items-start gap-6 lg:grid-cols-[1.1fr_1fr]">
       <div className="space-y-5">
+        <section className={`${card} border-emerald-200`}>
+          <h2 className="flex items-center gap-2 font-bold text-navy"><ShieldCheck size={18} /> Comprobación de fichas</h2>
+          <p className="mt-3 text-sm text-slate-600">{context.child_id
+            ? 'Este jugador ya existe. Se reutilizarán su ficha y su vínculo familiar, conservando su historial.'
+            : context.identity?.guardian_id
+              ? 'El tutor ya existe. Se conservará su cuenta y se añadirá únicamente la ficha del nuevo jugador.'
+              : 'No hay una ficha coincidente. Se crearán las fichas de esta familia al aceptar.'}</p>
+          <div className="mt-3 flex flex-wrap gap-4 text-sm font-semibold text-navy">
+            {context.child_id && <Link className="underline" href={`/admin/crm/alumnos/${context.child_id}`}>Ver ficha del jugador</Link>}
+            {context.identity?.guardian_id && <Link className="underline" href="/admin/crm/tutores">Revisar tutor existente</Link>}
+          </div>
+          <p className="mt-3 text-xs text-slate-500">Los datos se vuelven a comprobar al aceptar. Una coincidencia dudosa bloquea el alta para revisarla antes de crear otra ficha.</p>
+        </section>
         <section className={card}>
           <h2 className="font-bold text-navy">La plaza solicitada</h2>
+          {d.admin_completion && <Link href={`/admin/solicitudes/academia/${r.id}/completar`} className="mt-2 inline-flex text-sm font-semibold text-navy underline">Cambiar plan, grupos o pago</Link>}
           <p className="mt-3 text-sm font-semibold">{d.plan.name}</p>
           {d.groups.map(g => <p key={g.id} className="mt-2 text-sm text-slate-600">{g.name} · {g.public_offer.day} · {g.schedule}</p>)}
           <p className="mt-3 text-sm text-slate-600">Pago: <strong>{d.payment_choice === 'monthly_card' ? 'Tarjeta · Stripe' : d.payment_choice === 'cash' ? 'Efectivo' : d.payment_choice}</strong></p>
