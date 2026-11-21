@@ -5,7 +5,7 @@ import { createRecoveryClient } from '@/lib/supabase/recovery-client'
 import { createClient } from '@/lib/supabase/server'
 import { openPasswordSetup, sealPasswordSetup, setupCookie, setupLifetime } from '@/lib/auth/password-setup'
 import { getRoleHome, isAppRole } from '@/lib/roles'
-import { billingReturnPath } from '@/lib/billing-request'
+import { portalReturnPath } from '@/lib/portal-return'
 
 export const runtime = 'nodejs'
 const verifySchema = z.object({ action: z.literal('verify'), email: z.string().trim().email().max(254), token: z.string().regex(/^\d{6,10}$/), type: z.enum(['invite', 'recovery']) })
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
             if(loginError||!login.user) operationalLog('auth.auto_login_failed',{source:'portal'})
             if (!loginError && login.user) {
                 const { data: profile } = await browserClient.from('profiles').select('role').eq('id', login.user.id).maybeSingle()
-                next = (profile?.role === 'guardian' && billingReturnPath(password.data.next || null)) || getRoleHome(isAppRole(profile?.role) ? profile.role : null)
+                next = (profile?.role === 'guardian' && portalReturnPath(password.data.next || null)) || getRoleHome(isAppRole(profile?.role) ? profile.role : null)
             }
         } catch { operationalLog('auth.auto_login_failed',{source:'portal'}) }
         const response = reply({ success: true, next })

@@ -15,7 +15,7 @@ import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 import { getRoleHome, isAppRole } from '@/lib/roles'
 import { PortalEntryLoading } from '@/components/portal/portal-entry-loading'
-import { billingReturnPath } from '@/lib/billing-request'
+import { portalReturnPath } from '@/lib/portal-return'
 
 export function LoginForm() {
     const translate = useT()
@@ -90,7 +90,7 @@ export function LoginForm() {
 
                 router.refresh()
 
-                const next=profile?.role==='guardian'?billingReturnPath(new URLSearchParams(window.location.search).get('next')):null
+                const next=profile?.role==='guardian'?portalReturnPath(new URLSearchParams(window.location.search).get('next')):null
                 router.push(next||getRoleHome(isAppRole(profile?.role) ? profile.role : null))
             }
         } catch {
@@ -120,7 +120,7 @@ export function LoginForm() {
 
         try { sessionStorage.setItem('academy-access-email', normalizedEmail) } catch {}
         toast.success(codeText.sent)
-        const next = billingReturnPath(new URLSearchParams(window.location.search).get('next'))
+        const next = portalReturnPath(new URLSearchParams(window.location.search).get('next'))
         router.push('/portal/codigo?type=recovery' + (next ? '&next=' + encodeURIComponent(next) : ''))
         } catch { toast.error(codeText.failed) }
         finally { setResettingPassword(false) }
