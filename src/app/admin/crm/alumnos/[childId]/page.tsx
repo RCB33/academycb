@@ -305,7 +305,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
                         </Button>
                     </Link>
                     <div>
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
                             <h1 className="text-3xl font-black tracking-tight text-slate-900">{student.full_name}</h1>
                             <Badge className="bg-slate-900 hover:bg-slate-800 text-white border-none px-3 py-1">{student.category?.name || '---'}</Badge>
                         </div>
@@ -316,7 +316,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
                         </p>
                     </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                     <EditStudentDialog
                         student={student}
                         guardian={primaryGuardian}
