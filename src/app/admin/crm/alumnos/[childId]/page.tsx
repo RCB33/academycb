@@ -1,5 +1,7 @@
 'use client'
 
+import { playerPaymentSummary } from '@/lib/player-payment-summary'
+
 import { isAcceptedTournamentRegistration } from '@/lib/christmas-tournaments'
 
 import { PlayerProfileDetails } from '@/components/portal/player-profile-details'
@@ -58,7 +60,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
     const [documents, setDocuments] = useState<any[]>([])
     const [categories, setCategories] = useState<any[]>([])
     const [achievements, setAchievements] = useState<any[]>([])
-    const [paymentsData, setPaymentsData] = useState<{ memberships: any[], payments: any[] }>({ memberships: [], payments: [] })
+    const [paymentsData, setPaymentsData] = useState<{ memberships: any[], payments: any[], error?: string }>({ memberships: [], payments: [] })
     const [plans, setPlans] = useState<any[]>([])
     const [assignmentTeams,setAssignmentTeams]=useState<import('@/lib/family-plan').AssignmentTeam[]>([])
     const [activeTab,setActiveTab]=useState('overview')
@@ -291,6 +293,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
 
     if (!student) return <div className="p-8 text-center text-red-500 font-bold">Alumno no encontrado</div>
 
+    const paymentSummary = playerPaymentSummary(paymentsData.payments, paymentsData.error)
     const primaryGuardian = student.guardians?.find((g: any) => g.is_primary)?.guardian
     const ovr = metrics ? Math.round((metrics.pace + metrics.shooting + metrics.passing + metrics.dribbling + metrics.defending + metrics.physical) / 6) : 0
 
@@ -435,11 +438,11 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
                 <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-widest text-amber-800">Ficha única del jugador</p><h2 className="mt-2 text-lg font-bold text-navy">Familia, actividades y pagos</h2><p className="mt-2 text-sm text-slate-600">Revisa el tutor y elige la actividad. La inscripción y el ingreso se gestionan por separado.</p></div><Link href="/admin/solicitudes" className="rounded-xl border bg-white px-4 py-2 text-xs font-bold">Solicitudes de familias →</Link></div>
                 <div className="mt-4 flex flex-wrap gap-2"><FamilyPlanAssignment childId={childId} childName={student.full_name} plans={plans} teams={assignmentTeams} defaultTeamId={student.team_id||''} onComplete={fetchStudentData}/><Link href={`/admin/finanzas/solicitudes?child_id=${childId}`} className="inline-flex items-center gap-2 rounded-xl bg-gold px-4 py-3 text-sm font-bold text-navy"><Mail className="h-4 w-4" />Enviar enlace de pago</Link><button onClick={()=>{setActiveTab('finance');document.getElementById('player-tabs')?.scrollIntoView({behavior:'smooth'})}} className="rounded-xl bg-navy px-4 py-3 text-sm font-bold text-white">Ver pagos</button><Link href={`/admin/campus?child=${childId}`} className="rounded-xl border bg-white px-4 py-3 text-sm font-bold text-navy">Campus · inscribir</Link><Link href="/admin/torneos" className="rounded-xl border bg-white px-4 py-3 text-sm font-bold text-navy">Torneos · equipos</Link></div>
             </section>
-            <PlayerPaymentMethods childId={childId} memberships={paymentsData.memberships} payments={paymentsData.payments} onSaved={()=>void fetchStudentData()} activities={[
+            {paymentsData.error ? <p role="alert" className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">{paymentsData.error}</p> : <PlayerPaymentMethods childId={childId} memberships={paymentsData.memberships} payments={paymentsData.payments} onSaved={()=>void fetchStudentData()} activities={[
                 ...(student.campus_enrollments||[]).filter((a:any)=>!['cancelled','rejected'].includes(a.status)).map((a:any)=>({id:a.id,name:a.campus?.name||'Campus',branch:'Campus',status:a.status})),
                 ...(student.tournament_players||[]).filter((a:any)=>!['cancelled','rejected'].includes(a.status)).map((a:any)=>({id:a.id,name:a.tournament?.title||'Torneo',branch:'Torneo',status:a.status})),
                 ...(student.event_registrations||[]).filter((a:any)=>!['cancelled','rejected','requested'].includes(a.status)).map((a:any)=>({id:a.id,name:a.campaign,branch:'Torneos',status:a.status})),
-            ]}/>
+            ]}/>}
             <PlayerProfileDetails key={childId} player={student} editable onSaved={()=>void fetchStudentData()} />
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -705,22 +708,15 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
 
                                 <Card className="border-none shadow-md overflow-hidden bg-white">
                                     <CardHeader className="pb-2 border-b border-slate-50">
-                                        <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-500">Estado de Pagos</CardTitle>
+                                        <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-500">Estado de recibos</CardTitle>
                                     </CardHeader>
                                     <CardContent className="pt-6 flex items-center justify-between">
                                         <div>
-                                            <div className={`text-3xl font-black uppercase ${paymentsData.payments.some((payment: any) => payment.status === 'pending' || payment.status === 'overdue') ? 'text-amber-600' : 'text-green-600'}`}>
-                                                {paymentsData.payments.length === 0
-                                                    ? 'Sin movimientos'
-                                                    : paymentsData.payments.some((payment: any) => payment.status === 'pending' || payment.status === 'overdue')
-                                                        ? 'Pendiente'
-                                                        : 'Al día'}
+                                            <div className={`text-2xl font-black ${paymentSummary.tone === 'pending' ? 'text-amber-700' : paymentSummary.tone === 'paid' ? 'text-green-700' : 'text-slate-600'}`}>
+                                                {paymentSummary.label}
                                             </div>
-                                            <p className="text-xs text-slate-500 font-bold mt-1">
-                                                {paymentsData.payments.length === 0
-                                                    ? 'Todavía no hay pagos registrados.'
-                                                    : `${paymentsData.payments.filter((payment: any) => payment.status === 'paid').length} de ${paymentsData.payments.length} pagos completados`}
-                                            </p>
+                                            <p className="mt-2 text-sm text-slate-600">{paymentSummary.detail}</p>
+                                            <p className="mt-2 text-xs text-slate-500">Solo refleja los recibos creados. No confirma cuotas que todavía no se hayan emitido.</p>
                                         </div>
                                         <Wallet className="h-12 w-12 text-slate-200" />
                                     </CardContent>

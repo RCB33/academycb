@@ -6,7 +6,7 @@ export async function getStudentPayments(childId: string) {
     const { supabase } = await requireFinanceAccess()
 
     // Fetch Memberships (Cuotas / Suscripciones)
-    const { data: memberships } = await supabase
+    const { data: memberships, error: membershipsError } = await supabase
         .from('academy_memberships')
         .select(`
             *,
@@ -16,7 +16,7 @@ export async function getStudentPayments(childId: string) {
         .order('start_date', { ascending: false })
 
     // Fetch individual payments from payments table
-    const { data: paymentRecords } = await supabase
+    const { data: paymentRecords, error: paymentsError } = await supabase
         .from('payments')
         .select('*, manual_receipt_allocations(id,batch_id,amount,paid_date,method,voided_at)')
         .eq('child_id', childId)
@@ -24,6 +24,7 @@ export async function getStudentPayments(childId: string) {
 
     return {
         memberships: memberships || [],
-        payments: paymentRecords || []
+        payments: paymentRecords || [],
+        error: membershipsError || paymentsError ? 'No se pudieron consultar todos los recibos y cuotas. Recarga la ficha para revisar los pagos.' : undefined
     }
 }
