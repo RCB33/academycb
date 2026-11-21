@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowRight, MessageSquare } from "lucide-react";
 import { getAdminWorkspace } from "@/lib/admin-workspace";
 import { RequestInbox } from "@/components/management/dashboard";
 export default async function Requests({
@@ -10,7 +11,7 @@ export default async function Requests({
     filter = (await searchParams).filter;
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-4">
+      <header className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-widest text-amber-700">
             Academia · Campus · Torneos
@@ -24,9 +25,11 @@ export default async function Requests({
         </div>
         <Link
           href="/admin/leads"
-          className="rounded-xl border bg-white px-4 py-3 text-xs font-semibold"
+          className="inline-flex min-h-12 w-full items-center justify-center gap-3 rounded-xl bg-gold px-6 py-3 text-base font-bold text-navy shadow-sm transition-colors hover:bg-gold/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy focus-visible:ring-offset-2 lg:w-auto"
         >
-          Contactos y consultas comerciales →
+          <MessageSquare className="h-5 w-5 shrink-0" aria-hidden="true" />
+          Consultas comerciales
+          <ArrowRight className="h-5 w-5 shrink-0" aria-hidden="true" />
         </Link>
       </header>
       <RequestInbox
