@@ -1,13 +1,14 @@
 import { getPortalViewer } from '@/lib/admin-view'
 
-import { getT } from '@/lib/i18n/server'
+import { MonthlyCardOption, monthlyCardRequests } from '@/components/portal/monthly-card-option'
+import { getLocale, getT } from '@/lib/i18n/server'
 import { Receipt, Calendar, CreditCard, ShoppingBag, GraduationCap, Tent, Trophy as TrophyIcon } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { redirect } from 'next/navigation'
 import { PortalPageHeader } from '@/components/portal/portal-page-header'
 import { receiptBalance } from '@/lib/receipt-balance'
 import { FamilyPlanSummary, type FamilyMembership, type FamilyPayment } from '@/components/family-plan-summary'
-import { stripeCheckoutMode } from '@/lib/stripe-availability'
+import { stripeCheckoutMode, stripeSalesConfigured } from '@/lib/stripe-availability'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { ConfirmationRefresh } from '@/app/admin/stripe/confirmation-refresh'
 import { CancelCheckout } from './cancel-checkout'
@@ -22,6 +23,7 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
 
     if (!user) redirect('/portal')
     const checkoutMode = await stripeCheckoutMode()
+    const paymentMode = checkoutMode || stripeSalesConfigured()
     let billingQuery = supabase.from('billing_requests').select('*,billing_request_items(*)')
     if (view) billingQuery = billingQuery.eq('guardian_id',view.selectedId)
     const { data: billingRequests, error: billingError } = await billingQuery.in('state',['ready','processing','active','cancelling']).order('created_at',{ascending:false})
@@ -37,7 +39,11 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
 
     const childIds = [...new Set(guardians?.flatMap(g => g.child_guardians?.map((cg: any) => cg.child_id) || []) || [])]
     const { data: memberships } = childIds.length ? await supabase.from('academy_memberships').select('id,child_id,plan_snapshot,plan:membership_plans(name,is_active,full_payment_enabled,full_payment_price,monthly_payment_enabled,monthly_payment_price,duration_months,enrollment_fee)').in('child_id', childIds).eq('status','active') : { data: [] }
-    const { data: contracts } = await supabase.from('academy_checkout_contracts').select('id,membership_id,state,mode,choice,months,unit_cents,fee_cents,total_cents,billing_status,academy_contract_collections(id,amount_cents)').eq('owner_id',user.id).eq('mode',checkoutMode || 'test').not('state','in','(expired,cancelled)')
+    const { data: contracts, error: contractsError } = await supabase.from('academy_checkout_contracts').select('id,membership_id,state,mode,choice,months,unit_cents,fee_cents,total_cents,billing_status,academy_contract_collections(id,amount_cents)').eq('owner_id',user.id).eq('mode',paymentMode || 'live').not('state','in','(expired,cancelled)')
+    if (contractsError) throw new Error('No se pudo consultar el estado del pago con tarjeta')
+    const monthlyEnabled = Boolean(checkoutMode && (checkoutMode === 'test' || process.env.STRIPE_RECURRING_PAYMENTS_ENABLED === 'true'))
+    const monthlyRequestIds = new Set(monthlyCardRequests((billingRequests || []) as BillingRequest[], paymentMode).map(request => request.id))
+    const otherBillingRequests = (billingRequests || []).filter(request => !monthlyRequestIds.has(request.id))
     const returnedContract = contracts?.find(c=>c.id===params.contract)
     const [familyChildren, familyMemberships] = childIds.length ? await Promise.all([
         supabase.from('children').select('id,full_name').in('id',childIds),
@@ -125,21 +131,25 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
     return (
         <div className="space-y-6">
             <PortalPageHeader icon={<Receipt className="h-6 w-6" />} title={translate("Pagos")} description={translate("Consulta cuotas, inscripciones y compras asociadas a tu familia.")} />
+            <MonthlyCardOption requests={(billingRequests || []) as BillingRequest[]} mode={paymentMode} enabled={monthlyEnabled}
+                // Expiry is evaluated for this authenticated request, not during a static build.
+                // eslint-disable-next-line react-hooks/purity
+                now={Date.now()} locale={await getLocale()} viewOnly={Boolean(view)} legacyInProgress={Boolean(contracts?.some(contract => contract.choice === 'monthly' && ['creating', 'open', 'active'].includes(contract.state)))} />
             <FamilyPlanSummary students={familyChildren.data||[]} memberships={familyMemberships.data as unknown as FamilyMembership[]} payments={academyPayments as FamilyPayment[]} />
-            {!!billingRequests?.length&&<section className="space-y-3"><h2 className="text-xl font-bold">Solicitudes de administración</h2>{(billingRequests as BillingRequest[]).map(r=><article key={r.id} className="space-y-2 rounded-xl border bg-white p-4"><h3 className="font-semibold">{r.title}</h3><p className="text-sm">{billingSummary(r)}</p><p className="text-sm">{billingLabels[r.state]||r.state}{r.mode==='test'?' · Solo pruebas':''}</p><Link className="inline-block font-semibold text-blue-700 underline" href={'/portal/pagos/solicitud/'+r.id}>Revisar solicitud</Link></article>)}</section>}
+            {!!otherBillingRequests.length&&<section className="space-y-3"><h2 className="text-xl font-bold">Solicitudes de administración</h2>{(otherBillingRequests as BillingRequest[]).map(r=><article key={r.id} className="space-y-2 rounded-xl border bg-white p-4"><h3 className="font-semibold">{r.title}</h3><p className="text-sm">{billingSummary(r)}</p><p className="text-sm">{billingLabels[r.state]||r.state}{r.mode==='test'?' · Solo pruebas':''}</p><Link className="inline-block font-semibold text-blue-700 underline" href={'/portal/pagos/solicitud/'+r.id}>Revisar solicitud</Link></article>)}</section>}
             {translate(checkoutMode === 'test' && <div className="rounded-xl border border-gold/40 bg-gold/10 p-4 text-sm"><strong>{translate("Entorno de pruebas.")}</strong> {translate(" Usa únicamente tarjetas de prueba de Stripe. No se cobra dinero ni se modifican los recibos reales.")}</div>)}
             {translate(returnedAttempt?.state === 'paid' && <p role="status" className="rounded-xl bg-green-50 p-4 text-green-800">{translate(returnedAttempt.mode === 'test' ? 'Prueba confirmada correctamente. Tu recibo real sigue sin cambios.' : 'Pago confirmado. El recibo se ha actualizado correctamente.')}</p>)}
             {translate(returnedAttempt && <ConfirmationRefresh pending={['creating','open'].includes(returnedAttempt.state) && !params.cancelled} />)}
             {translate(params.cancelled && <p className="rounded-xl border p-4 text-sm">{translate("Has vuelto sin finalizar el pago. No se ha marcado como abonado por regresar a esta página.")}</p>)}
             {translate(returnedContract && <><p role="status" className="rounded-xl border p-4 text-sm">{translate(returnedContract.state === 'completed' ? 'Contrato pagado por completo.' : returnedContract.state === 'active' ? 'Mensualidades activadas. Los cobros terminarán automáticamente al finalizar el periodo contratado.' : 'Estamos confirmando tu contrato con Stripe.')}{translate(checkoutMode === 'test' ? ' Simulación: no se ha cobrado dinero real.' : '')}</p><ConfirmationRefresh pending={['creating','open'].includes(returnedContract.state) && !params.cancelled} /></>)}
-            {translate(checkoutMode && (memberships || []).map((m: any)=>{
+            {translate(contracts?.length && (memberships || []).map((m: any)=>{
                 const plan = m.plan
                 if(m.plan_snapshot?.offering?.family_batch_id) return <section key={m.id} className="rounded-2xl border bg-amber-50 p-5 text-sm">Esta plaza forma parte de un pago familiar conjunto. Revisa el enlace familiar cuando estén resueltas las plazas de los hermanos; no contrates una suscripción individual.</section>
                 const contract = contracts?.find(c=>c.membership_id===m.id)
                 if(contract) return <section key={m.id} className="space-y-3 rounded-2xl border bg-white p-5">
                     <h2 className="font-bold text-navy">{translate(plan?.name || 'Academia')} {translate(" · Plan de pago")}</h2>
                     <p>{translate(contract.choice === 'monthly' ? `${contract.months} mensualidades de ${(Number(contract.unit_cents)/100).toFixed(2)} €` : 'Pago completo')} {translate(" · Total ")}{translate((Number(contract.total_cents)/100).toFixed(2))} {translate(" €")}</p>
-                    <p className="text-sm text-slate-600">{translate(({creating:'Preparando',open:'Pendiente de autorización',active:'Activado',completed:'Pagado por completo'} as Record<string,string>)[contract.state] || contract.state)}{translate(checkoutMode === 'test' ? ' · Solo pruebas' : '')}</p>
+                    <p className="text-sm text-slate-600">{translate(({creating:'Preparando',open:'Pendiente de autorización',active:'Activado',completed:'Pagado por completo'} as Record<string,string>)[contract.state] || contract.state)}{translate(contract.mode === 'test' ? ' · Solo pruebas' : '')}</p>
                     <p className="text-sm">{translate("Cobros confirmados: ")}{translate(contract.academy_contract_collections?.length || 0)} {translate(" de ")}{translate(contract.choice==='monthly' ? contract.months : 1)}{translate(".")}</p>
                     {translate(contract.billing_status==='attention' && <p role="alert" className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{translate("Hay una cuota pendiente o una autorización bancaria por completar. Contacta con Academy para revisar el pago. No contrates otro plan.")}</p>)}
                     {translate(contract.billing_status==='ended' && <p className="text-sm">{translate("La programación de cobros ha finalizado.")}{translate(contract.state!=='completed' ? ' Quedan importes por revisar con Academy.' : '')}</p>)}
