@@ -5,6 +5,7 @@ import { LanguageSwitcher, useT } from '@/lib/i18n/client'
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
+import { PortalNavigationIcon } from './navigation-icon'
 import { Home, Calendar as CalendarIcon, ChevronLeft, ChevronRight, ChevronUp, FileText, User, Download, ShoppingBag, Video, Store, MessageSquare, Heart, Trophy, X, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NotificationBell } from '@/components/ui/notification-bell'
@@ -46,7 +47,7 @@ export function SidebarNav({ collapsed = false }: { collapsed?: boolean }) {
                 const active = isCurrent(pathname, item.href)
                 const Icon = item.icon
 
-                return <Link key={item.href} href={item.href} title={translate(item.label)} aria-current={active ? 'page' : undefined} className={cn('flex min-h-11 items-center rounded-xl text-sm font-semibold transition-all', collapsed ? 'justify-center px-2' : 'gap-3 px-3', active ? 'bg-gold text-navy shadow-md shadow-black/15' : 'text-slate-300 hover:bg-white/10 hover:text-white')}><Icon className="h-[18px] w-[18px] shrink-0" />{translate(!collapsed && <span className="truncate">{translate(item.label)}</span>)}</Link>
+                return <Link key={item.href} href={item.href} title={translate(item.label)} aria-current={active ? 'page' : undefined} className={cn('flex min-h-11 items-center rounded-xl text-sm font-semibold transition-all', collapsed ? 'justify-center px-2' : 'gap-3 px-3', active ? 'bg-gold text-navy shadow-md shadow-black/15' : 'text-slate-300 hover:bg-white/10 hover:text-white')}><PortalNavigationIcon icon={Icon} label={item.label} className="h-[18px] w-[18px] shrink-0" />{translate(!collapsed && <span className="truncate">{translate(item.label)}</span>)}</Link>
             }))}
         </nav>
     )
@@ -120,7 +121,7 @@ export function MobilePortalNav() {
                 {translate(MOBILE_MORE_ITEMS.map((item) => {
                     const active = isCurrent(pathname, item.href)
                     const Icon = item.icon
-                    return <Link key={item.href} href={item.href} onClick={() => setMoreOpen(false)} aria-current={active ? 'page' : undefined} className={cn('flex min-h-20 min-w-0 flex-col items-start gap-2 rounded-2xl sm:flex-row sm:items-center sm:gap-3 border p-3 text-left transition active:scale-[0.98]', active ? 'border-gold bg-gold/10 text-navy shadow-sm' : 'border-slate-200 bg-white text-navy')}><span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-xl', active ? 'bg-gold text-navy' : 'bg-navy/7 text-navy')}><Icon className="h-5 w-5" /></span><span className="min-w-0 break-words text-sm font-bold leading-tight">{translate(item.label.replace('Mi ', ''))}</span></Link>
+                    return <Link key={item.href} href={item.href} onClick={() => { if (pathname === item.href) setMoreOpen(false) }} aria-current={active ? 'page' : undefined} className={cn('touch-manipulation flex min-h-20 min-w-0 flex-col items-start gap-2 rounded-2xl sm:flex-row sm:items-center sm:gap-3 border p-3 text-left transition active:scale-[0.98]', active ? 'border-gold bg-gold/10 text-navy shadow-sm' : 'border-slate-200 bg-white text-navy')}><span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-xl', active ? 'bg-gold text-navy' : 'bg-navy/7 text-navy')}><PortalNavigationIcon icon={Icon} label={item.label} className="h-5 w-5" /></span><span className="min-w-0 break-words text-sm font-bold leading-tight">{translate(item.label.replace('Mi ', ''))}</span></Link>
                 }))}
             </nav>
         </section>)}
@@ -130,9 +131,9 @@ export function MobilePortalNav() {
                 {translate(MOBILE_PRIMARY_ITEMS.map((item) => {
                     const active = isCurrent(pathname, item.href)
                     const Icon = item.icon
-                    return <Link key={item.href} href={item.href} aria-current={active ? 'page' : undefined} className={cn('relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-bold transition active:scale-95', active ? 'text-navy' : 'text-slate-500')}><span className={cn('flex h-8 w-11 items-center justify-center rounded-xl transition', active && 'bg-gold text-navy shadow-sm')}><Icon className="h-[18px] w-[18px]" /></span><span className="truncate">{translate(item.label.replace('Mi ', ''))}</span></Link>
+                    return <Link key={item.href} href={item.href} aria-current={active ? 'page' : undefined} className={cn('touch-manipulation relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-bold transition active:scale-95', active ? 'text-navy' : 'text-slate-500')}><span className={cn('flex h-8 w-11 items-center justify-center rounded-xl transition', active && 'bg-gold text-navy shadow-sm')}><PortalNavigationIcon icon={Icon} label={item.label} className="h-[18px] w-[18px]" /></span><span className="truncate">{translate(item.label.replace('Mi ', ''))}</span></Link>
                 }))}
-                <button type="button" onClick={() => setMoreOpen(true)} aria-expanded={moreOpen} className={cn('relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-bold transition active:scale-95', moreIsActive || moreOpen ? 'text-navy' : 'text-slate-500')}><span className={cn('flex h-8 w-11 items-center justify-center rounded-xl transition', (moreIsActive || moreOpen) && 'bg-gold text-navy shadow-sm')}><ChevronUp className="h-[19px] w-[19px]" /></span><span>{translate("Más")}</span></button>
+                <button type="button" onClick={() => setMoreOpen(true)} aria-expanded={moreOpen} className={cn('touch-manipulation relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-bold transition active:scale-95', moreIsActive || moreOpen ? 'text-navy' : 'text-slate-500')}><span className={cn('flex h-8 w-11 items-center justify-center rounded-xl transition', (moreIsActive || moreOpen) && 'bg-gold text-navy shadow-sm')}><ChevronUp className="h-[19px] w-[19px]" /></span><span>{translate("Más")}</span></button>
             </div>
         </nav>
     </>

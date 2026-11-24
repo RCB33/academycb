@@ -1696,5 +1696,11 @@
   "Vista de consulta: la autorización debe hacerla la familia desde su cuenta.": "Read-only view: the family must authorize payments from their own account.",
   "Solicitar activación por WhatsApp": "Request activation via WhatsApp",
   "La tarjeta se introduce en Stripe. Cada recibo se marcará pagado solo cuando se confirme el cobro. Puedes seguir pagando en efectivo si lo prefieres.": "Card details are entered in Stripe. Each receipt is marked paid only after the charge is confirmed. You can continue paying in cash if you prefer.",
-  "Hola, quiero activar el pago mensual de Academia con tarjeta. ¿Podéis revisar mis cuotas y preparar la autorización en el portal?": "Hello, I would like to activate monthly Academy card payments. Could you review my fees and prepare the authorization in the portal?"
+  "Hola, quiero activar el pago mensual de Academia con tarjeta. ¿Podéis revisar mis cuotas y preparar la autorización en el portal?": "Hello, I would like to activate monthly Academy card payments. Could you review my fees and prepare the authorization in the portal?",
+  "Abriendo": "Opening",
+  "Cargando sección…": "Loading section…",
+  "Puedes seguir usando el menú mientras carga.": "You can keep using the menu while it loads.",
+  "No hemos podido cargar esta sección": "We couldn’t load this section",
+  "Comprueba tu conexión y vuelve a intentarlo. También puedes abrir otra sección desde el menú.": "Check your connection and try again. You can also open another section from the menu.",
+  "Volver a intentar": "Try again"
 }

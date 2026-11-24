@@ -1696,5 +1696,11 @@
   "Vista de consulta: la autorización debe hacerla la familia desde su cuenta.": "Vista de consulta: la família ha de fer l’autorització des del seu compte.",
   "Solicitar activación por WhatsApp": "Demanar l’activació per WhatsApp",
   "La tarjeta se introduce en Stripe. Cada recibo se marcará pagado solo cuando se confirme el cobro. Puedes seguir pagando en efectivo si lo prefieres.": "La targeta s’introdueix a Stripe. Cada rebut es marcarà com a pagat només quan es confirmi el cobrament. Pots continuar pagant en efectiu si ho prefereixes.",
-  "Hola, quiero activar el pago mensual de Academia con tarjeta. ¿Podéis revisar mis cuotas y preparar la autorización en el portal?": "Hola, vull activar el pagament mensual d’Acadèmia amb targeta. Podeu revisar les meves quotes i preparar l’autorització al portal?"
+  "Hola, quiero activar el pago mensual de Academia con tarjeta. ¿Podéis revisar mis cuotas y preparar la autorización en el portal?": "Hola, vull activar el pagament mensual d’Acadèmia amb targeta. Podeu revisar les meves quotes i preparar l’autorització al portal?",
+  "Abriendo": "Obrint",
+  "Cargando sección…": "Carregant la secció…",
+  "Puedes seguir usando el menú mientras carga.": "Pots continuar fent servir el menú mentre es carrega.",
+  "No hemos podido cargar esta sección": "No hem pogut carregar aquesta secció",
+  "Comprueba tu conexión y vuelve a intentarlo. También puedes abrir otra sección desde el menú.": "Comprova la connexió i torna-ho a provar. També pots obrir una altra secció des del menú.",
+  "Volver a intentar": "Tornar-ho a provar"
 }

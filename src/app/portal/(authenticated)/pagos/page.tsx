@@ -22,56 +22,48 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
     const { supabase, user, view } = await getPortalViewer()
 
     if (!user) redirect('/portal')
-    const checkoutMode = await stripeCheckoutMode()
-    const paymentMode = checkoutMode || stripeSalesConfigured()
+    // Independent reads run together; ownership filters and payment calculations
+    // are unchanged. Nothing here writes receipts or contacts Stripe.
     let billingQuery = supabase.from('billing_requests').select('*,billing_request_items(*)')
     if (view) billingQuery = billingQuery.eq('guardian_id',view.selectedId)
-    const { data: billingRequests, error: billingError } = await billingQuery.in('state',['ready','processing','active','cancelling']).order('created_at',{ascending:false})
-    if(billingError)throw new Error('No se pudieron cargar las solicitudes de cobro')
-    const { data: attempts } = await supabase.from('receipt_checkout_attempts').select('id,payment_id,state,mode').eq('owner_id', user.id).order('created_at', { ascending: false }).limit(100)
-    const returnedAttempt = attempts?.find(a => a.id === params.attempt)
-
-    // 1. Get guardian and children ids
-    const { data: guardians } = await supabase
-        .from('guardians')
-        .select('id, child_guardians(child_id)')
-        .eq('user_id', user.id)
-
+    const [checkoutMode, billingResult, attemptsResult, guardiansResult, ordersResult] = await Promise.all([
+        stripeCheckoutMode(),
+        billingQuery.in('state',['ready','processing','active','cancelling']).order('created_at',{ascending:false}),
+        supabase.from('receipt_checkout_attempts').select('id,payment_id,state,mode').eq('owner_id', user.id).order('created_at', { ascending: false }).limit(100),
+        supabase.from('guardians').select('id, child_guardians(child_id)').eq('user_id', user.id),
+        user.email_confirmed_at && user.email ? createAdminClient().from('orders').select('*, order_items (*)').eq('customer_email', user.email.trim().toLowerCase()) : Promise.resolve({ data: [] }),
+    ])
+    const paymentMode = checkoutMode || stripeSalesConfigured()
+    const { data: billingRequests, error: billingError } = billingResult
+    if (billingError) throw new Error('No se pudieron cargar las solicitudes de cobro')
+    const { data: attempts } = attemptsResult
+    const { data: guardians } = guardiansResult
+    const { data: orders } = ordersResult
     const childIds = [...new Set(guardians?.flatMap(g => g.child_guardians?.map((cg: any) => cg.child_id) || []) || [])]
-    const { data: memberships } = childIds.length ? await supabase.from('academy_memberships').select('id,child_id,plan_snapshot,plan:membership_plans(name,is_active,full_payment_enabled,full_payment_price,monthly_payment_enabled,monthly_payment_price,duration_months,enrollment_fee)').in('child_id', childIds).eq('status','active') : { data: [] }
-    const { data: contracts, error: contractsError } = await supabase.from('academy_checkout_contracts').select('id,membership_id,state,mode,choice,months,unit_cents,fee_cents,total_cents,billing_status,academy_contract_collections(id,amount_cents)').eq('owner_id',user.id).eq('mode',paymentMode || 'live').not('state','in','(expired,cancelled)')
+    const orderIds = (orders || []).map(o => o.id)
+
+    // Children only come from this guardian; shop receipts only from orders
+    // matched to the verified Auth email. Do not replace these with global reads.
+    const [membershipsResult, contractsResult, familyChildren, familyMemberships, paymentsResult, orderReceiptsResult] = await Promise.all([
+        childIds.length ? supabase.from('academy_memberships').select('id,child_id,plan_snapshot,plan:membership_plans(name,is_active,full_payment_enabled,full_payment_price,monthly_payment_enabled,monthly_payment_price,duration_months,enrollment_fee)').in('child_id', childIds).eq('status','active') : Promise.resolve({ data: [] }),
+        supabase.from('academy_checkout_contracts').select('id,membership_id,state,mode,choice,months,unit_cents,fee_cents,total_cents,billing_status,academy_contract_collections(id,amount_cents)').eq('owner_id',user.id).eq('mode',paymentMode || 'live').not('state','in','(expired,cancelled)'),
+        childIds.length ? supabase.from('children').select('id,full_name').in('id',childIds) : Promise.resolve({ data: [], error: null }),
+        childIds.length ? supabase.from('academy_memberships').select('*,plan:membership_plans(name,frequency)').in('child_id',childIds).order('start_date',{ascending:false}) : Promise.resolve({ data: [], error: null }),
+        childIds.length ? supabase.from('payments').select('*, manual_receipt_allocations(amount,paid_date,method,voided_at)').in('child_id', childIds) : Promise.resolve({ data: [], error: null }),
+        orderIds.length ? createAdminClient().from('payments').select('id,ref_id,status,method,amount,manual_receipt_allocations(amount,paid_date,method,voided_at)').eq('type', 'shop').in('ref_id', orderIds) : Promise.resolve({ data: [] }),
+    ])
+    const { data: memberships } = membershipsResult
+    const { data: contracts, error: contractsError } = contractsResult
     if (contractsError) throw new Error('No se pudo consultar el estado del pago con tarjeta')
+    if (familyChildren.error || familyMemberships.error) throw new Error('No se pudieron cargar los planes de la familia')
+    if (paymentsResult.error) throw new Error('No se pudieron cargar los pagos')
+    const academyPayments = paymentsResult.data || []
+    const { data: orderReceipts } = orderReceiptsResult
+    const returnedAttempt = attempts?.find(a => a.id === params.attempt)
+    const returnedContract = contracts?.find(c => c.id === params.contract)
     const monthlyEnabled = Boolean(checkoutMode && (checkoutMode === 'test' || process.env.STRIPE_RECURRING_PAYMENTS_ENABLED === 'true'))
     const monthlyRequestIds = new Set(monthlyCardRequests((billingRequests || []) as BillingRequest[], paymentMode).map(request => request.id))
     const otherBillingRequests = (billingRequests || []).filter(request => !monthlyRequestIds.has(request.id))
-    const returnedContract = contracts?.find(c=>c.id===params.contract)
-    const [familyChildren, familyMemberships] = childIds.length ? await Promise.all([
-        supabase.from('children').select('id,full_name').in('id',childIds),
-        supabase.from('academy_memberships').select('*,plan:membership_plans(name,frequency)').in('child_id',childIds).order('start_date',{ascending:false}),
-    ]) : [{data:[],error:null},{data:[],error:null}]
-    if (familyChildren.error || familyMemberships.error) throw new Error('No se pudieron cargar los planes de la familia')
-
-    // 2. Fetch payments for those children (Admin assigned payments/fees)
-    let academyPayments: any[] = []
-    if (childIds.length > 0) {
-        const { data: payments, error } = await supabase
-            .from('payments')
-            .select('*, manual_receipt_allocations(amount,paid_date,method,voided_at)')
-            .in('child_id', childIds)
-        if (error) throw new Error('No se pudieron cargar los pagos')
-        academyPayments = payments || []
-    }
-
-    // 3. Fetch orders (Store purchases)
-    const { data: orders } = user.email_confirmed_at && user.email ? await createAdminClient()
-        .from('orders')
-        .select(`*, order_items (*)`)
-        .eq('customer_email', user.email.trim().toLowerCase()) : { data: [] }
-
-    // These orders are filtered by the confirmed email from Auth.getUser(). Only
-    // resolve the receipt IDs here; the payment RPC independently checks ownership.
-    const orderIds = (orders || []).map(o => o.id)
-    const { data: orderReceipts } = orderIds.length ? await createAdminClient().from('payments').select('id,ref_id,status,method,amount,manual_receipt_allocations(amount,paid_date,method,voided_at)').eq('type', 'shop').in('ref_id', orderIds) : { data: [] }
 
     // 4. Combine and sort
     const allTransactions = [
