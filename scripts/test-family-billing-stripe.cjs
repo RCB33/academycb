@@ -43,5 +43,17 @@ const api=load(path.resolve('src/lib/billing-request-stripe.ts'))
  request.billing_request_items=request.billing_request_items.filter(i=>i.phase==='initial');request.total_cents=15250;attempt.schedule_id=null;saveUsage=null
  await api.createBillingCheckout(request,attempt,'qa@example.invalid','https://preview.example');assert.equal(seen.checkout.at(-1)[0].payment_intent_data.setup_future_usage,undefined)
  await api.fulfillBillingCheckout(session,'checkout.session.completed');assert.equal(seen.schedules.length,1)
+ // Existing cash family: save the card without charging an initial amount.
+ request.billing_request_items=[item('8','a','Ana',7500,'2090-02-01','recurring','Febrero'),item('9','a','Ana',7500,'2090-03-01','recurring','Marzo'),item('10','b','Berta',14000,'2090-03-01','recurring','Marzo')]
+ request.total_cents=29000;request.state='processing';attempt.state='open';attempt.schedule_id=null
+ assert.match(util.billingSummary(request),/sin cargo ahora/)
+ const collectedBefore=seen.collections.length
+ await api.createBillingCheckout(request,attempt,'qa@example.invalid','https://preview.example')
+ assert.equal(seen.checkout.at(-1)[0].mode,'setup');assert.equal(seen.checkout.at(-1)[0].line_items,undefined)
+ await api.fulfillBillingCheckout({...session,mode:'setup',setup_intent:'seti_qa',payment_status:'no_payment_required'},'checkout.session.completed')
+ assert.equal(seen.collections.length,collectedBefore,'Card setup must not mark any receipt paid')
+ assert.equal(seen.schedules.length,2)
+ assert.deepEqual(seen.schedules.at(-1)[0].phases.map(p=>p.items[0].price),['price_7500','price_21500'])
+ assert.equal(seen.schedules.at(-1)[0].end_behavior,'cancel')
  console.log('PASS family Stripe (mock): one initial checkout with per-child lines; staggered months 75 then 215; no repeated fees; one schedule; invoice binding; retries; final month. No provider calls.')
 })().catch(e=>{console.error(e);process.exitCode=1})

@@ -1702,5 +1702,11 @@
   "Puedes seguir usando el menú mientras carga.": "Pots continuar fent servir el menú mentre es carrega.",
   "No hemos podido cargar esta sección": "No hem pogut carregar aquesta secció",
   "Comprueba tu conexión y vuelve a intentarlo. También puedes abrir otra sección desde el menú.": "Comprova la connexió i torna-ho a provar. També pots obrir una altra secció des del menú.",
-  "Volver a intentar": "Tornar-ho a provar"
+  "Volver a intentar": "Tornar-ho a provar",
+  "Puedes autorizar tus mensualidades futuras aunque antes pagaras en efectivo. Verás las cuotas de cada jugador y las fechas antes de introducir la tarjeta.": "Pots autoritzar les mensualitats futures encara que abans paguessis en efectiu. Veuràs les quotes de cada jugador i les dates abans d’introduir la targeta.",
+  "Solo se incluyen mensualidades futuras pendientes. Los meses ya pagados no se vuelven a cobrar. Los atrasos, la matrícula y otros conceptos se mantienen aparte.": "Només s’inclouen mensualitats futures pendents. Els mesos ja pagats no es tornen a cobrar. Els endarreriments, la matrícula i altres conceptes es mantenen a part.",
+  "No hay mensualidades futuras disponibles para activar. Si tu inscripción está pendiente, primero debe aceptarse la plaza. Si ya tienes plaza, consulta tus cuotas o contacta con Academy.": "No hi ha mensualitats futures disponibles per activar. Si la inscripció està pendent, primer cal acceptar la plaça. Si ja tens plaça, consulta les quotes o contacta amb Academy.",
+  "Consultar mis cuotas con Academy": "Consultar les meves quotes amb Academy",
+  "No se pudo abrir la autorización.": "No s’ha pogut obrir l’autorització.",
+  "Abriendo tus mensualidades…": "Obrint les teves mensualitats…"
 }

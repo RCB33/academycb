@@ -36,7 +36,10 @@ for(const expires_at of ['2026-11-23','bad-date']) {
     assert.ok(!html.includes('Añadir tarjeta y activar mensualidades'))
 }
 assert.match(render({requests:[{...request,billing_request_items:[{...request.billing_request_items[0],phase:'initial'},request.billing_request_items[1]]}]}),/primer pago al completar Stripe/)
-assert.match(render({requests:[]}),/Solicitar activación por WhatsApp/)
+assert.match(render({requests:[]}),/No hay mensualidades futuras disponibles/)
+assert.match(render({requests:[],selfService:React.createElement('button',null,'Activar mis cuotas')}),/Activar mis cuotas/)
+assert.ok(!render({requests:[],selfService:React.createElement('button',null,'Activar mis cuotas')}).includes('Secretaría debe preparar'))
+assert.ok(!render({requests:[],selfService:React.createElement('button',null,'Activar mis cuotas'),viewOnly:true}).includes('Activar mis cuotas'))
 assert.ok(!render({requests:[],viewOnly:true}).includes('href="https://wa.me'))
 assert.ok(!render({requests:[],legacyInProgress:true}).includes('Solicitar activación por WhatsApp'))
 assert.match(render({mode:'test',requests:[{...request,mode:'test'}]}),/tarjetas de prueba/)

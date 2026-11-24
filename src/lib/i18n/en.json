@@ -1702,5 +1702,11 @@
   "Puedes seguir usando el menú mientras carga.": "You can keep using the menu while it loads.",
   "No hemos podido cargar esta sección": "We couldn’t load this section",
   "Comprueba tu conexión y vuelve a intentarlo. También puedes abrir otra sección desde el menú.": "Check your connection and try again. You can also open another section from the menu.",
-  "Volver a intentar": "Try again"
+  "Volver a intentar": "Try again",
+  "Puedes autorizar tus mensualidades futuras aunque antes pagaras en efectivo. Verás las cuotas de cada jugador y las fechas antes de introducir la tarjeta.": "You can authorise future monthly fees even if you previously paid cash. You will see each player’s fees and dates before entering your card.",
+  "Solo se incluyen mensualidades futuras pendientes. Los meses ya pagados no se vuelven a cobrar. Los atrasos, la matrícula y otros conceptos se mantienen aparte.": "Only unpaid future monthly fees are included. Paid months will not be charged again. Overdue fees, registration and other charges remain separate.",
+  "No hay mensualidades futuras disponibles para activar. Si tu inscripción está pendiente, primero debe aceptarse la plaza. Si ya tienes plaza, consulta tus cuotas o contacta con Academy.": "There are no future monthly fees available to activate. If your registration is pending, the place must be accepted first. If you already have a place, check your fees or contact Academy.",
+  "Consultar mis cuotas con Academy": "Ask Academy about my fees",
+  "No se pudo abrir la autorización.": "Unable to open the authorisation.",
+  "Abriendo tus mensualidades…": "Opening your monthly fees…"
 }

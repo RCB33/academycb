@@ -29,6 +29,7 @@ export function billingItemLabel(item: BillingItem) {
 }
 export function billingSummary(r: BillingRequest) {
  const {initial,initialCents}=billingParts(r),items=billingMonthly(r)
+ if(familyBilling(r) && !initial.length) return `Autoriza la tarjeta sin cargo ahora. Un único cobro por mes, con el desglose de cada jugador: ${items.map(m=>`${m.due_date}: ${euros(m.amount_cents)}`).join(' · ')}. Total de las mensualidades incluidas: ${euros(r.total_cents)}. Los cobros terminan tras la última cuota, sin renovación automática.`
  if(familyBilling(r)) return `Pago familiar: ${euros(initialCents)} al completar Stripe, con el desglose de cada jugador. ${items.length ? 'Después, un único cobro por mes: '+items.map(m=>`${m.due_date}: ${euros(m.amount_cents)}`).join(' · ')+'.' : 'Sin mensualidades posteriores.'} Matrícula y Plus se incluyen una sola vez cuando corresponden. Sin renovación automática.`
  if(initial.length) return `Primer pago de ${euros(initialCents)} al completar Stripe: primera cuota, matrícula y extras incluidos según el desglose. ${items.length?`Después, ${items.length} mensualidades de ${euros(items[0].amount_cents)}, desde ${items[0].due_date} hasta ${items.at(-1)!.due_date}.`:'No quedan mensualidades posteriores.'} Total de temporada incluido en este enlace: ${euros(r.total_cents)}. Sin renovación automática.`
  return r.kind==='payment' ? `Pago único de ${euros(r.total_cents)}.` :

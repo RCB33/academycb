@@ -1,6 +1,8 @@
 import { getPortalViewer } from '@/lib/admin-view'
 
 import { MonthlyCardOption, monthlyCardRequests } from '@/components/portal/monthly-card-option'
+import { StartMonthlyCard } from '@/components/portal/start-monthly-card'
+import { monthlyCardCandidates } from '@/lib/parent-monthly-card'
 import { getLocale, getT } from '@/lib/i18n/server'
 import { Receipt, Calendar, CreditCard, ShoppingBag, GraduationCap, Tent, Trophy as TrophyIcon } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
@@ -47,7 +49,7 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
     const [membershipsResult, contractsResult, familyChildren, familyMemberships, paymentsResult, orderReceiptsResult] = await Promise.all([
         childIds.length ? supabase.from('academy_memberships').select('id,child_id,plan_snapshot,plan:membership_plans(name,is_active,full_payment_enabled,full_payment_price,monthly_payment_enabled,monthly_payment_price,duration_months,enrollment_fee)').in('child_id', childIds).eq('status','active') : Promise.resolve({ data: [] }),
         supabase.from('academy_checkout_contracts').select('id,membership_id,state,mode,choice,months,unit_cents,fee_cents,total_cents,billing_status,academy_contract_collections(id,amount_cents)').eq('owner_id',user.id).eq('mode',paymentMode || 'live').not('state','in','(expired,cancelled)'),
-        childIds.length ? supabase.from('children').select('id,full_name').in('id',childIds) : Promise.resolve({ data: [], error: null }),
+        childIds.length ? supabase.from('children').select('id,full_name,archived_at').in('id',childIds) : Promise.resolve({ data: [], error: null }),
         childIds.length ? supabase.from('academy_memberships').select('*,plan:membership_plans(name,frequency)').in('child_id',childIds).order('start_date',{ascending:false}) : Promise.resolve({ data: [], error: null }),
         childIds.length ? supabase.from('payments').select('*, manual_receipt_allocations(amount,paid_date,method,voided_at)').in('child_id', childIds) : Promise.resolve({ data: [], error: null }),
         orderIds.length ? createAdminClient().from('payments').select('id,ref_id,status,method,amount,manual_receipt_allocations(amount,paid_date,method,voided_at)').eq('type', 'shop').in('ref_id', orderIds) : Promise.resolve({ data: [] }),
@@ -64,6 +66,13 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
     const monthlyEnabled = Boolean(checkoutMode && (checkoutMode === 'test' || process.env.STRIPE_RECURRING_PAYMENTS_ENABLED === 'true'))
     const monthlyRequestIds = new Set(monthlyCardRequests((billingRequests || []) as BillingRequest[], paymentMode).map(request => request.id))
     const otherBillingRequests = (billingRequests || []).filter(request => !monthlyRequestIds.has(request.id))
+    const locale = await getLocale()
+    // eslint-disable-next-line react-hooks/purity
+    const now = Date.now()
+    const today = new Date(now).toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
+    const candidates = monthlyCardCandidates(familyMemberships.data || [], academyPayments, (billingRequests || []) as BillingRequest[], contracts || [], paymentMode || 'live', today, now)
+        .filter(m => familyChildren.data?.some(c => c.id === m.child_id && !c.archived_at))
+    const eligibleGuardians = (guardians || []).filter(g => g.child_guardians?.some((cg: { child_id: string }) => candidates.some(m => m.child_id === cg.child_id)))
 
     // 4. Combine and sort
     const allTransactions = [
@@ -126,7 +135,8 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
             <MonthlyCardOption requests={(billingRequests || []) as BillingRequest[]} mode={paymentMode} enabled={monthlyEnabled}
                 // Expiry is evaluated for this authenticated request, not during a static build.
                 // eslint-disable-next-line react-hooks/purity
-                now={Date.now()} locale={await getLocale()} viewOnly={Boolean(view)} legacyInProgress={Boolean(contracts?.some(contract => contract.choice === 'monthly' && ['creating', 'open', 'active'].includes(contract.state)))} />
+                now={now} locale={locale} viewOnly={Boolean(view)} legacyInProgress={Boolean(contracts?.some(contract => contract.choice === 'monthly' && ['creating', 'open', 'active'].includes(contract.state)))}
+                selfService={eligibleGuardians.length ? <div className="space-y-3">{eligibleGuardians.map(g => <StartMonthlyCard key={g.id} guardianId={g.id} enabled={monthlyEnabled} locale={locale} />)}</div> : undefined} />
             <FamilyPlanSummary students={familyChildren.data||[]} memberships={familyMemberships.data as unknown as FamilyMembership[]} payments={academyPayments as FamilyPayment[]} />
             {!!otherBillingRequests.length&&<section className="space-y-3"><h2 className="text-xl font-bold">Solicitudes de administración</h2>{(otherBillingRequests as BillingRequest[]).map(r=><article key={r.id} className="space-y-2 rounded-xl border bg-white p-4"><h3 className="font-semibold">{r.title}</h3><p className="text-sm">{billingSummary(r)}</p><p className="text-sm">{billingLabels[r.state]||r.state}{r.mode==='test'?' · Solo pruebas':''}</p><Link className="inline-block font-semibold text-blue-700 underline" href={'/portal/pagos/solicitud/'+r.id}>Revisar solicitud</Link></article>)}</section>}
             {translate(checkoutMode === 'test' && <div className="rounded-xl border border-gold/40 bg-gold/10 p-4 text-sm"><strong>{translate("Entorno de pruebas.")}</strong> {translate(" Usa únicamente tarjetas de prueba de Stripe. No se cobra dinero ni se modifican los recibos reales.")}</div>)}

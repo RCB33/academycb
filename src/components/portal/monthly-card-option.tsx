@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { CreditCard, ShieldCheck } from 'lucide-react'
 import { billingParts, billingSummary, type BillingRequest } from '@/lib/billing-request'
 import { createTranslator, type Locale } from '@/lib/i18n/translate'
+import type { ReactNode } from 'react'
 
 export function monthlyCardRequests(requests: BillingRequest[], mode: 'test' | 'live' | null) {
     return requests.filter(request => request.mode === (mode || 'live')
@@ -11,7 +12,7 @@ export function monthlyCardRequests(requests: BillingRequest[], mode: 'test' | '
         && billingParts(request).recurring.length > 0)
 }
 
-export function MonthlyCardOption({ requests, mode, enabled, now, legacyInProgress = false, viewOnly = false, locale = 'es' }: {
+export function MonthlyCardOption({ requests, mode, enabled, now, legacyInProgress = false, viewOnly = false, locale = 'es', selfService }: {
     requests: BillingRequest[]
     mode: 'test' | 'live' | null
     enabled: boolean
@@ -19,6 +20,7 @@ export function MonthlyCardOption({ requests, mode, enabled, now, legacyInProgre
     legacyInProgress?: boolean
     viewOnly?: boolean
     locale?: Locale
+    selfService?: ReactNode
 }) {
     const t = createTranslator(locale)
     const monthly = monthlyCardRequests(requests, mode)
@@ -53,11 +55,16 @@ export function MonthlyCardOption({ requests, mode, enabled, now, legacyInProgre
                 {expired && !viewOnly && <a href={contactUrl} target="_blank" rel="noopener noreferrer" className="block text-sm font-semibold text-navy underline">{t('Solicitar nuevo enlace por WhatsApp')}</a>}
             </article>
         })}
-        {monthly.length === 0 && (legacyInProgress
+        {selfService && <div className="space-y-3 rounded-xl border border-gold/30 bg-white p-4">
+            <p className="text-sm text-slate-700">{t('Puedes autorizar tus mensualidades futuras aunque antes pagaras en efectivo. Verás las cuotas de cada jugador y las fechas antes de introducir la tarjeta.')}</p>
+            <p className="text-sm text-slate-600">{t('Solo se incluyen mensualidades futuras pendientes. Los meses ya pagados no se vuelven a cobrar. Los atrasos, la matrícula y otros conceptos se mantienen aparte.')}</p>
+            {viewOnly ? <p className="text-sm text-slate-500">{t('Vista de consulta: la autorización debe hacerla la familia desde su cuenta.')}</p> : selfService}
+        </div>}
+        {monthly.length === 0 && !selfService && (legacyInProgress
             ? <p className="rounded-xl bg-white p-4 text-sm text-slate-700">{t('Ya tienes un plan de tarjeta autorizado o una autorización en curso. Consulta su estado en esta página; para cambiarlo, contacta con secretaría.')}</p>
             : <div className="space-y-3">
-                <p className="text-sm text-slate-700">{t('¿Quieres pasar de efectivo a tarjeta? Secretaría debe preparar primero tus mensualidades. Cuando estén listas, podrás añadir la tarjeta y autorizarlas aquí.')}</p>
-                {viewOnly ? <p className="text-sm text-slate-500">{t('Vista de consulta: la autorización debe hacerla la familia desde su cuenta.')}</p> : <a href={contactUrl} target="_blank" rel="noopener noreferrer" className={button}>{t('Solicitar activación por WhatsApp')}</a>}
+                <p className="text-sm text-slate-700">{t('No hay mensualidades futuras disponibles para activar. Si tu inscripción está pendiente, primero debe aceptarse la plaza. Si ya tienes plaza, consulta tus cuotas o contacta con Academy.')}</p>
+                {viewOnly ? <p className="text-sm text-slate-500">{t('Vista de consulta: la autorización debe hacerla la familia desde su cuenta.')}</p> : <a href={contactUrl} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-navy underline">{t('Consultar mis cuotas con Academy')}</a>}
             </div>)}
         <p className="text-xs leading-relaxed text-slate-500">{t('La tarjeta se introduce en Stripe. Cada recibo se marcará pagado solo cuando se confirme el cobro. Puedes seguir pagando en efectivo si lo prefieres.')}</p>
     </section>

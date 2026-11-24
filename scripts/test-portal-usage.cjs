@@ -15,6 +15,12 @@ assert.equal(model.filterPortalUsage(rows, 'all', 'alvaro').length, 4)
 assert.equal(model.filterPortalUsage(rows, 'all', 'nobody').length, 0)
 assert.deepEqual(model.filterPortalUsage(rows, 'review', '').map(row => row.id), ['internal', 'unlinked'])
 assert.deepEqual(model.filterPortalUsage(rows, 'visited', '').map(row => row.id), ['visited'])
+assert.equal(model.portalUsageSummary([...rows,{...base,id:'duplicate'}]).accounts,2)
+const unlinkedAccount={...base,id:'account-new',user_id:'new-family',players:[],unlinkedAccount:true}
+assert.equal(model.portalUsageSummary([...rows,unlinkedAccount]).accounts,3)
+assert.equal(model.portalUsageSummary([...rows,unlinkedAccount]).noAccount,2)
+assert.ok(model.needsPortalReview(unlinkedAccount))
+assert.deepEqual(model.filterPortalUsage(rows,'accounts','').map(row=>row.id),['contact','visited'])
 
 let authorized = true, dbError = null, writes = [], roles = [], effect
 const route = load('src/app/api/portal/visit/route.ts', {
