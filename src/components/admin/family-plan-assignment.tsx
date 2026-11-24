@@ -11,9 +11,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 
 const euro = (n: number) => n.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })
 const field = 'mt-1 w-full rounded-md border bg-white px-3 py-2 text-sm'
-export function FamilyPlanAssignment({ childId, childName, plans, teams, defaultTeamId = '', onComplete }: {
+export function FamilyPlanAssignment({ childId, childName, plans, teams, defaultTeamId = '', onComplete, triggerLabel = 'Asignar plan', triggerClassName }: {
     childId: string; childName: string; plans: PlanDefinition[]; teams: AssignmentTeam[]
     defaultTeamId?: string; onComplete?: () => void
+    triggerLabel?: string; triggerClassName?: string
 }) {
     const router = useRouter()
     const [open,setOpen] = useState(false)
@@ -49,7 +50,7 @@ export function FamilyPlanAssignment({ childId, childName, plans, teams, default
         finally { setBusy(false) }
     }
     return <>
-        <Button size="sm" onClick={()=>{setOpen(true);setReview(false);setRequestId(crypto.randomUUID())}}>Asignar plan</Button>
+        <Button type="button" size="sm" className={triggerClassName} onClick={()=>{setOpen(true);setReview(false);setRequestId(crypto.randomUUID())}}>{triggerLabel}</Button>
         <Dialog open={open} onOpenChange={value=>{if(!busy)setOpen(value)}}>
             <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-xl">
                 <DialogHeader><DialogTitle>{review?'Revisar asignación':'Asignar plan'} · {childName}</DialogTitle></DialogHeader>

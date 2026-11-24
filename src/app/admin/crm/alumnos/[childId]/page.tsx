@@ -495,6 +495,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
                             <CardTitle className="text-sm font-bold flex items-center gap-2">
                                 <Link2 className="h-4 w-4 text-slate-700" /> Vinculaciones
                             </CardTitle>
+                            <CardDescription className="text-xs leading-relaxed">Tener un tutor vinculado no inscribe al jugador en una actividad. Añade aquí su plaza o revisa primero si tiene una solicitud pendiente.</CardDescription>
                         </CardHeader>
                         <CardContent className="pt-4 space-y-4 text-sm">
                             <BranchLinks
@@ -502,6 +503,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
                                 label="Academia"
                                 items={(student.academy_memberships || []).filter((item: any) => item.status !== 'cancelled')}
                                 getName={(item: any) => item.plan?.name || 'Matrícula activa'}
+                                action={<FamilyPlanAssignment childId={childId} childName={student.full_name} plans={plans} teams={assignmentTeams} defaultTeamId={student.team_id || ''} onComplete={fetchStudentData} triggerLabel="Vincular a Academia" triggerClassName="min-h-11 w-full whitespace-normal bg-navy text-white hover:bg-navy/90" />}
                             />
                             <Separator className="opacity-50" />
                             <BranchLinks
@@ -509,6 +511,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
                                 label="Campus"
                                 items={(student.campus_enrollments || []).filter((item: any) => item.status !== 'cancelled')}
                                 getName={(item: any) => item.campus ? `${item.campus.name}${item.campus.year ? ` · ${item.campus.year}` : ''}` : 'Campus'}
+                                action={<Button asChild variant="outline" className="min-h-11 w-full"><Link href={`/admin/campus?child=${childId}`}>Inscribir en un campus</Link></Button>}
                             />
                             <Separator className="opacity-50" />
                             <BranchLinks
@@ -516,7 +519,9 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
                                 label="Torneos"
                                 items={[...(student.tournament_players || []).filter((item: any) => item.status !== 'cancelled'), ...(student.event_registrations || []).filter((item:{status:string})=>isAcceptedTournamentRegistration(item.status)).map((item:{id:string;status:string})=>({...item,tournament:{title:'Torneos · Navidad 2026–2027'}}))]}
                                 getName={(item: any) => `${item.tournament?.title || 'Torneo'}${item.team?.name ? ` · ${item.team.name}` : ''}`}
+                                action={<Button asChild variant="outline" className="min-h-11 w-full"><Link href="/admin/torneos">Gestionar torneos</Link></Button>}
                             />
+                            <Link href="/admin/solicitudes" className="inline-flex min-h-11 items-center text-xs font-semibold text-navy underline underline-offset-4">Revisar solicitudes pendientes</Link>
                         </CardContent>
                     </Card>
 
@@ -1014,7 +1019,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ child
     )
 }
 
-function BranchLinks({ icon, label, items, getName }: { icon: React.ReactNode, label: string, items: any[], getName: (item: any) => string }) {
+function BranchLinks({ icon, label, items, getName, action }: { icon: React.ReactNode, label: string, items: any[], getName: (item: any) => string, action?: React.ReactNode }) {
     return (
         <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -1029,6 +1034,7 @@ function BranchLinks({ icon, label, items, getName }: { icon: React.ReactNode, l
                     <span className="text-[9px] uppercase text-slate-400 font-bold">{formatLinkStatus(item.status)}</span>
                 </div>
             ))}
+            {action && <div className="pt-2">{action}</div>}
         </div>
     )
 }
