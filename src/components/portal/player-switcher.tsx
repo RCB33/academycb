@@ -26,7 +26,8 @@ export function PortalPlayerSwitcher({
     const currentPlayer = players.find((player) => pathname === `/portal/${player.id}`)
     const compact = variant === 'mobile'
 
-    if (players.length < 2) return null
+    // Payments has its own scoped family/player filter; this switcher navigates away.
+    if (players.length < 2 || pathname === '/portal/pagos') return null
 
     return (
         <section className={compact ? 'border-t border-navy/10 bg-white px-4 py-2.5' : 'mt-5 rounded-2xl border border-gold/25 bg-gold/5 p-3'} aria-label={translate("Cambiar jugador")}>
