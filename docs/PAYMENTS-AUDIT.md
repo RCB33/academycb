@@ -652,3 +652,10 @@ Las menciones a “pendiente” en las secciones siguientes reflejan su fecha, n
 - `test-family-billing-rollback.sql` en esquema real: dos solicitudes nuevas, aprobación individual con prorrateo/matrícula/Plus, cuenta sintética, un enlace, cobro TEST simulado y RLS; todo revertido con ROLLBACK. No se invocó Auth API, Stripe ni proveedor de correo. No se afirma aceptación de una nueva sesión por Stripe ni entrega real de email en esta tarea.
 - Baseline real antes/después: 84 pagos, digest `1c8fe1bf41f1e648276b7fb715f78d6a`; 4 enlaces (`6866a20c9911de9fa421949f9a844887`), 21 líneas (`523af3f2fe02ba86c5296cd73b106d28`), cero intentos. Sin fixtures persistentes.
 - Vista comprobada con datos ficticios del componente real; captura `/Users/roque/Desktop/WEB manu/auditoria-2026-11-21/pago-familiar-conjunto.jpg`. Ruta temporal retirada antes de publicar.
+
+## 2026-11-25 — Eliminar consultas generales desde Solicitudes web
+
+- Se añade Eliminar junto a Archivar/Restaurar en la bandeja de consultas generales, tanto activas como archivadas. Diálogo con nombre/email, cancelación y aviso de borrado irreversible; la tarjeta se retira solo tras éxito del servidor.
+- Acción limitada a administradores, UUID validado, sesión del usuario y RLS existente. Solo borra una fila de `contact_messages`; se verificó que no existen referencias entrantes ni triggers propios en esta tabla. No elimina solicitudes de inscripción, jugadores, tutores, vinculaciones o pagos.
+- Validación: suite `test-contact-archive.cjs` ampliada con borrado activo/archivado, permisos, ID inválido, fila inexistente y error de base de datos; lint de componente/acciones y build completo correctos.
+- `test-contact-delete-rollback.sql`: prueba con fila ficticia y rollback, denegación a no administrador y borrado permitido a administrador. Consultas reales conservadas y digest de los 182 pagos idéntico antes/después: `79ec4f91aff18b0527a34398316ec583`. No se eliminó ninguna consulta real.

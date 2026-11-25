@@ -5,21 +5,23 @@ const ts = require('typescript')
 const React = require('react')
 const { renderToStaticMarkup } = require('react-dom/server')
 const id = '11111111-1111-4111-8111-111111111111'
-let authorized, dbError, visible, record, updates, paths
+let authorized, dbError, visible, record, updates, paths, deletes
 function reset() {
-    authorized = true; dbError = false; visible = true; updates = []; paths = []
+    authorized = true; dbError = false; visible = true; updates = []; paths = []; deletes = []
     record = { id, name: 'Consulta de prueba', email: 'test@example.invalid', phone: null, message: 'Mensaje de prueba que se conserva', created_at: '2026-11-21T12:00:00Z', status: 'new' }
 }
 const db = { from(table) {
     assert.equal(table, 'contact_messages')
-    let values
+    let values, deleting = false
     const query = {
         update(input) { values = input; return query },
+        delete() { deleting = true; return query },
         eq(column, value) { assert.equal(column, 'id'); assert.equal(value, id); return query },
-        select(columns) { assert.equal(columns, 'id,status'); return query },
+        select(columns) { assert.equal(columns, deleting ? 'id' : 'id,status'); return query },
         async maybeSingle() {
             if (dbError) return { data: null, error: { message: 'private database error' } }
             if (!visible) return { data: null, error: null }
+            if (deleting) { deletes.push(record.id); record = null; return { data: { id }, error: null } }
             updates.push(values); Object.assign(record, values)
             return { data: { id, status: record.status }, error: null }
         },
@@ -37,7 +39,7 @@ function load(file, overrides = {}) {
     })
     return module.exports
 }
-const { setContactArchived: save } = load('src/app/actions/contact-messages.ts', {
+const { setContactArchived: save, deleteContactMessage: remove } = load('src/app/actions/contact-messages.ts', {
     '@/lib/auth': { requireAdmin: async () => { if (!authorized) throw Error('Forbidden'); return { supabase: db } } },
     'next/cache': { revalidatePath: value => paths.push(value) },
 })
@@ -53,17 +55,29 @@ async function run() {
     reset(); authorized = false; await assert.rejects(save(id, true), /Forbidden/); assert.equal(updates.length, 0)
     reset(); visible = false; assert.equal((await save(id, true)).success, false); assert.equal(paths.length, 0)
     reset(); dbError = true; const failure = await save(id, true); assert.equal(failure.success, false); assert.ok(!failure.error.includes('private')); assert.equal(paths.length, 0)
+    for (const status of ['new', 'closed']) {
+        reset(); record.status = status
+        assert.deepEqual(await remove(id), { success: true, id })
+        assert.equal(record, null); assert.deepEqual(deletes, [id]); assert.equal(updates.length, 0)
+        assert.deepEqual(paths, ['/admin/leads', '/admin/solicitudes'])
+    }
+    reset(); assert.equal((await remove('invalid')).success, false); assert.equal(deletes.length, 0)
+    reset(); authorized = false; await assert.rejects(remove(id), /Forbidden/); assert.equal(deletes.length, 0)
+    reset(); visible = false; assert.equal((await remove(id)).success, false); assert.equal(deletes.length, 0); assert.equal(paths.length, 0)
+    reset(); dbError = true; const deleteFailure = await remove(id); assert.equal(deleteFailure.success, false); assert.ok(!deleteFailure.error.includes('private')); assert.equal(deletes.length, 0)
     reset()
-    const { ContactMessageInbox } = load('src/components/admin/contact-message-inbox.tsx', { '@/app/actions/contact-messages': { setContactArchived: save } })
-    const props = { contacts: [record, { ...record, id: 'closed-id', name: 'Consulta archivada oculta', status: 'closed' }], canManage: true, loadError: false, onStatusChanged() {} }
+    const { ContactMessageInbox } = load('src/components/admin/contact-message-inbox.tsx', { '@/app/actions/contact-messages': { setContactArchived: save, deleteContactMessage: remove } })
+    const props = { contacts: [record, { ...record, id: 'closed-id', name: 'Consulta archivada oculta', status: 'closed' }], canManage: true, loadError: false, onStatusChanged() {}, onDeleted() {} }
     const html = renderToStaticMarkup(React.createElement(ContactMessageInbox, props))
     assert.match(html, /Archivar consulta/)
+    assert.match(html, /Eliminar consulta de Consulta de prueba/)
     assert.match(html, /Activas \(1\)/)
     assert.match(html, /Archivadas \(1\)/)
     assert.ok(html.includes(record.name))
     assert.ok(!html.includes('Consulta archivada oculta'))
     assert.ok(!renderToStaticMarkup(React.createElement(ContactMessageInbox, { ...props, canManage: false })).includes('Archivar consulta'))
+    assert.ok(!renderToStaticMarkup(React.createElement(ContactMessageInbox, { ...props, canManage: false })).includes('Eliminar consulta de'))
     assert.match(renderToStaticMarkup(React.createElement(ContactMessageInbox, { ...props, loadError: true })), /No se pudieron cargar/)
-    console.log('PASS: scoped reversible contact archive, input/admin guard, missing rows/errors, preserved message, active-only inbox and visible action. Mock writes only.')
+    console.log('PASS: scoped contact deletion (active/archived), reversible archive, input/admin guard, missing rows/errors, preserved message, active-only inbox and visible action. Mock writes only.')
 }
 run().catch(error => { console.error(error); process.exitCode = 1 })

@@ -172,7 +172,7 @@ export default function AdminLeadsPage() {
                 </div>
             </section>
 
-            <ContactMessageInbox contacts={contacts} canManage={canConvert} loadError={contactLoadError} onStatusChanged={(id, status) => setContacts(current => current.map(contact => contact.id === id ? { ...contact, status } : contact))} />
+            <ContactMessageInbox contacts={contacts} canManage={canConvert} loadError={contactLoadError} onStatusChanged={(id, status) => setContacts(current => current.map(contact => contact.id === id ? { ...contact, status } : contact))} onDeleted={id => setContacts(current => current.filter(contact => contact.id !== id))} />
         </div>
     )
 }

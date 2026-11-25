@@ -4,6 +4,24 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { requireAdmin } from '@/lib/auth'
 
+export async function deleteContactMessage(id: string) {
+    const { supabase } = await requireAdmin()
+    const input = z.string().uuid().safeParse(id)
+    if (!input.success) return { success: false as const, error: 'Consulta no válida.' }
+
+    // This inbox has no dependent records. Delete only the selected message,
+    // using the administrator's session and the existing RLS policy.
+    const { data, error } = await supabase.from('contact_messages')
+        .delete().eq('id', input.data).select('id').maybeSingle()
+
+    if (error) return { success: false as const, error: 'No se pudo eliminar la consulta. Inténtalo de nuevo.' }
+    if (!data) return { success: false as const, error: 'No se encontró la consulta o ya no está disponible.' }
+
+    revalidatePath('/admin/leads')
+    revalidatePath('/admin/solicitudes')
+    return { success: true as const, id: data.id as string }
+}
+
 export async function setContactArchived(id: string, archived: boolean) {
     const { supabase } = await requireAdmin()
     const input = z.object({ id: z.string().uuid(), archived: z.boolean() }).safeParse({ id, archived })

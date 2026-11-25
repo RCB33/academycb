@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Archive, ArchiveRestore, Mail, Phone } from 'lucide-react'
+import { Archive, ArchiveRestore, Mail, Phone, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { setContactArchived } from '@/app/actions/contact-messages'
+import { deleteContactMessage, setContactArchived } from '@/app/actions/contact-messages'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -11,17 +11,33 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 
 export type ContactMessage = { id: string; name: string; email: string; phone: string | null; message: string; status: string; created_at: string }
 
-export function ContactMessageInbox({ contacts, canManage, loadError, onStatusChanged }: {
+export function ContactMessageInbox({ contacts, canManage, loadError, onStatusChanged, onDeleted }: {
     contacts: ContactMessage[]
     canManage: boolean
     loadError: boolean
     onStatusChanged: (id: string, status: 'closed' | 'new') => void
+    onDeleted: (id: string) => void
 }) {
     const [archived, setArchived] = useState(false)
     const [selected, setSelected] = useState<ContactMessage | null>(null)
+    const [deleteTarget, setDeleteTarget] = useState<ContactMessage | null>(null)
     const [busy, setBusy] = useState<string | null>(null)
     const archivedCount = contacts.filter(contact => contact.status === 'closed').length
     const visible = contacts.filter(contact => (contact.status === 'closed') === archived)
+
+    async function removeContact(contact: ContactMessage) {
+        if (busy) return
+        setBusy(contact.id)
+        try {
+            const result = await deleteContactMessage(contact.id)
+            if (!result.success) { toast.error(result.error); return }
+            onDeleted(result.id)
+            setDeleteTarget(null)
+            toast.success('Consulta eliminada definitivamente.')
+        } catch {
+            toast.error('No se pudo eliminar la consulta. Comprueba tu sesión e inténtalo de nuevo.')
+        } finally { setBusy(null) }
+    }
 
     async function changeStatus(contact: ContactMessage, archive: boolean) {
         if (busy) return
@@ -40,7 +56,7 @@ export function ContactMessageInbox({ contacts, canManage, loadError, onStatusCh
     return <section id="consultas-generales" className="space-y-4 border-t pt-6" aria-labelledby="contact-inbox-heading">
         <div>
             <h2 id="contact-inbox-heading" className="text-xl font-bold">Consultas generales</h2>
-            <p className="mt-2 text-sm text-muted-foreground">Archiva las consultas antiguas o la publicidad para retirarlas de la lista activa. Puedes recuperarlas en Archivadas.</p>
+            <p className="mt-2 text-sm text-muted-foreground">Archiva las consultas para recuperarlas más adelante o elimínalas definitivamente cuando ya no las necesites.</p>
         </div>
         <div className="flex flex-wrap gap-2" role="group" aria-label="Mostrar consultas">
             <Button type="button" variant={archived ? 'outline' : 'default'} aria-pressed={!archived} onClick={() => setArchived(false)}>Activas ({contacts.length - archivedCount})</Button>
@@ -51,10 +67,11 @@ export function ContactMessageInbox({ contacts, canManage, loadError, onStatusCh
                 <CardHeader className="pb-2">
                     <div className="flex flex-wrap justify-between gap-2"><Badge variant="secondary">{archived ? 'Archivada' : 'Consulta'}</Badge><span className="text-xs text-muted-foreground">{new Date(contact.created_at).toLocaleDateString('es-ES')}</span></div>
                     <CardTitle className="break-words text-lg">{contact.name}</CardTitle>
-                    {canManage && <Button type="button" variant="outline" disabled={busy !== null} className="mt-2 min-h-11 w-full" onClick={() => archived ? void changeStatus(contact, false) : setSelected(contact)}>
+                    {canManage && <div className="mt-2 flex flex-wrap gap-2"><Button type="button" variant="outline" disabled={busy !== null} className="min-h-11 flex-1" onClick={() => archived ? void changeStatus(contact, false) : setSelected(contact)}>
                         {archived ? <ArchiveRestore className="mr-2 h-4 w-4" /> : <Archive className="mr-2 h-4 w-4" />}
                         {busy === contact.id ? 'Guardando…' : archived ? 'Restaurar consulta' : 'Archivar consulta'}
-                    </Button>}
+                    </Button>
+                    <Button type="button" variant="outline" disabled={busy !== null} className="min-h-11 text-red-700 hover:bg-red-50 hover:text-red-800" aria-label={`Eliminar consulta de ${contact.name}`} onClick={() => setDeleteTarget(contact)}><Trash2 className="mr-2 h-4 w-4" />Eliminar</Button></div>}
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm">
                     <a href={`mailto:${contact.email}`} className="flex items-center gap-2 hover:underline"><Mail className="h-4 w-4 shrink-0" /><span className="min-w-0 break-all">{contact.email}</span></a>
@@ -73,6 +90,18 @@ export function ContactMessageInbox({ contacts, canManage, loadError, onStatusCh
                 <AlertDialogFooter>
                     <AlertDialogCancel disabled={busy !== null}>Cancelar</AlertDialogCancel>
                     <AlertDialogAction disabled={busy !== null} onClick={event => { event.preventDefault(); if (selected) void changeStatus(selected, true) }}>{busy ? 'Archivando…' : 'Archivar consulta'}</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+        <AlertDialog open={deleteTarget !== null} onOpenChange={open => { if (!open && !busy) setDeleteTarget(null) }}>
+            <AlertDialogContent className="max-w-[calc(100%-2rem)] rounded-xl sm:max-w-lg">
+                <AlertDialogHeader>
+                    <AlertDialogTitle>¿Eliminar esta consulta definitivamente?</AlertDialogTitle>
+                    <AlertDialogDescription>Se eliminará la consulta de {deleteTarget?.name} ({deleteTarget?.email}). No podrás recuperarla. Esto no elimina jugadores, tutores, inscripciones ni pagos. Si quieres conservarla, cancela y utiliza Archivar.</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel disabled={busy !== null}>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction className="bg-red-700 text-white hover:bg-red-800" disabled={busy !== null} onClick={event => { event.preventDefault(); if (deleteTarget) void removeContact(deleteTarget) }}>{busy ? 'Eliminando…' : 'Eliminar definitivamente'}</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
