@@ -1,3 +1,11 @@
+## Continuación de inscripción familiar — 25 noviembre 2026
+
+- Las cuentas verificadas sin tutor o jugador activo ya no reciben «Cuenta no vinculada»: Inicio muestra «Completa tu inscripción» con un enlace al formulario existente. La cuenta de acceso puede preceder a la solicitud; no se crea un alumno vacío ni se considera una plaza confirmada por verificar el correo.
+- Si ya existe una solicitud propia (Auth ID o correo verificado), se muestra recepción/revisión en vez de pedir duplicarla. Solicitudes aceptadas, cerradas o estados desconocidos sin jugador activo requieren revisión de Academy. Lecturas administrativas limitadas al campo `status`, identidad del servidor, correo verificado y comodines escapados. Fallos de consulta no se convierten en ausencia de inscripción. Sin cambios de RLS, permisos ni escrituras.
+- El retorno tras verificar correo incorpora botón para abrir el formulario, comprueba sesión verificada y mantiene instrucciones para retomar el borrador en la pestaña original. Aclarado el primer paso de acceso. En el portal sin jugadores hay enlace permanente al estado de inscripción; no se abre firma de documentos sin jugador activo.
+- Pruebas mock de estados, límites de identidad, errores, dashboard vacío y redirección del jugador existente, ES/CA/EN; regresiones de inscripción conjunta, traducciones y contraseña. Revisión visual local en Chrome móvil 375 px de inicio incompleto y solicitud recibida, sin cuentas reales. No se envía una inscripción, correo ni cobro durante las pruebas. La ruta temporal se retira antes de publicar.
+- Baseline de esta tarea: 123 pagos, digest `772385ed23e5054c91f50121acb51fa8`. No se modifica la cuenta investigada ni se vincula a un menor sin identificar su inscripción.
+
 ## Pagos familiares: próximo vencimiento e historial — 25 noviembre 2026
 
 - Se sustituye el saldo de temporada por el importe que vence ahora o en la siguiente fecha, con desglose por jugador. Cuota mensual visible, filtro familiar/por hijo sin navegación, historial con fecha real de pago y abonos parciales; futuras y opciones de tarjeta plegadas. Los importes sin fecha y cobros fallidos se señalan por separado. No se modifican contratos, recibos, cargos ni condiciones de baja.

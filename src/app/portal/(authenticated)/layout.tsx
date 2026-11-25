@@ -37,18 +37,22 @@ export default async function AuthenticatedLayout({
         redirect(getRoleHome(role))
     }
 
-    const { data: guardian } = await supabase
+    const { data: guardian, error: guardianError } = await supabase
         .from('guardians')
         .select('id')
         .eq('user_id', user.id)
         .maybeSingle()
 
-    const { data: childRelations } = guardian
+    if (guardianError) throw new Error('No se pudo cargar tu ficha familiar.')
+
+    const { data: childRelations, error: childRelationsError } = guardian
         ? await supabase
             .from('child_guardians')
             .select('child:children(id, full_name, birth_year, archived_at)')
             .eq('guardian_id', guardian.id)
-        : { data: [] }
+        : { data: [], error: null }
+
+    if (childRelationsError) throw new Error('No se pudieron cargar los jugadores de tu familia.')
 
     const familyPlayers = (childRelations || [])
         .map((relation: any) => relation.child)
@@ -92,6 +96,7 @@ export default async function AuthenticatedLayout({
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                 <main className="relative h-full flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] [-webkit-overflow-scrolling:touch] md:p-6 xl:p-8">
                     <div className="mx-auto w-full max-w-7xl">
+                        {!familyPlayers.length && <Link href="/portal/dashboard" className="mb-5 block rounded-xl border border-gold/30 bg-gold/10 p-4 text-sm font-semibold text-navy underline underline-offset-4">{translate('Consultar el estado de mi inscripción y continuar')}</Link>}
                         {translate(children)}
                     </div>
                     <div className="h-4 shrink-0 w-full md:h-8" />
@@ -99,7 +104,7 @@ export default async function AuthenticatedLayout({
             </div>
 
             {/* Global Signature Check */}
-            {!view && <GlobalSignatureGuard userId={user.id} />}
+            {!view && familyPlayers.length > 0 && <GlobalSignatureGuard userId={user.id} />}
         </div>
         </ViewOnly></div>
     )

@@ -37,13 +37,13 @@ function AccessFields({ initialTournament, returnTo }: AccessProps) {
     <div className="mt-6 grid gap-3 sm:grid-cols-2">
       {(['new','existing'] as const).map(m => <button type="button" key={m} aria-pressed={mode === m} disabled={busy} onClick={() => {setMode(m);setMessage('');setPassword('')}} className={`min-h-24 rounded-xl border p-4 text-left transition ${mode === m ? 'border-gold bg-navy text-white ring-2 ring-gold/40' : 'border-slate-200 text-navy hover:border-gold'}`}>
         <span className={`block text-base font-bold ${mode === m ? 'text-gold' : ''}`}>{translate(m === 'new' ? 'Soy nuevo / vengo de otro club' : 'Ya tengo cuenta Academy')}</span>
-        <span className="mt-2 block text-sm">{translate(m === 'new' ? 'Inscribir a mi hijo solo en torneos.' : 'Entrar y utilizar la ficha de mi hijo.')}</span>
+        <span className="mt-2 block text-sm">{translate(m === 'new' ? (returnTo ? 'Verificar mi correo y completar la inscripción.' : 'Inscribir a mi hijo solo en torneos.') : 'Entrar y utilizar la ficha de mi hijo.')}</span>
       </button>)}
     </div>
     <form className="mt-6 space-y-4" onSubmit={e => { e.preventDefault(); void access(mode === 'new') }}>
       <label className="block text-sm font-semibold">{translate('Correo del padre, madre o tutor')}<input type="email" autoComplete="email" required value={email} onChange={e => setEmail(e.target.value)} className="mt-2 block min-h-12 w-full rounded-lg border p-3 text-base" /></label>
       {mode === 'existing' && <label className="block text-sm font-semibold">{translate('Contraseña')}<input type="password" autoComplete="current-password" required value={password} onChange={e => setPassword(e.target.value)} className="mt-2 block min-h-12 w-full rounded-lg border p-3 text-base" /></label>}
-      {mode === 'new' && <p className="text-sm leading-relaxed text-slate-600">{translate(returnTo ? 'Verificar tu correo no confirma ninguna plaza ni realiza un cobro.' : 'Primero verifica tu correo. Después podrás añadir al jugador, elegir los torneos y enviar la solicitud. Crear esta cuenta no te matricula en Academia ni genera ningún cobro.')}</p>}
+      {mode === 'new' && <p className="text-sm leading-relaxed text-slate-600">{translate(returnTo ? 'Verificar el correo crea tu acceso. Después debes completar los datos del jugador y enviar la solicitud. No confirma ninguna plaza ni realiza un cobro.' : 'Primero verifica tu correo. Después podrás añadir al jugador, elegir los torneos y enviar la solicitud. Crear esta cuenta no te matricula en Academia ni genera ningún cobro.')}</p>}
       <button disabled={busy} className="min-h-12 w-full rounded-xl bg-gold p-3 font-bold disabled:opacity-50">{translate(busy ? 'Un momento…' : mode === 'new' ? (returnTo ? 'Verificar correo y continuar' : 'Verificar correo y apuntarme a torneos') : 'Entrar e inscribir')}</button>
     </form>
     {mode === 'existing' && <button disabled={busy} onClick={() => void access(true)} className="mt-4 min-h-11 text-sm underline">{translate('Acceder con un enlace por correo, sin contraseña')}</button>}

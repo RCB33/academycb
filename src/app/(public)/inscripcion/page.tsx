@@ -1,3 +1,5 @@
+import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { getAcademyOffer, getCampusOffers, getTournamentOffer } from '@/lib/offering-server'
 
 import { getT } from '@/lib/i18n/server'
@@ -28,7 +30,17 @@ export default async function InscripcionPage({ searchParams }: { searchParams: 
 
     const params = await searchParams
     if (params.access === '1') return <main className="min-h-screen bg-slate-50 p-6"><h1 className="text-center text-2xl font-bold">Verifica tu correo para continuar</h1><EventAccess returnTo="/inscripcion?verified=1"/></main>
-    if (params.verified === '1') return <main className="mx-auto max-w-xl p-8"><h1 className="text-2xl font-bold">Vuelve a tu formulario</h1><p className="mt-4">Si has completado el acceso, vuelve a la pestaña donde estabas rellenando la inscripción y pulsa «Ya he verificado mi correo». Así conservarás tus selecciones.</p></main>
+    if (params.verified === '1') {
+        if (!await getFamilyContext()) redirect('/inscripcion?access=1')
+        return <main className="mx-auto max-w-xl space-y-5 px-5 py-12">
+            <ShieldCheck aria-hidden="true" className="h-12 w-12 text-emerald-700" />
+            <h1 className="text-3xl font-black text-navy">{translate('Correo verificado. Continúa tu inscripción.')}</h1>
+            <p className="leading-relaxed text-slate-600">{translate('Verificar el correo crea tu acceso. La solicitud se envía cuando completas los datos del jugador y las actividades.')}</p>
+            <p className="rounded-xl bg-amber-50 p-4 text-sm leading-relaxed">{translate('Si tienes el formulario abierto en otra pestaña, vuelve a ella y pulsa «Ya he verificado mi correo» para conservar tu borrador.')}</p>
+            <Link href="/inscripcion" className="flex min-h-12 items-center justify-center rounded-xl bg-gold px-4 py-3 text-center font-bold text-navy">{translate('Abrir el formulario de inscripción')}</Link>
+            <p className="text-sm text-slate-500">{translate('Usa este botón si ya no tienes el formulario abierto. No necesitas crear otra cuenta.')}</p>
+        </main>
+    }
     const [academyOffer, allCampuses, tournaments, family] = await Promise.all([getAcademyOffer(), getCampusOffers(), getTournamentOffer(), getFamilyContext()])
     const campuses = allCampuses.filter(c => c.end_date >= new Date().toISOString().slice(0, 10))
     const familyPlayers = family?.children || []

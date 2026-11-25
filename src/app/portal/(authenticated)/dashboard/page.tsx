@@ -2,7 +2,9 @@ import { getPortalViewer } from '@/lib/admin-view'
 
 import { PlayerProfileDetails } from '@/components/portal/player-profile-details'
 import { PlayerPhotoEditor } from '@/components/portal/player-photo-editor'
-import { getT } from '@/lib/i18n/server'
+import { getT, getLocale } from '@/lib/i18n/server'
+import { getFamilyOnboardingState } from '@/lib/family-onboarding'
+import { FamilyOnboarding } from '@/components/portal/family-onboarding'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card"
@@ -12,31 +14,29 @@ import { ArrowRight, UsersRound } from "lucide-react"
 export default async function DashboardPage() {
     const translate = await getT()
 
-    const { supabase, user, view } = await getPortalViewer()
+    const { supabase, user } = await getPortalViewer()
+    if (!user) redirect('/portal')
 
     // Get Guardian ID
-    const { data: guardian } = await supabase
+    const { data: guardian, error: guardianError } = await supabase
         .from('guardians')
         .select('id')
         .eq('user_id', user?.id)
-        .single()
+        .maybeSingle()
 
-    if (!guardian) {
-        return (
-            <div className="text-center py-20">
-                <h2 className="text-2xl font-bold mb-4">{translate("Cuenta no vinculada")}</h2>
-                <p className="text-muted-foreground">{translate("Tu usuario no está asociado a ningún tutor. Contacta con la academia.")}</p>
-            </div>
-        )
-    }
+    if (guardianError) throw new Error('No se pudo cargar tu ficha familiar.')
+    if (!guardian) return <FamilyOnboarding state={await getFamilyOnboardingState()} locale={await getLocale()} />
 
     // Get Children
-    const { data: relations } = await supabase
+    const { data: relations, error: relationsError } = await supabase
         .from('child_guardians')
         .select('child:children(id, full_name, birth_year, birth_date, club_name, club_category, club_division, avatar_url, archived_at)')
         .eq('guardian_id', guardian.id)
 
+    if (relationsError) throw new Error('No se pudieron cargar los jugadores de tu familia.')
     const children = (relations?.map(r => r.child) || []).filter((child: any) => child && !child.archived_at)
+
+    if (!children.length) return <FamilyOnboarding state={await getFamilyOnboardingState()} locale={await getLocale()} />
 
     if (children.length === 1) {
         redirect(`/portal/${(children[0] as any).id}`)
@@ -76,12 +76,6 @@ export default async function DashboardPage() {
                         </CardFooter>
                     </Card>
                 )))}
-
-                {translate(children.length === 0 && (
-                    <Card className="col-span-full p-8 text-center bg-muted/50 border-dashed">
-                        <p className="text-muted-foreground">{translate("No hay alumnos asociados a tu cuenta.")}</p>
-                    </Card>
-                ))}
             </div>
         </div>
     )
