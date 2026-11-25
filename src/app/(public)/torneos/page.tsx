@@ -35,7 +35,7 @@ const participationLines = [
 const periods = [
     { key: 'navidad', title: 'Navidad', subtitle: 'Diciembre 2026 · Enero 2027' },
     { key: 'semana_santa', title: 'Semana Santa', subtitle: 'Marzo 2027' },
-    { key: 'verano', title: 'Verano', subtitle: 'Julio 2027' },
+    { key: 'verano', title: 'Verano', subtitle: 'Junio – Julio 2027' },
     { key: 'otro', title: 'Otras fechas', subtitle: 'Nuevas experiencias Academy' },
 ]
 
