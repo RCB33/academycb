@@ -1,10 +1,9 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { CircleCheck, KeyRound, Loader2, Mail } from 'lucide-react'
 import { LanguageSwitcher, useLocale } from '@/lib/i18n/client'
-import { createRecoveryClient } from '@/lib/supabase/recovery-client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -19,7 +18,8 @@ const messages = {
         save: 'Guardar mi contraseña', request: 'Enviar un nuevo código a este email', back: 'Volver al inicio de sesión',
         sending: 'Enviando…', checking: 'Comprobando…', saving: 'Guardando…',
         saved: '¡Contraseña guardada!', savedIntro: 'Tu contraseña se ha guardado correctamente. A partir de ahora puedes acceder cuando quieras con tu email y esta contraseña.', enter: 'Entrar en mi portal', accessEmail: 'Tu email de acceso',
-        sent: 'Si este email tiene una cuenta, recibirá un código. Revisa también spam. Usa el último correo de recuperación que recibas.',
+        sent: 'Si este email tiene acceso habilitado a Academy, recibirá un código. Si aún no te has inscrito, completa primero la inscripción. Revisa también spam.',
+        registration: '¿Aún no te has inscrito? Completar inscripción',
         emailRequired: 'Escribe un email válido para recibir el código.', mismatch: 'Las contraseñas no coinciden.',
         invalid_code: 'El código no es válido, ha caducado o ya se ha usado. Comprueba el email y el último código recibido, o solicita uno nuevo.',
         expired_setup: 'Esta verificación ya se ha utilizado o ha caducado. Si acabas de guardar tu contraseña, vuelve al inicio de sesión y entra con ella. Si no, solicita un nuevo código.',
@@ -38,7 +38,8 @@ const messages = {
         save: 'Desar la meva contrasenya', request: 'Enviar un nou codi a aquest email', back: 'Tornar a l’inici de sessió',
         sending: 'Enviant…', checking: 'Comprovant…', saving: 'Desant…',
         saved: 'Contrasenya desada!', savedIntro: 'La teva contrasenya s’ha desat correctament. A partir d’ara pots accedir quan vulguis amb el teu email i aquesta contrasenya.', enter: 'Entrar al meu portal', accessEmail: 'El teu email d’accés',
-        sent: 'Si aquest email té un compte, rebrà un codi. Revisa també el correu brossa. Fes servir l’últim correu de recuperació que rebis.',
+        sent: 'Si aquest correu té accés habilitat a Academy, rebrà un codi. Si encara no t’has inscrit, completa primer la inscripció. Revisa també el correu brossa.',
+        registration: 'Encara no t’has inscrit? Completar la inscripció',
         emailRequired: 'Escriu un email vàlid per rebre el codi.', mismatch: 'Les contrasenyes no coincideixen.',
         invalid_code: 'El codi no és vàlid, ha caducat o ja s’ha utilitzat. Comprova l’email i l’últim codi rebut, o demana’n un de nou.',
         expired_setup: 'Aquesta verificació ja s’ha utilitzat o ha caducat. Si acabes de desar la contrasenya, torna a l’inici de sessió i entra amb ella. Si no, demana un nou codi.',
@@ -57,7 +58,8 @@ const messages = {
         save: 'Save my password', request: 'Send a new code to this email', back: 'Back to sign in',
         sending: 'Sending…', checking: 'Checking…', saving: 'Saving…',
         saved: 'Password saved!', savedIntro: 'Your password has been saved successfully. From now on, you can sign in whenever you like with your email and this password.', enter: 'Enter my portal', accessEmail: 'Your sign-in email',
-        sent: 'If this email has an account, it will receive a code. Check your spam folder too. Use the latest recovery email you receive.',
+        sent: 'If this email has Academy access enabled, it will receive a code. Check your spam folder too. Use the latest recovery email you receive.',
+        registration: 'Not registered yet? Complete registration',
         emailRequired: 'Enter a valid email to receive the code.', mismatch: 'The passwords do not match.',
         invalid_code: 'The code is invalid, expired or already used. Check your email and the latest code, or request a new one.',
         expired_setup: 'This verification was already used or has expired. If you just saved your password, return to sign in and use it. Otherwise, request a new code.',
@@ -85,7 +87,6 @@ export function EmailCodeForm({ initialType, next }: { initialType: 'invite' | '
     const [error, setError] = useState('')
     const [notice, setNotice] = useState(false)
     const passwordInput = useRef<HTMLInputElement>(null)
-    const recovery = useMemo(() => createRecoveryClient(), [])
 
     useEffect(() => {
         let active = true
@@ -133,8 +134,8 @@ export function EmailCodeForm({ initialType, next }: { initialType: 'invite' | '
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setError(t.emailRequired); return }
         inFlight.current = true; setBusy(true); setError(''); setNotice(false)
         try {
-            const { error } = await recovery.auth.resetPasswordForEmail(email.trim().toLowerCase(), { redirectTo: `${window.location.origin}/portal/codigo?type=recovery` })
-            if (error) { setError(error.status === 429 ? t.rate_limit : t.unavailable); return }
+            const response = await fetch('/api/auth/request-code', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email.trim().toLowerCase() }) })
+            if (!response.ok) { setError(response.status === 429 ? t.rate_limit : t.unavailable); return }
             setType('recovery'); setToken(''); setNotice(true); setCooldown(60)
             // Keep the flow correct when a parent reloads or opens the newest email.
             const url = new URL(window.location.href); url.searchParams.set('type', 'recovery'); window.history.replaceState({}, '', url)
@@ -173,6 +174,7 @@ export function EmailCodeForm({ initialType, next }: { initialType: 'invite' | '
                         {step === 'code' && <Button type="button" variant="outline" disabled={busy || cooldown > 0} onClick={sendCode} className="min-h-12 h-auto w-full whitespace-normal py-3 text-navy">{t.request}{cooldown > 0 ? ` (${cooldown}s)` : ''}</Button>}
                     </form>
                 </>}
+                {step === 'code' && <Link href="/inscripcion" className="mt-5 block text-center text-sm font-semibold text-navy underline">{t.registration}</Link>}
                 {step !== 'complete' && <Link href="/portal" className="mt-6 block text-center text-sm font-semibold text-navy underline">{t.back}</Link>}
             </section>
         </div>

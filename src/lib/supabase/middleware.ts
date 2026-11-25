@@ -1,3 +1,4 @@
+import { hasFamilyPortalAccess } from '@/lib/family-portal-access'
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { canAccessAdminPath, getRoleHome, isAppRole } from '@/lib/roles'
@@ -13,6 +14,7 @@ const PUBLIC_ROUTES = [
   '/tienda',
   '/contacto',
   '/inscripcion',
+  '/inscripcion/estado',
   '/portal/establecer-contrasena',
   '/portal/codigo',
   '/terminos',
@@ -103,6 +105,7 @@ export async function updateSession(request: NextRequest) {
         .maybeSingle()
       const url = request.nextUrl.clone()
       url.pathname = (profile?.role==='guardian' && portalReturnPath(request.nextUrl.searchParams.get('next'))) || getRoleHome(isAppRole(profile?.role) ? profile.role : null)
+      if ((!profile?.role || profile.role === 'guardian') && !await hasFamilyPortalAccess(supabase, user)) url.pathname = '/inscripcion/estado'
       url.search = ''
       return NextResponse.redirect(url)
     }
@@ -162,6 +165,12 @@ export async function updateSession(request: NextRequest) {
       .maybeSingle()
 
     const role = isAppRole(profile?.role) ? profile.role : null
+    if ((!role || role === 'guardian') && !await hasFamilyPortalAccess(supabase, user)) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/inscripcion/estado'
+      url.search = ''
+      return NextResponse.redirect(url)
+    }
     if (role && role !== 'guardian' && role !== 'admin') {
       const url = request.nextUrl.clone()
       url.pathname = getRoleHome(role)

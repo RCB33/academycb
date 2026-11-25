@@ -1,3 +1,4 @@
+import { hasFamilyPortalAccess } from '@/lib/family-portal-access'
 import { PortalVisitRecorder } from '@/components/portal/visit-recorder'
 import { getPortalViewer } from '@/lib/admin-view'
 import { AdminViewBar } from '@/components/admin/admin-view-bar'
@@ -36,6 +37,8 @@ export default async function AuthenticatedLayout({
     if (role && role !== 'guardian' && !view) {
         redirect(getRoleHome(role))
     }
+
+    if (!view && !await hasFamilyPortalAccess(supabase, user)) redirect('/inscripcion/estado')
 
     const { data: guardian, error: guardianError } = await supabase
         .from('guardians')

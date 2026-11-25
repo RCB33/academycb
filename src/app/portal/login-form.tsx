@@ -6,7 +6,6 @@ import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { createRecoveryClient } from '@/lib/supabase/recovery-client'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -20,7 +19,7 @@ import { portalReturnPath } from '@/lib/portal-return'
 export function LoginForm() {
     const translate = useT()
     const locale = useLocale()
-    const codeText = { es: { have: 'Tengo un código de bienvenida', request: 'Enviar código para crear o recuperar contraseña', sent: 'Si el email tiene una cuenta, recibirá un código. Revisa también spam.', failed: 'No se pudo enviar el código. Inténtalo de nuevo en unos minutos.' }, ca: { have: 'Tinc un codi de benvinguda', request: 'Enviar codi per crear o recuperar la contrasenya', sent: 'Si l’email té un compte, rebrà un codi. Revisa també el correu brossa.', failed: 'No s’ha pogut enviar el codi. Torna-ho a provar d’aquí a uns minuts.' }, en: { have: 'I have a welcome code', request: 'Send a code to create or reset my password', sent: 'If the email has an account, it will receive a code. Check your spam folder too.', failed: 'The code could not be sent. Try again in a few minutes.' } }[locale]
+    const codeText = { es: { have: 'Tengo un código de bienvenida', request: 'Enviar código para crear o recuperar contraseña', sent: 'Si el email tiene acceso habilitado a Academy, recibirá un código. Si aún no te has inscrito, completa primero la inscripción.', failed: 'No se pudo enviar el código. Inténtalo de nuevo en unos minutos.' }, ca: { have: 'Tinc un codi de benvinguda', request: 'Enviar codi per crear o recuperar la contrasenya', sent: 'Si el correu té accés habilitat a Academy, rebrà un codi. Si encara no t’has inscrit, completa primer la inscripció.', failed: 'No s’ha pogut enviar el codi. Torna-ho a provar d’aquí a uns minuts.' }, en: { have: 'I have a welcome code', request: 'Send a code to create or reset my password', sent: 'If this email has Academy access enabled, it will receive a code. If you have not registered yet, complete registration first.', failed: 'The code could not be sent. Try again in a few minutes.' } }[locale]
 
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
@@ -30,7 +29,6 @@ export function LoginForm() {
     const [resettingPassword, setResettingPassword] = useState(false)
     const router = useRouter()
     const supabase = useMemo(() => createClient(), [])
-    const recoveryClient = useMemo(() => createRecoveryClient(), [])
 
     useEffect(() => {
         const isPasswordLink = (type: string | null) => type === 'invite' || type === 'recovery'
@@ -110,10 +108,9 @@ export function LoginForm() {
 
         setResettingPassword(true)
         try {
-        const redirectTo = `${window.location.origin}/portal/codigo?type=recovery`
-        const { error } = await recoveryClient.auth.resetPasswordForEmail(normalizedEmail, { redirectTo })
+        const response = await fetch('/api/auth/request-code', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: normalizedEmail }) })
 
-        if (error) {
+        if (!response.ok) {
             toast.error(codeText.failed)
             return
         }
@@ -174,6 +171,7 @@ export function LoginForm() {
                 >
                     {translate(resettingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />)}
                     {codeText.request}</Button>
+                <Link href="/inscripcion" className="mt-3 text-sm font-semibold text-white underline">{translate('¿Aún no te has inscrito? Completar inscripción')}</Link>
             </CardFooter>
         </Card>
     )
