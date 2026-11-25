@@ -659,3 +659,12 @@ Las menciones a “pendiente” en las secciones siguientes reflejan su fecha, n
 - Acción limitada a administradores, UUID validado, sesión del usuario y RLS existente. Solo borra una fila de `contact_messages`; se verificó que no existen referencias entrantes ni triggers propios en esta tabla. No elimina solicitudes de inscripción, jugadores, tutores, vinculaciones o pagos.
 - Validación: suite `test-contact-archive.cjs` ampliada con borrado activo/archivado, permisos, ID inválido, fila inexistente y error de base de datos; lint de componente/acciones y build completo correctos.
 - `test-contact-delete-rollback.sql`: prueba con fila ficticia y rollback, denegación a no administrador y borrado permitido a administrador. Consultas reales conservadas y digest de los 182 pagos idéntico antes/después: `79ec4f91aff18b0527a34398316ec583`. No se eliminó ninguna consulta real.
+
+
+## 2026-11-25 — Precios públicos de Artena, Donosti y Pirineos
+
+- Publicados los totales aprobados: Donosti 1.025 € (6 × 150 € + 125 €, o 2 × 512,50 €); Pirineos 599 € (5 × 100 € + 99 €, o 2 × 299,50 €). Sin descuento por dos pagos en estas dos citas. Artena conserva la propuesta de 450 € + vuelo (4 × 112,50 €), o 2 × 215 € con ahorro de 20 €.
+- Cuota destacada, número de mensualidades, última cuota, total y alojamiento en tarjetas y fichas; ES/CA/EN. Catálogo visible junto al inicio de Torneos y acceso «Ver torneos» en la portada. La presentación de cuotas se oculta si administración cambia el precio base, para evitar ofertas desfasadas.
+- Datos publicados mediante `scripts/publish-tournament-prices-20261125.sql`, transacción con digest de pagos antes/después. Artena corrige fechas al 24–27/03/2027 manteniendo el ID de su único evento de calendario. Pirineos se incorpora sin fechas; no se atribuye un mes sin confirmar. Donosti mantiene 5–11/07/2027.
+- Alcance: información comercial y contacto. Las tres convocatorias conservan «Próximamente». El formulario actual solo admite los torneos de Navidad; no se ha activado inscripción ni cobro automático a plazos para estas tres citas. Antes de abrirlas hay que integrar su selección y calendario de vencimientos.
+- Pruebas de sumas en céntimos, última mensualidad, descuento de Artena y protección ante cambios de precio; i18n, TypeScript, lint de archivos cambiados y build correctos. Ficha Donosti comprobada en Chrome a 375 px. Los 182 pagos existentes conservan digest `79ec4f91aff18b0527a34398316ec583`; sin cobros, envíos de correo ni cambios de flags Stripe.

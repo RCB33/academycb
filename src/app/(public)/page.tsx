@@ -52,9 +52,10 @@ export default async function LandingPage() {
                             <Link href="/inscripcion">{translate("Inscribirse ")}<ArrowRight className="ml-2 h-5 w-5" /></Link>
                         </Button>
                         <Button size="lg" variant="outline" className="h-14 px-10 text-lg font-heading font-bold tracking-wide uppercase rounded-xl border-2 border-white/20 bg-white/5 text-white backdrop-blur-sm hover:bg-white/10 hover:border-white/40 shadow-lg" asChild>
-                            <Link href="/academia">{translate("Ver metodología")}</Link>
+                            <Link href="/torneos#proximos-torneos">{translate("Ver torneos")}</Link>
                         </Button>
                     </div>
+                    <Link href="/academia" className="mt-5 min-h-11 py-2 text-sm font-semibold text-white underline underline-offset-4">{translate("Ver metodología")}</Link>
                 </div>
 
                 {/* Scroll Indicator */}

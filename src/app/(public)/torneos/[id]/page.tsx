@@ -1,4 +1,6 @@
 
+import { TournamentPricing } from '@/components/tournament-pricing'
+import { getTournamentPricing } from '@/lib/tournament-pricing'
 import { getT } from '@/lib/i18n/server'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -9,7 +11,7 @@ import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 
 function formatDateRange(start: string | null, end: string | null, locale: string) {
-    if (!start) return 'Fechas próximamente'
+    if (!start) return 'Fechas por confirmar'
     const formatter = new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long', year: 'numeric' })
     const startLabel = formatter.format(new Date(`${start}T12:00:00`))
     if (!end || end === start) return startLabel
@@ -68,7 +70,8 @@ export default async function TournamentDetailPage({ params }: { params: Promise
 
                     <aside className="h-fit rounded-3xl border border-gold/30 bg-gold p-6 text-navy shadow-2xl shadow-black/20 lg:sticky lg:top-24">
                         <h2 className="font-heading text-2xl font-black uppercase">{translate("Información principal")}</h2>
-                        <div className="mt-6 space-y-4 text-sm"><p className="flex gap-3"><CalendarDays className="h-5 w-5 shrink-0" /><span><strong className="block">{translate("Fechas")}</strong>{translate(formatDateRange(tournament.start_date, tournament.end_date, translate.locale))}</span></p>{translate(tournament.location && <p className="flex gap-3"><MapPin className="h-5 w-5 shrink-0" /><span><strong className="block">{translate("Lugar")}</strong>{translate(tournament.location)}</span></p>)}<p className="flex gap-3"><Users className="h-5 w-5 shrink-0" /><span><strong className="block">{translate("Aforo previsto")}</strong>{translate(tournament.capacity)} {translate(" plazas")}</span></p>{translate(Number(tournament.price) > 0 && <p className="border-t border-navy/20 pt-4"><strong className="block text-xs uppercase tracking-wider">{translate("Precio por plaza")}</strong><span className="font-heading text-4xl font-black">{translate(Number(tournament.price).toFixed(2))} {translate(" €")}</span></p>)}</div>
+                        <div className="mt-6 space-y-4 text-sm"><p className="flex gap-3"><CalendarDays className="h-5 w-5 shrink-0" /><span><strong className="block">{translate("Fechas")}</strong>{translate(formatDateRange(tournament.start_date, tournament.end_date, translate.locale))}</span></p>{translate(tournament.location && <p className="flex gap-3"><MapPin className="h-5 w-5 shrink-0" /><span><strong className="block">{translate("Lugar")}</strong>{translate(tournament.location)}</span></p>)}<p className="flex gap-3"><Users className="h-5 w-5 shrink-0" /><span><strong className="block">{translate("Aforo previsto")}</strong>{translate(tournament.capacity)} {translate(" plazas")}</span></p>{translate(!getTournamentPricing(tournament.id, tournament.price) && Number(tournament.price) > 0 && <p className="border-t border-navy/20 pt-4"><strong className="block text-xs uppercase tracking-wider">{translate("Precio por plaza")}</strong><span className="font-heading text-4xl font-black">{translate(Number(tournament.price).toFixed(2))} {translate(" €")}</span></p>)}</div>
+                        <TournamentPricing id={tournament.id} price={tournament.price} locale={translate.locale} light />
                         {translate(tournament.status === 'open' ? <Button asChild className="mt-7 w-full bg-navy font-bold text-white hover:bg-navy/90"><Link href={`/inscripcion?service=tournament&activity=${tournament.id}`}>{translate("Solicitar plaza")}</Link></Button> : <Button asChild className="mt-7 w-full bg-navy font-bold text-white hover:bg-navy/90"><Link href="/contacto">{translate("Quiero recibir información")}</Link></Button>)}
                         {translate(tournament.external_url && <Button asChild variant="outline" className="mt-3 w-full border-navy/25 bg-white/30 font-bold text-navy hover:bg-white/50"><a href={tournament.external_url} target="_blank" rel="noopener noreferrer">{translate("Web del torneo ")}<ExternalLink className="ml-2 h-4 w-4" /></a></Button>)}
                         <p className="mt-5 flex gap-2 text-xs leading-relaxed text-navy/70"><CheckCircle2 className="h-4 w-4 shrink-0" /> {translate(" Secretaría confirmará disponibilidad y siguientes pasos.")}</p>
