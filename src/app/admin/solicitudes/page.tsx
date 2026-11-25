@@ -36,6 +36,7 @@ export default async function Requests({
         </Link>
       </header>
       {!!families?.length && <section className="rounded-2xl border bg-white p-5"><h2 className="font-bold text-navy">Pagos familiares · hermanos</h2><div className="mt-3 flex flex-wrap gap-3">{families.map(f=><Link key={f.id} className="rounded-xl bg-amber-50 px-4 py-3 text-sm font-semibold text-navy" href={`/admin/solicitudes/familia/${f.id}`}>{f.family_billing_members.flatMap(m=>Array.isArray(m.request)?m.request:[m.request]).filter(Boolean).map(r=>r.child_name).join(" + ")} →</Link>)}</div></section>}
+      <Link href="/admin/torneos/solicitudes" className="inline-flex rounded-xl border bg-white px-5 py-3 font-bold text-navy">Solicitudes de torneos 2027 →</Link>
       <RequestInbox
         requests={data.requests}
         initialFilter={

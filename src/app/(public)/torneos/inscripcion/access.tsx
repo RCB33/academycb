@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { FormDraft, useDraftState, useFormDraft } from '@/components/forms/form-draft'
 
-type AccessProps = { initialTournament?: string; returnTo?: "/inscripcion?verified=1" }
+type AccessProps = { initialTournament?: string; returnTo?: "/inscripcion?verified=1" | `/torneos/${string}/inscripcion` }
 export function EventAccess(props: AccessProps) {
   return <FormDraft storageKey="academy:draft:tournament-access"><AccessFields {...props} /></FormDraft>
 }
@@ -33,7 +33,7 @@ function AccessFields({ initialTournament, returnTo }: AccessProps) {
   }
   return <section className="mx-auto mt-8 max-w-2xl rounded-3xl border bg-white p-5 shadow-sm sm:p-8">
     <h2 className="text-2xl font-black">{translate(returnTo ? 'Verifica tu correo para solicitar tus actividades' : 'Juega los torneos con Academy')}</h2>
-    <p className="mt-3 text-sm leading-relaxed text-slate-600">{translate(returnTo ? 'Usaremos una sola ficha del jugador para todas las actividades. Después de verificar tu correo, vuelve al formulario que tienes abierto.' : 'Para jugadores de Academy y de otros clubes, también sin equipo. No necesitas estar matriculado en la academia: solicita tu plaza y nosotros organizamos los equipos.')}</p>
+    <p className="mt-3 text-sm leading-relaxed text-slate-600">{translate(returnTo?.startsWith('/torneos/') ? 'Verifica tu correo y continúa con los datos del jugador y la solicitud de plaza. Administración revisará tu inscripción.' : returnTo ? 'Usaremos una sola ficha del jugador para todas las actividades. Después de verificar tu correo, vuelve al formulario que tienes abierto.' : 'Para jugadores de Academy y de otros clubes, también sin equipo. No necesitas estar matriculado en la academia: solicita tu plaza y nosotros organizamos los equipos.')}</p>
     <div className="mt-6 grid gap-3 sm:grid-cols-2">
       {(['new','existing'] as const).map(m => <button type="button" key={m} aria-pressed={mode === m} disabled={busy} onClick={() => {setMode(m);setMessage('');setPassword('')}} className={`min-h-24 rounded-xl border p-4 text-left transition ${mode === m ? 'border-gold bg-navy text-white ring-2 ring-gold/40' : 'border-slate-200 text-navy hover:border-gold'}`}>
         <span className={`block text-base font-bold ${mode === m ? 'text-gold' : ''}`}>{translate(m === 'new' ? 'Soy nuevo / vengo de otro club' : 'Ya tengo cuenta Academy')}</span>

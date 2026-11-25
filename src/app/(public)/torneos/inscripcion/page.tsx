@@ -1,3 +1,5 @@
+import { redirect } from 'next/navigation'
+import { tournamentPricing } from '@/lib/tournament-pricing'
 
 import { getT } from '@/lib/i18n/server'
 import { translateMetadata } from '@/lib/i18n/translate'
@@ -15,6 +17,7 @@ export default async function EventRegistrationPage({ searchParams }: { searchPa
     const translate = await getT()
 
   const { torneo, attempt } = await searchParams
+  if (torneo && Object.hasOwn(tournamentPricing, torneo)) redirect(`/torneos/${torneo}/inscripcion`)
   const db = await createClient()
   const { data: { user } } = await db.auth.getUser()
   let family: Awaited<ReturnType<typeof getEventFamily>> | null = null

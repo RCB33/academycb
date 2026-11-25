@@ -1,3 +1,4 @@
+import { tournamentPricing } from '@/lib/tournament-pricing'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getAcademyOffer, getCampusOffers, getTournamentOffer } from '@/lib/offering-server'
@@ -29,6 +30,7 @@ export default async function InscripcionPage({ searchParams }: { searchParams: 
     const translate = await getT()
 
     const params = await searchParams
+    if (params.service === 'tournament' && params.activity && Object.hasOwn(tournamentPricing, params.activity)) redirect(`/torneos/${params.activity}/inscripcion`)
     if (params.access === '1') return <main className="min-h-screen bg-slate-50 p-6"><h1 className="text-center text-2xl font-bold">Verifica tu correo para continuar</h1><EventAccess returnTo="/inscripcion?verified=1"/></main>
     if (params.verified === '1') {
         if (!await getFamilyContext()) redirect('/inscripcion?access=1')

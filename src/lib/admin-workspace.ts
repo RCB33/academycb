@@ -78,7 +78,7 @@ export async function getAdminWorkspace(
       supabase
         .from("enrollment_requests")
         .select(
-          "id,service,child_name,guardian_name,activity_name,status,created_at,academy_details,campus_details",
+          "id,service,child_name,guardian_name,activity_name,status,created_at,academy_details,campus_details,tournament_details",
         )
         .order("id")
         .range(f, t),
@@ -156,9 +156,10 @@ export async function getAdminWorkspace(
         r.academy_details?.accepted?.first_total ??
         r.academy_details?.quote?.first_total ??
         r.campus_details?.quoted_amount ??
+        (r.tournament_details?.total_cents ? r.tournament_details.total_cents / 100 : null) ??
         null,
       href:
-        r.service === "campus"
+        r.tournament_details ? `/admin/torneos/solicitudes?request=${r.id}` : r.service === "campus"
           ? `/admin/campus/solicitudes?request=${r.id}`
           : r.service === "academy" && ["new", "contacted", "interested"].includes(r.status)
           ? `/admin/solicitudes/academia/${r.id}${r.academy_details ? '' : '/completar'}`

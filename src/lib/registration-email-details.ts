@@ -1,3 +1,4 @@
+import { travelTournamentDetailsSchema, travelTournamentSummary } from '@/lib/travel-tournament'
 import 'server-only'
 import { paymentChoicesText, requestedPaymentChoices } from '@/lib/enrollment-payment'
 import { receiptBalance } from '@/lib/receipt-balance'
@@ -35,8 +36,16 @@ export async function registrationEmailDetails(source:string,id:string,kind:stri
     return {welcome:true,familyAccess:p.onboarding?.access||'pending',subject:`¡Enhorabuena, ${child.full_name}! Tu plaza está aceptada`,message:`¡Bienvenidos a la familia Academy Costa Brava! ${child.full_name} ya tiene su plaza aceptada en Academia.\n\n${p.name}\n${groups}\nIncorporación: ${m.start_date}\nFin: ${m.end_date}\n${p.frequency==='mensual'?`Primera mensualidad: ${p.first_percent} % de la cuota.`:'Pago por periodo según el plan elegido.'}\n\n${due?academyPayment(due):'No consta un primer pago pendiente.'}\n\n${familyAccessMessage(p.onboarding?.access)}\n\nAceptar la plaza no acredita el pago.${contact}`}
   }
   if(source==='enrollment') {
-    const {data:r,error}=await db.from('enrollment_requests').select('service,child_name,activity_name,status,academy_details,campus_details').eq('id',id).single()
+    const {data:r,error}=await db.from('enrollment_requests').select('service,child_name,activity_name,status,academy_details,campus_details,tournament_details').eq('id',id).single()
     if(error||!r) throw new Error('Registration unavailable')
+    if(r.service==='tournament' && r.tournament_details) {
+      const d=travelTournamentDetailsSchema.parse(r.tournament_details)
+      const summary=travelTournamentSummary(d)
+      if(kind==='received') return {subject:`${r.child_name}, solicitud recibida para ${d.tournament.title}`,message:`Hemos recibido la solicitud de ${r.child_name}.\n\n${summary}\n\nLa administradora revisará la edad, el equipo y la disponibilidad y se pondrá en contacto contigo. Recibirás la aceptación por correo. Este mensaje no confirma la plaza. Todavía no hagas ninguna transferencia.${contact}`}
+      if(kind!=='reviewed'||r.status!=='enrolled'||!r.tournament_details.accepted) return null
+      const access=r.tournament_details.onboarding?.access||'pending'
+      return {welcome:true,familyAccess:access,subject:`¡Enhorabuena, ${r.child_name}! Plaza aceptada en ${d.tournament.title}`,message:`¡Bienvenidos a Academy Costa Brava! La plaza de ${r.child_name} en ${d.tournament.title} está aceptada.\n\n${summary}\n\nEl pago se realiza exclusivamente por transferencia bancaria. La administradora se pondrá en contacto contigo para confirmar los vencimientos y los datos bancarios. Espera esas instrucciones antes de transferir. No hay cargos automáticos.\n\n${familyAccessMessage(access)}\n\nAceptar la plaza no acredita ningún ingreso. Academy registrará los pagos después de comprobarlos en el banco.${contact}`}
+    }
     const a=r.academy_details
     const methods = paymentChoicesText(requestedPaymentChoices(r))
     const extra = r.service === 'academy' && (requestedPaymentChoices(r).campus || requestedPaymentChoices(r).tournament) ? '\nCampus y/o Torneos: solicitud adicional pendiente de concretar; su plaza se confirmará por separado.' : ''
