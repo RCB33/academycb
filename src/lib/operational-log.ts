@@ -5,6 +5,9 @@ import 'server-only'
 const levels = {
     'monitoring.ready': 'info',
     'request.failed': 'error',
+    'registration.received': 'info',
+    'registration.rejected': 'warn',
+    'registration.saved': 'info',
     'auth.code_rejected': 'warn',
     'auth.setup_expired': 'warn',
     'auth.password_rejected': 'warn',

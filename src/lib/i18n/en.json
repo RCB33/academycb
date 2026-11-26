@@ -1763,5 +1763,7 @@
   "condiciones de participación": "participation terms",
   "Soy el padre, madre o tutor y solicito la participación del jugador. Entiendo que la plaza está pendiente de aceptación y que pagaré por transferencia según la modalidad elegida.": "I am the parent or guardian and request the player’s participation. I understand that the place is pending acceptance and that I will pay by bank transfer using the selected payment plan.",
   "Enviar solicitud de plaza": "Submit place request",
-  "Verifica tu correo y continúa con los datos del jugador y la solicitud de plaza. Administración revisará tu inscripción.": "Verify your email and continue with the player details and place request. Administration will review your registration."
+  "Verifica tu correo y continúa con los datos del jugador y la solicitud de plaza. Administración revisará tu inscripción.": "Verify your email and continue with the player details and place request. Administration will review your registration.",
+  "La solicitud todavía no se ha enviado. Revisa estos campos:": "Your request has not been sent yet. Check these fields:",
+  "Pulsa un campo para corregirlo. Tus datos se mantienen.": "Select a field to correct it. Your details are preserved."
 }

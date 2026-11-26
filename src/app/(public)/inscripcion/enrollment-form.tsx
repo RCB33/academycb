@@ -7,6 +7,7 @@ import { CampusFields, TournamentFields } from './activity-fields'
 import { combinedFormData, combinedQuote } from '@/lib/combined-enrollment'
 import { useRouter } from 'next/navigation'
 import { useT } from '@/lib/i18n/client'
+import { invalidFormFields, focusInvalidField, type InvalidField } from '@/lib/form-validation'
 
 
 import { useEffect, useRef, useState, type ComponentProps, type FormEvent } from 'react'
@@ -65,6 +66,15 @@ function EnrollmentFields({
 
     const [state, setState] = useState<{ success?: boolean; error?: string; message?: string }>({})
     const [pending, setPending] = useState(false)
+    const submitting = useRef(false)
+    const [invalidFields, setInvalidFields] = useState<InvalidField[]>([])
+    const feedbackRef = useRef<HTMLDivElement>(null)
+    useEffect(() => {
+        if (invalidFields.length || state.error || state.success) {
+            feedbackRef.current?.focus({ preventScroll: true })
+            feedbackRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+        }
+    }, [invalidFields, state])
     const [players, setPlayers] = useDraftState('players', [0], ids => ids.length > 0 && ids.length <= 6 && new Set(ids).size === ids.length && ids.every(id => Number.isInteger(id) && id >= 0))
     const [nextPlayer, setNextPlayer] = useDraftState<number>('nextPlayer', 1)
     const draft = useFormDraft()
@@ -87,13 +97,18 @@ function EnrollmentFields({
 
     async function submitForm(event: FormEvent<HTMLFormElement>) {
         event.preventDefault()
+        if (submitting.current) return
+        const form = event.currentTarget
+        const invalid = invalidFormFields(form)
+        setInvalidFields(invalid)
+        if (invalid.length) { setState({}); return }
+        submitting.current = true
         setPending(true)
         setState({})
-        const id = requestId || crypto.randomUUID()
-        if (!requestId) setRequestId(id)
-        const data = combinedFormData(new FormData(event.currentTarget), players, id)
-
         try {
+            const id = requestId || crypto.randomUUID()
+            if (!requestId) setRequestId(id)
+            const data = combinedFormData(new FormData(form), players, id)
             const response = await fetch('/api/enrollment/combined', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -105,21 +120,22 @@ function EnrollmentFields({
         } catch {
             setState({ success: false, error: 'No se ha podido conectar. Comprueba tu conexión e inténtalo de nuevo.' })
         } finally {
+            submitting.current = false
             setPending(false)
         }
     }
 
     if (state.success) {
-        return <section className="mx-auto max-w-2xl rounded-3xl border border-green-200 bg-white p-10 text-center shadow-2xl shadow-navy/15" role="status"><CheckCircle2 className="mx-auto h-14 w-14 text-green-600" /><h2 className="mt-5 font-heading text-3xl font-black uppercase text-navy">{translate("Solicitud recibida")}</h2><p className="mt-3 text-slate-600">{translate(state.message)}</p><Button asChild className="mt-7 bg-gold font-bold text-navy hover:bg-gold/80"><Link href="/">{translate("Volver a la web")}</Link></Button></section>
+        return <div ref={feedbackRef} tabIndex={-1} className="scroll-mt-40 mx-auto max-w-2xl rounded-3xl border border-green-200 bg-white p-10 text-center shadow-2xl shadow-navy/15" role="status"><CheckCircle2 className="mx-auto h-14 w-14 text-green-600" /><h2 className="mt-5 font-heading text-3xl font-black uppercase text-navy">{translate("Solicitud recibida")}</h2><p className="mt-3 text-slate-600">{translate(state.message)}</p><Button asChild className="mt-7 bg-gold font-bold text-navy hover:bg-gold/80"><Link href="/">{translate("Volver a la web")}</Link></Button></div>
     }
 
     return (
-        <form ref={formRef} onChange={() => updateSummary()} onClick={() => updateSummary()} onSubmit={submitForm} className="mx-auto max-w-3xl space-y-8 rounded-3xl border border-slate-200/90 bg-white p-6 shadow-2xl shadow-navy/15 md:p-10">
+        <form ref={formRef} noValidate onChange={() => updateSummary()} onClick={() => updateSummary()} onSubmit={submitForm} className="mx-auto max-w-3xl space-y-8 rounded-3xl border border-slate-200/90 bg-white p-6 shadow-2xl shadow-navy/15 md:p-10">
             <DraftNotice />
             <div className="space-y-6">
                 <h2 className="font-heading text-2xl font-black text-navy">{translate("1. Jugadores y actividades")}</h2>
                 <p className="text-sm text-slate-600">{translate("Añade a tus hijos y marca una o varias actividades para cada uno. Rellena una sola vez los datos del jugador y del tutor.")}</p>
-                {translate(players.map((id, index) => <fieldset key={id} disabled={pending} className="min-w-0 space-y-5 rounded-2xl border border-slate-200 p-4 sm:p-6">
+                {translate(players.map((id, index) => <fieldset key={id} data-player={`${translate("Jugador")} ${index + 1}`} disabled={pending} className="min-w-0 space-y-5 rounded-2xl border border-slate-200 p-4 sm:p-6">
                     <legend className="px-2 font-bold text-navy">{translate("Jugador ")}{translate(index + 1)}</legend>
                     <PlayerFields academyOffer={academyOffer} prefix={`player_${id}_`} campuses={campuses} tournaments={tournaments} initialService={initialService} initialActivityId={initialActivityId} familyPlayers={familyPlayers} verified={verified} />
                     {translate(players.length > 1 && <Button type="button" variant="outline" className="min-h-11" onClick={() => { const remaining = players.filter((value) => value !== id); setPlayers(remaining); updateSummary(remaining) }}>{translate("Quitar jugador ")}{translate(index + 1)}</Button>)}
@@ -150,8 +166,13 @@ function EnrollmentFields({
                 <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 transition hover:border-gold/60"><DraftInput name="terms_consent" type="checkbox" required className="mt-0.5 h-4 w-4 accent-gold" /><span>{translate("He leído y acepto las ")}<Link href="/terminos" target="_blank" className="font-semibold text-navy underline">{translate("condiciones generales de inscripción")}</Link>{translate(".")}</span></label>
                 <p className="px-1 text-xs leading-relaxed text-slate-500">{translate("Al activar el acceso al Portal Familias, el tutor legal firmará el documento de aceptación. Quedará disponible en ")}<strong>{translate("Mis documentos")}</strong> {translate(" y en la ficha del jugador.")}</p>
             </section>
-            {translate(state.error && <p className="rounded-xl bg-red-50 p-4 text-sm font-medium text-red-700" role="alert">{translate(state.error)}</p>)}
-            <Button disabled={pending} className="min-h-12 h-auto whitespace-normal py-3 w-full bg-gold text-sm sm:text-base font-black text-navy shadow-lg shadow-gold/20 hover:bg-gold/80">{translate(pending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {translate(" Enviando solicitud…")}</> : <><Send className="mr-2 h-4 w-4" /> {translate(players.length > 1 ? `Enviar solicitudes (${players.length} jugadores)` : 'Enviar solicitud de inscripción')}</>)}</Button>
+            {!!invalidFields.length && <div ref={feedbackRef} tabIndex={-1} role="alert" className="scroll-mt-40 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-800">
+                <p className="font-bold">{translate('La solicitud todavía no se ha enviado. Revisa estos campos:')}</p>
+                <ul className="mt-3 space-y-3">{invalidFields.map(({ field, label, message }, index) => <li key={index}><button type="button" onClick={() => focusInvalidField(field)} className="text-left underline underline-offset-2"><strong>{label}</strong>: {message}</button></li>)}</ul>
+                <p className="mt-3">{translate('Pulsa un campo para corregirlo. Tus datos se mantienen.')}</p>
+            </div>}
+            {translate(state.error && <p ref={feedbackRef} tabIndex={-1} className="scroll-mt-40 rounded-xl bg-red-50 p-4 text-sm font-medium text-red-700" role="alert">{translate(state.error)}</p>)}
+            <Button type="submit" disabled={pending} className="min-h-12 h-auto whitespace-normal py-3 w-full bg-gold text-sm sm:text-base font-black text-navy shadow-lg shadow-gold/20 hover:bg-gold/80">{translate(pending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {translate(" Enviando solicitud…")}</> : <><Send className="mr-2 h-4 w-4" /> {translate(players.length > 1 ? `Enviar solicitudes (${players.length} jugadores)` : 'Enviar solicitud de inscripción')}</>)}</Button>
             <p className="text-center text-xs text-slate-500">{translate("Enviar esta solicitud no crea un cargo ni confirma una plaza automáticamente.")}</p>
         </form>
     )
