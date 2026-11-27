@@ -7,6 +7,7 @@ function load(file) {
     if (name === '@/lib/travel-tournament' || name === '@/lib/tournament-pricing') return load('src/lib/' + name.split('/').pop() + '.ts')
     if (name === '@/lib/enrollment-payment') return load('src/lib/enrollment-payment.ts')
     if(name === '@/lib/family-billing') return {prepareFamilyBilling:async()=>{throw Error('Unexpected family billing in individual fixture')},familyBillingEmail:async()=>{throw Error('Unexpected family email in individual fixture')}}
+    if (name === '@/lib/enrollment-history') return load('src/lib/enrollment-history.ts')
     if (name === 'server-only') return {}
     if (name === '@/lib/supabase/admin') return { createAdminClient: () => db }
     if (name === '@/lib/receipt-balance') return load('src/lib/receipt-balance.ts')
@@ -18,7 +19,7 @@ function load(file) {
 ;(async () => {
   const { registrationEmailDetails: details, familyAccessMessage } = load('src/lib/registration-email-details.ts')
   const a = { plan: { name: 'Una sesión' }, groups: [{ name: 'Benjamines', schedule: '17:30–19:00', public_offer: { day: 'Martes', location: 'Campo' } }], start_date: '2027-01-16', quote: { percent: 50, monthly_price: 75, season_end: '2027-05-31', remaining: [1, 2, 3, 4] }, accepted: { membership_id: 'membership', first_month: 37.5, enrollment_fee: 30, plus: 0 }, payment_choice: 'monthly_card' }
-  rows = { enrollment_requests: { service: 'academy', child_name: 'Jugador de prueba', status: 'enrolled', academy_details: a }, event_campaign_settings: { iban: 'MOCK-ONLY', bank_holder: 'Academy' }, payments: [
+  rows = { academy_memberships: {history_review_required:false}, enrollment_requests: { service: 'academy', child_name: 'Jugador de prueba', status: 'enrolled', academy_details: a }, event_campaign_settings: { iban: 'MOCK-ONLY', bank_holder: 'Academy' }, payments: [
     { amount: 37.5, status: 'pending', concept_code: 'monthly', covered_month: '2027-01', manual_receipt_allocations: [{ amount: 10, voided_at: null }] },
     { amount: 30, status: 'overdue', concept_code: 'enrollment' },
     { amount: 75, status: 'pending', concept_code: 'monthly', covered_month: '2027-02' },
@@ -39,6 +40,10 @@ function load(file) {
   a.onboarding.billing_initial=true
   result=await details('enrollment','test-request','reviewed');assert.equal(result.action.label,'Pagar alta y activar mensualidades');assert.match(result.message,/Primer pago con tarjeta: 57\.50/);assert.match(result.message,/una sola vez/);assert.doesNotMatch(result.message,/efectivo por separado/)
   assert.match(result.message,/se cobra al completar Stripe/)
+  rows.academy_memberships={history_review_required:true,history_reviewed_at:null}
+  result=await details('enrollment','test-request','reviewed');assert.match(result.message,/No repitas ningún pago/);assert.equal(result.action,undefined);assert.doesNotMatch(result.message,/Primer pago con tarjeta|se cobra al completar Stripe/)
+  a.payment_choice='cash';result=await details('enrollment','test-request','reviewed');assert.match(result.message,/Secretaría revisará/);assert.doesNotMatch(result.message,/Importe inicial pendiente/)
+  rows.academy_memberships={history_review_required:false};a.payment_choice='monthly_card'
   const original = { start_date:a.start_date, quote:a.quote, accepted:a.accepted, payments:rows.payments }
   a.start_date='2026-12-01';a.quote={...a.quote,percent:100,remaining:[{due_date:'2027-01-01'}]};a.accepted={...a.accepted,first_month:75,enrollment_fee:0}
   rows.payments=[{amount:75,status:'pending',concept_code:'monthly',covered_month:'2026-12'},{amount:75,status:'pending',concept_code:'monthly',covered_month:'2027-01'}]

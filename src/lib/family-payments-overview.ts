@@ -3,7 +3,7 @@ import type { BillingRequest } from './billing-request'
 export type FamilyReceipt = {
  id:string; child_id:string|null; ref_id:string|null; type:string; description:string|null; amount:number; status:string;
  due_date:string|null; paid_at:string|null; method:string|null; covered_month:string|null;
- manual_receipt_allocations:ReceiptAllocation[]; downloadable?:boolean; hasInvoice?:boolean;
+ underReview?:boolean; manual_receipt_allocations:ReceiptAllocation[]; downloadable?:boolean; hasInvoice?:boolean;
 }
 export type FamilyPlan = {id:string;child_id:string;status:string;start_date:string;end_date:string;monthly_price:number|null;agreed_payment_method:string|null;plan_snapshot:{name?:string;frequency?:string}|null;plan:{name:string;frequency:string}|null}
 export type FamilyBilling = BillingRequest & {billing_request_attempts?:{state:string;billing_status:string;schedule_id:string|null;subscription_id:string|null}[]}
@@ -33,7 +33,8 @@ export function paymentChannel(p:FamilyReceipt,plans:FamilyPlan[],requests:Famil
 }
 export function familyPaymentsOverview(receipts:FamilyReceipt[],today:string,childId='') {
  const visible=receipts.filter(p=>!childId||p.child_id===childId)
- const open=visible.filter(p=>receiptBalance(p).remaining>0&&!['cancelled','refunded'].includes(p.status))
+ const review=visible.filter(p=>p.underReview&&receiptBalance(p).remaining>0&&!['cancelled','refunded'].includes(p.status))
+ const open=visible.filter(p=>!p.underReview&&receiptBalance(p).remaining>0&&!['cancelled','refunded'].includes(p.status))
  const due=open.filter(p=>p.due_date&&p.due_date<=today).sort((a,b)=>a.due_date!.localeCompare(b.due_date!))
  const future=open.filter(p=>p.due_date&&p.due_date>today).sort((a,b)=>a.due_date!.localeCompare(b.due_date!))
  const undated=open.filter(p=>!p.due_date)
@@ -45,5 +46,5 @@ export function familyPaymentsOverview(receipts:FamilyReceipt[],today:string,chi
  }).sort((a,b)=>(b.date||'').localeCompare(a.date||''))
  const archived=visible.filter(p=>['cancelled','refunded'].includes(p.status)||Number(p.amount)===0)
  const sum=(items:FamilyReceipt[])=>items.reduce((n,p)=>n+Math.round(receiptBalance(p).remaining*100),0)/100
- return {visible,open,due,future,undated,next,nextDate,history,archived,dueTotal:sum(due),nextTotal:sum(next)}
+ return {visible,review,open,due,future,undated,next,nextDate,history,archived,dueTotal:sum(due),nextTotal:sum(next)}
 }

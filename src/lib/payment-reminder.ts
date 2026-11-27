@@ -5,8 +5,13 @@ import { renderCommunicationEmail } from './communication-email'
 
 export async function loadPaymentReminder(paymentId:string, db:SupabaseClient) {
     if(!z.string().uuid().safeParse(paymentId).success) throw Error('Recibo no válido')
-    const {data:p,error}=await db.from('payments').select('id,child_id,description,type,amount,status,due_date,covered_month,child:children(full_name,archived_at),manual_receipt_allocations(amount,paid_date,method,voided_at)').eq('id',paymentId).single()
+    const {data:p,error}=await db.from('payments').select('id,ref_id,child_id,description,type,amount,status,due_date,covered_month,child:children(full_name,archived_at),manual_receipt_allocations(amount,paid_date,method,voided_at)').eq('id',paymentId).single()
     if(error||!p||!p.child_id) throw Error('Recibo no disponible o sin jugador vinculado')
+    if(p.type==='academy'&&p.ref_id) {
+        const {data:m,error:reviewError}=await db.from('academy_memberships').select('history_review_required,history_reviewed_at').eq('id',p.ref_id).single()
+        if(reviewError||!m)throw Error('No se pudo comprobar la revisión de pagos anteriores.')
+        if(m.history_review_required&&!m.history_reviewed_at)throw Error('Revisa los pagos anteriores en la ficha del jugador antes de enviar recordatorios.')
+    }
     const balance=receiptBalance(p),today=new Date().toLocaleDateString('en-CA',{timeZone:'Europe/Madrid'})
     if(!['pending','failed','overdue'].includes(p.status)||balance.remaining<=0) throw Error('Este recibo no tiene saldo pendiente. No se debe enviar un recordatorio.')
     if(!p.due_date||p.due_date>today) throw Error('El recibo todavía no vence o necesita una fecha revisada. No se enviará un recordatorio.')

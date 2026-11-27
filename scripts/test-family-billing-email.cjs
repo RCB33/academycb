@@ -16,6 +16,7 @@ const request={id:'11111111-1111-4111-8111-111111111111',child_id:'a',guardian_i
  const template=load('src/lib/payment-request-email.ts').paymentRequestEmail({request,childName:'Ana y Berta',guardianName:'Familia',origin:'https://www.academycostabrava.com'})
  assert.match(template.html,/Pagar el total familiar/);assert.match(template.html,/email-logo.png/);assert.match(template.text,/152,50/);assert.match(template.text,/215,00/);assert.match(template.text,/Berta · Primera cuota/)
  records.enrollment_requests={service:'academy',status:'enrolled',child_name:'Berta',academy_details:{plan:{name:'Una sesión'},groups:[],payment_choice:'monthly_card',start_date:'2090-01-23',quote:{percent:25,monthly_price:140,season_end:'2090-02-28',remaining:[{due_date:'2090-02-01'}]},accepted:{membership_id:'m',first_month:35,enrollment_fee:0,plus:0},family_batch_id:request.id,onboarding:{access:'existing',billing:'ready',billing_initial:true,billing_request_id:request.id}}}
+ records.academy_memberships={history_review_required:false}
  records.payments=[{amount:35,status:'pending',concept_code:'monthly',covered_month:'2090-01'}]
  const welcome=await load('src/lib/registration-email-details.ts').registrationEmailDetails('enrollment','child-request','reviewed')
  assert.equal(welcome.welcome,true);assert.match(welcome.message,/Total del primer pago familiar: 152,50/);assert.match(welcome.message,/Matrícula: 0.00 € \(exenta\)/);assert.equal(welcome.action.href,email.action.href);assert.doesNotMatch(welcome.message,/Primer pago con tarjeta: 35.00/)

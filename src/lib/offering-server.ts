@@ -56,6 +56,5 @@ export async function academySelection(input:{plan_id:string;group_id:string;sec
     const year=Number(birthDate.slice(0,4))
     if(birth_from!==null&&birth_to!==null&&(year<birth_from||year>birth_to)) throw new Error(`${g.name}: grupo para nacidos entre ${birth_from} y ${birth_to}.`)
   }
-  if(input.start_date<new Date().toLocaleDateString('en-CA',{timeZone:'Europe/Madrid'})) throw new Error('Elige una fecha de incorporación actual o futura.')
   return {version:offer.version,plan,groups,start_date:input.start_date,payment_choice:input.payment_choice,quote:academyQuote(plan,input.start_date,input.plus)}
 }

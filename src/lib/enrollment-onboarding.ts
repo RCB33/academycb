@@ -43,6 +43,11 @@ export async function prepareAcceptedSubscription(requestId:string,actorId:strin
   const db=createAdminClient()
   const {data:request}=await db.from('enrollment_requests').select('academy_details').eq('id',requestId).single()
   const details=request?.academy_details
+  if(details?.accepted?.membership_id) {
+    const {data:m,error}=await db.from('academy_memberships').select('history_review_required,history_reviewed_at').eq('id',details.accepted.membership_id).single()
+    if(error||!m)return {error:'No se pudo comprobar la revisión de pagos anteriores.'}
+    if(m.history_review_required&&!m.history_reviewed_at)return {status:'history_review',error:'Plaza aceptada y recibos pendientes creados. Revisa los cobros anteriores en la ficha del jugador y confirma la revisión antes de habilitar la tarjeta.'}
+  }
   if(details?.payment_choice!=='monthly_card') return {status:details?.payment_choice==='cash'?'cash':'needs_review'}
  if(details?.family_batch_id) return prepareFamilyBilling(details.family_batch_id,actorId)
   if(process.env.STRIPE_RECURRING_PAYMENTS_ENABLED!=='true') return {status:'pending_activation'}

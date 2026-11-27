@@ -23,7 +23,8 @@
     "test:management": "node scripts/test-management-workspace.cjs",
     "test:request-review": "node scripts/test-academy-request-review.cjs && node scripts/test-registration-email-details.cjs",
     "test:request-completion": "node scripts/test-academy-request-completion.cjs",
-    "test:family-billing": "node scripts/test-family-billing-stripe.cjs && node scripts/test-family-billing-email.cjs"
+    "test:family-billing": "node scripts/test-family-billing-stripe.cjs && node scripts/test-family-billing-email.cjs",
+    "test:enrollment-history": "node scripts/test-retrospective-enrollment.cjs && node scripts/test-accepted-subscription.cjs && node scripts/test-registration-email-details.cjs && node scripts/test-family-payments-overview.cjs && node scripts/test-karen-reminders.cjs"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.15",

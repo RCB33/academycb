@@ -1765,5 +1765,14 @@
   "Enviar solicitud de plaza": "Enviar sol·licitud de plaça",
   "Verifica tu correo y continúa con los datos del jugador y la solicitud de plaza. Administración revisará tu inscripción.": "Verifica el teu correu i continua amb les dades del jugador i la sol·licitud de plaça. Administració revisarà la teva inscripció.",
   "La solicitud todavía no se ha enviado. Revisa estos campos:": "La sol·licitud encara no s’ha enviat. Revisa aquests camps:",
-  "Pulsa un campo para corregirlo. Tus datos se mantienen.": "Prem un camp per corregir-lo. Les teves dades es conserven."
+  "Pulsa un campo para corregirlo. Tus datos se mantienen.": "Prem un camp per corregir-lo. Les teves dades es conserven.",
+  "Fecha real de incorporación": "Data real d’incorporació",
+  "Indica cuándo empezó o empezará a entrenar esta temporada. Puedes elegir una fecha anterior a hoy. Secretaría comprobará los pagos ya realizados.": "Indica quan va començar o començarà a entrenar aquesta temporada. Pots triar una data anterior a avui. Secretaria comprovarà els pagaments ja realitzats.",
+  "La incorporación es anterior al alta en la web. Secretaría revisará las cuotas y los pagos ya realizados antes de indicar el importe pendiente. No repitas ningún pago. La tarjeta permanecerá bloqueada hasta terminar esa revisión.": "La incorporació és anterior a l’alta al web. Secretaria revisarà les quotes i els pagaments ja realitzats abans d’indicar l’import pendent. No repeteixis cap pagament. La targeta continuarà bloquejada fins a acabar aquesta revisió.",
+  "Cuotas previstas · pendientes de revisión": "Quotes previstes · pendents de revisió",
+  "Importe del mes de incorporación *": "Import del mes d’incorporació *",
+  "Calendario desde la incorporación; puede incluir meses ya pagados.": "Calendari des de la incorporació; pot incloure mesos ja pagats.",
+  "Secretaría está revisando los pagos anteriores de tu incorporación. Los recibos todavía pueden incluir meses ya abonados. No repitas pagos; te confirmaremos el saldo pendiente.": "Secretaria està revisant els pagaments anteriors de la teva incorporació. Els rebuts encara poden incloure mesos ja abonats. No repeteixis pagaments; et confirmarem el saldo pendent.",
+  "Importe inicial a revisar": "Import inicial per revisar",
+  "Hay una incorporación anterior. Secretaría revisará los pagos ya realizados antes de confirmar el saldo o preparar enlaces de tarjeta. Las cuotas previstas pueden incluir meses ya pagados; no los abones otra vez.": "Hi ha una incorporació anterior. Secretaria revisarà els pagaments ja realitzats abans de confirmar el saldo o preparar enllaços de targeta. Les quotes previstes poden incloure mesos ja pagats; no els abonis una altra vegada."
 }

@@ -1765,5 +1765,14 @@
   "Enviar solicitud de plaza": "Submit place request",
   "Verifica tu correo y continúa con los datos del jugador y la solicitud de plaza. Administración revisará tu inscripción.": "Verify your email and continue with the player details and place request. Administration will review your registration.",
   "La solicitud todavía no se ha enviado. Revisa estos campos:": "Your request has not been sent yet. Check these fields:",
-  "Pulsa un campo para corregirlo. Tus datos se mantienen.": "Select a field to correct it. Your details are preserved."
+  "Pulsa un campo para corregirlo. Tus datos se mantienen.": "Select a field to correct it. Your details are preserved.",
+  "Fecha real de incorporación": "Actual start date",
+  "Indica cuándo empezó o empezará a entrenar esta temporada. Puedes elegir una fecha anterior a hoy. Secretaría comprobará los pagos ya realizados.": "Enter when training started or will start this season. You can choose a past date. Academy will check payments already made.",
+  "La incorporación es anterior al alta en la web. Secretaría revisará las cuotas y los pagos ya realizados antes de indicar el importe pendiente. No repitas ningún pago. La tarjeta permanecerá bloqueada hasta terminar esa revisión.": "Training started before this online registration. Academy will review fees and previous payments before confirming the balance. Do not repeat any payment. Card payments will remain blocked until this review is complete.",
+  "Cuotas previstas · pendientes de revisión": "Estimated fees · pending review",
+  "Importe del mes de incorporación *": "Amount for the starting month *",
+  "Calendario desde la incorporación; puede incluir meses ya pagados.": "Schedule from the start date; it may include months already paid.",
+  "Secretaría está revisando los pagos anteriores de tu incorporación. Los recibos todavía pueden incluir meses ya abonados. No repitas pagos; te confirmaremos el saldo pendiente.": "Academy is reviewing previous payments from your start date. Receipts may still include months already paid. Do not repeat payments; we will confirm the remaining balance.",
+  "Importe inicial a revisar": "Initial amount to review",
+  "Hay una incorporación anterior. Secretaría revisará los pagos ya realizados antes de confirmar el saldo o preparar enlaces de tarjeta. Las cuotas previstas pueden incluir meses ya pagados; no los abones otra vez.": "There is a past start date. Academy will review previous payments before confirming the balance or preparing card links. Estimated fees may include months already paid; do not pay them again."
 }

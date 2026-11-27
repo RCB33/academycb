@@ -1,3 +1,4 @@
+import { historyReviewMessage, pastIncorporation } from '@/lib/enrollment-history'
 import { travelTournamentDetailsSchema, travelTournamentSummary } from '@/lib/travel-tournament'
 import 'server-only'
 import { paymentChoicesText, requestedPaymentChoices } from '@/lib/enrollment-payment'
@@ -23,7 +24,7 @@ export async function registrationEmailDetails(source:string,id:string,kind:stri
   }
   const academyPayment=(amount:number)=>`Importe inicial pendiente: ${amount.toFixed(2)} €.\nAcademia ofrece dos opciones: suscripción mensual con tarjeta mediante Stripe o pago en efectivo.\n¿Prefieres efectivo? Contacta por WhatsApp: https://wa.me/34691179600 para acordar la entrega. La primera cuota parcial, matrícula y extras se gestionan en efectivo por separado. Si ya tienes una suscripción activa, contacta antes de entregar efectivo para evitar pagos duplicados.`
   if(source==='membership'&&kind==='reviewed') {
-    const {data:m,error}=await db.from('academy_memberships').select('child_id,start_date,end_date,plan_snapshot,status').eq('id',id).single()
+    const {data:m,error}=await db.from('academy_memberships').select('child_id,start_date,end_date,plan_snapshot,status,history_review_required,history_reviewed_at').eq('id',id).single()
     if(error||!m||!['active','pending_payment'].includes(m.status)||!m.plan_snapshot?.manual_v2) throw new Error('Manual assignment unavailable')
     const {data:child,error:childError}=await db.from('children').select('full_name').eq('id',m.child_id).single()
     if(childError||!child) throw new Error('Player unavailable')
@@ -33,7 +34,7 @@ export async function registrationEmailDetails(source:string,id:string,kind:stri
     const due=(receipts||[]).filter(p=>['pending','failed','overdue'].includes(p.status)&&(p.concept_code!=='monthly'||(m.plan_snapshot.frequency==='mensual'?p.covered_month===m.start_date.slice(0,7):p.due_date===firstDue))).reduce((n,p)=>n+receiptBalance(p).remaining,0)
     const p=m.plan_snapshot
     const groups=(p.groups||[]).map((g:{name:string;schedule:string;public_offer?:{day?:string;location?:string}})=>[g.public_offer?.day,g.name,g.schedule,g.public_offer?.location].filter(Boolean).join(' · ')).join('\n')
-    return {welcome:true,familyAccess:p.onboarding?.access||'pending',subject:`¡Enhorabuena, ${child.full_name}! Tu plaza está aceptada`,message:`¡Bienvenidos a la familia Academy Costa Brava! ${child.full_name} ya tiene su plaza aceptada en Academia.\n\n${p.name}\n${groups}\nIncorporación: ${m.start_date}\nFin: ${m.end_date}\n${p.frequency==='mensual'?`Primera mensualidad: ${p.first_percent} % de la cuota.`:'Pago por periodo según el plan elegido.'}\n\n${due?academyPayment(due):'No consta un primer pago pendiente.'}\n\n${familyAccessMessage(p.onboarding?.access)}\n\nAceptar la plaza no acredita el pago.${contact}`}
+    return {welcome:true,familyAccess:p.onboarding?.access||'pending',subject:`¡Enhorabuena, ${child.full_name}! Tu plaza está aceptada`,message:`¡Bienvenidos a la familia Academy Costa Brava! ${child.full_name} ya tiene su plaza aceptada en Academia.\n\n${p.name}\n${groups}\nIncorporación: ${m.start_date}\nFin: ${m.end_date}\n${p.frequency==='mensual'?`Primera mensualidad: ${p.first_percent} % de la cuota.`:'Pago por periodo según el plan elegido.'}\n\n${m.history_review_required&&!m.history_reviewed_at?historyReviewMessage:due?academyPayment(due):'No consta un primer pago pendiente.'}\n\n${familyAccessMessage(p.onboarding?.access)}\n\nAceptar la plaza no acredita el pago.${contact}`}
   }
   if(source==='enrollment') {
     const {data:r,error}=await db.from('enrollment_requests').select('service,child_name,activity_name,status,academy_details,campus_details,tournament_details').eq('id',id).single()
@@ -53,6 +54,7 @@ export async function registrationEmailDetails(source:string,id:string,kind:stri
     if(kind==='received') {
       let summary=selection
       if(a?.quote) summary+=`\nPrimer mes: ${Number(a.quote.first_month||0).toFixed(2)} €\nMatrícula nuevos jugadores (pendiente de revisar): ${Number(a.quote.enrollment_fee||0).toFixed(2)} €\nPlus: ${Number(a.quote.plus||0).toFixed(2)} €\nDespués: ${a.quote.remaining?.length||0} mensualidades de ${Number(a.quote.monthly_price).toFixed(2)} €, hasta ${a.quote.season_end}.`
+      if(a?.start_date&&pastIncorporation(a.start_date)) summary+=`\n\n${historyReviewMessage}`
       const c=r.campus_details
       if(c?.program_snapshot) summary+=`\n${c.program_snapshot.weeks.filter((w:{id:string})=>c.weeks.includes(w.id)).map((w:{label:string})=>w.label).join(' · ')}\n${c.schedule} · ${c.location}\nImporte previsto: ${Number(c.quoted_amount).toFixed(2)} €${c.sibling?' · Descuento por hermano pendiente de comprobación.':''}`
       return {subject:`${r.child_name}, hemos recibido tu solicitud`,message:`La solicitud de ${r.child_name} se ha guardado correctamente.\n\n${summary}\n\nEl equipo revisará disponibilidad, edad y grupo. Te comunicaremos la aceptación y los siguientes pasos por correo. Este mensaje no confirma una plaza ni acredita un pago. Todavía no realices ningún pago.${contact}`}
@@ -78,6 +80,9 @@ export async function registrationEmailDetails(source:string,id:string,kind:stri
         payment+=a.onboarding?.billing==='ready'&&a.onboarding.billing_request_id?`\n\nActiva tu suscripción mensual con tarjeta y olvídate de gestionar cada mensualidad:\nhttps://www.academycostabrava.com/portal/pagos/solicitud/${a.onboarding.billing_request_id}\nEl primer vencimiento será el indicado en el enlace; la suscripción terminará al acabar la temporada.`:'\n\nHas solicitado mensualidades con tarjeta. Academy te enviará el enlace de autorización cuando esté disponible. Todavía no hay ningún cobro automático activado.'
       }
       if(a.family_batch_id&&a.payment_choice==='monthly_card') { const family=await familyBillingEmail(a.family_batch_id);payment=family.message;action=family.action }
+      const {data:membership,error:historyError}=await db.from('academy_memberships').select('history_review_required,history_reviewed_at').eq('id',a.accepted.membership_id).single()
+      if(historyError||!membership)throw new Error('Payment history review unavailable')
+      if(membership.history_review_required&&!membership.history_reviewed_at) {payment=historyReviewMessage;action=undefined}
     } else if(r.service==='campus') {
       const {data:link}=await db.from('campus_request_links').select('enrollment_id').eq('request_id',id).maybeSingle()
       if(!link) return null

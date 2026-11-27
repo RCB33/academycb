@@ -1,12 +1,13 @@
 const assert = require('node:assert/strict'), fs = require('node:fs'), ts = require('typescript')
+let historical=false
 let choice = 'monthly_card', receipts = [{ id: 'future-month' }], calls = [], rpcError = null, filters = []
 const requestId = '30000000-0000-4000-8000-000000000001'
 const details = () => ({ plan: { name: 'Academia' }, groups: [], start_date: '2027-01-15', payment_choice: choice, accepted: { membership_id: 'membership', first_month: 37.5, enrollment_fee: 30, plus: 0 }, quote: { remaining: [1], monthly_price: 75, percent: 50, season_end: '2027-02-28' } })
 const db = {
-  from() {
+  from(table) {
     const q = {
       select: () => q, eq: (field, value) => { filters.push([field, value]); return q }, gt: (field, value) => { filters.push([field, value]); return q }, in: () => q, order: () => q,
-      single: async () => ({ data: { academy_details: details() } }),
+      single: async () => ({ data: table==='academy_memberships'?{history_review_required:historical,history_reviewed_at:null}:{ academy_details: details() } }),
       then: (resolve, reject) => Promise.resolve({ data: receipts, error: null }).then(resolve, reject),
     }; return q
   },
@@ -35,6 +36,7 @@ function load(file) {
   assert.equal(calls[0].args.mode_input, 'live')
   assert.equal(calls[0].args.guardian_input, 'guardian')
   assert.equal(calls[0].args.actor_input, 'admin')
+  historical=true; calls=[];assert.equal((await prepare(...args)).status,'history_review');assert.equal(calls.length,0);historical=false
   choice = 'cash'; calls = []
   assert.equal((await prepare(...args)).status, 'cash'); assert.equal(calls.length, 0)
   choice = 'monthly_card'; receipts = []

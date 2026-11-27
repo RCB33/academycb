@@ -40,6 +40,8 @@ export function combinedFormData(fd: FormData, ids: number[], requestId: string)
 
 export function combinedQuote(children: CombinedPlayer[], academy: AcademyOffer, campuses: CampusOffer[], tournaments: TournamentOffer) {
     let complete = children.length > 0
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
+    const requiresHistoryReview = children.some(c => c.academy?.start_date && c.academy.start_date < today)
     const lines: { player: string; activity: string; amount: number }[] = []
     const monthly: { player: string; amount: number; count: number; until: string }[] = []
     for (const child of children) {
@@ -68,5 +70,5 @@ export function combinedQuote(children: CombinedPlayer[], academy: AcademyOffer,
             } catch { complete = false }
         }
     }
-    return { complete, lines, monthly, initial: lines.reduce((n,l) => n + Math.round(l.amount * 100), 0) / 100 }
+    return { complete, requiresHistoryReview, lines, monthly, initial: lines.reduce((n,l) => n + Math.round(l.amount * 100), 0) / 100 }
 }
